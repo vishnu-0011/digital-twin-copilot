@@ -1,0 +1,44 @@
+# --- Secrets ---
+.env
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+build/
+dist/
+
+# --- Virtual environment ---
+venv/
+env/
+.venv/
+
+# --- ChromaDB persistence (rebuilt on every run via ingest_directory()) ---
+rag/.chroma/
+**/.chroma/
+
+# --- Datasets (large, downloaded separately — see README) ---
+data/*.csv
+data/*.txt
+!data/.gitkeep
+
+# --- Streamlit ---
+.streamlit/
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Logs ---
+*.log
+nohup.out
+
+# --- Leftover shell artifacts (e.g. brace-expansion mistakes on Windows) ---
+{*}*
