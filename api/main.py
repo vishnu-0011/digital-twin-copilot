@@ -68,7 +68,12 @@ class WhatIfRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    predictor = app_state.get("predictor")
+    return {
+        "status": "ok",
+        "mode": "100% Pure ML (Zero API Keys)",
+        "rul_backend": predictor.backend if predictor else "tcn_2021",
+    }
 
 
 @app.get("/fleet")

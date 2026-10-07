@@ -14,7 +14,8 @@ from __future__ import annotations
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 
-FEATURE_COLUMNS = ["vibration_rms", "temperature_c", "wear_level"]
+# Observable features without feature leakage (internal wear_level is unobservable in production)
+FEATURE_COLUMNS = ["vibration_rms", "temperature_c"]
 
 
 class AnomalyDetector:

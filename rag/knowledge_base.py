@@ -90,7 +90,10 @@ def _chunk_markdown(text: str, max_chars: int = 800) -> list[str]:
 class MaintenanceKnowledgeBase:
     def __init__(self, persist_dir: str = DB_DIR, docs_dir: str = DOCS_DIR):
         md_files = glob.glob(os.path.join(docs_dir, "*.md"))
-        corpus = [open(p).read() for p in md_files]
+        corpus = []
+        for p in md_files:
+            with open(p, "r", encoding="utf-8") as f:
+                corpus.append(f.read())
         self.embed_fn = TfidfEmbeddingFunction(corpus=corpus if corpus else ["placeholder"])
 
         self.client = chromadb.PersistentClient(path=persist_dir)

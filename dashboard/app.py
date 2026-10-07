@@ -54,6 +54,7 @@ def api_post(path: str, json_body: dict = None, timeout: int = 60):
 # -- Sidebar: connection + controls -----------------------------------------
 st.sidebar.title("🏭 Digital Twin Copilot")
 st.sidebar.caption(f"Backend: {API_BASE}")
+st.sidebar.success("⚡ 100% Pure ML & Offline (Zero API Keys)")
 
 health, health_err = api_get("/health")
 if health_err:
@@ -65,12 +66,8 @@ if health_err:
     st.stop()
 else:
     st.sidebar.success("Backend connected ✅")
-    sources = health.get("data_sources") or {}
-    if sources:
-        st.sidebar.caption(
-            f"Anomaly model: **{sources.get('anomaly', '?')}**  \n"
-            f"RUL model: **{sources.get('rul', '?')}**"
-        )
+    rul_backend = health.get("rul_backend", "tcn_2021")
+    st.sidebar.caption(f"Prognostics Engine: **{rul_backend}**")
 
 st.sidebar.divider()
 st.sidebar.subheader("Advance simulation")
@@ -173,6 +170,8 @@ else:
 
                 st.markdown(f"**Cause:** {diagnosis.get('likely_cause', 'n/a')}")
                 st.markdown(f"**Recommended action:** {diagnosis.get('recommended_action', 'n/a')}")
+                if "safe_rul_cycles" in decision:
+                    st.caption(f"⏱️ **Conservative RUL:** {decision['safe_rul_cycles']} cycles (15% asymmetric risk buffer)")
 
                 meta_col1, meta_col2, meta_col3 = st.columns(3)
                 meta_col1.caption(f"Urgency: **{diagnosis.get('urgency', 'n/a')}**")
