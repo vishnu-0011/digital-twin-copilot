@@ -1057,3 +1057,82 @@ body[data-theme="dark"] .tcn-breakdown-box {
   font-family: var(--font-mono);
   color: var(--text-muted);
 }
+
+/* ==========================================================================
+   AUTHENTIC CYBERPUNK STRATEGY DARK THEME REFINEMENTS
+   ========================================================================== */
+body[data-theme="dark"] #top-kpi-bar,
+body[data-theme="dark"] #camera-director-bar {
+  background: rgba(11, 17, 30, 0.88);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 243, 255, 0.05);
+}
+
+body[data-theme="dark"] .brand-logo {
+  background: linear-gradient(135deg, #00f3ff, #0284c7);
+  box-shadow: 0 0 14px rgba(0, 243, 255, 0.5);
+  color: #080b12;
+}
+
+body[data-theme="dark"] .btn-director.active {
+  background: #00f3ff;
+  border-color: #00f3ff;
+  color: #080b12;
+  font-weight: 800;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.45);
+}
+
+body[data-theme="dark"] .badge-card {
+  background: rgba(10, 15, 26, 0.92);
+  border-color: rgba(0, 243, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 243, 255, 0.2);
+}
+
+body[data-theme="dark"] .badge-id {
+  color: #ffffff;
+}
+
+body[data-theme="dark"] .badge-rul {
+  color: #00f3ff;
+}
+
+body[data-theme="dark"] #pipeline-ribbon,
+body[data-theme="dark"] #process-pipeline-ribbon {
+  background: rgba(11, 17, 30, 0.94);
+  border-top-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 243, 255, 0.04);
+}
+
+body[data-theme="dark"] .pipe-node {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme="dark"] .pipe-node:hover {
+  border-color: #00f3ff;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
+}
+
+body[data-theme="dark"] .pipe-node-title {
+  color: #ffffff;
+}
+
+body[data-theme="dark"] .pipe-node-stage {
+  color: #00f3ff;
+}
+
+body[data-theme="dark"] .btn-scan {
+  border-color: rgba(0, 243, 255, 0.4);
+  color: #00f3ff;
+}
+
+body[data-theme="dark"] .btn-scan:hover {
+  background: rgba(0, 243, 255, 0.15);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+}
+
+body[data-theme="dark"] #machine-drawer {
+  background: rgba(11, 17, 30, 0.96);
+  border-left-color: rgba(0, 243, 255, 0.25);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.7);
+}

@@ -35,7 +35,7 @@
 | 🚪 **9. Executive Entrance Portal & Signage** | 🌙 **10. Cyberpunk Strategy Night Theme** |
 | :---: | :---: |
 | ![10_titan_aerospace_entrance_portal](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/10_titan_aerospace_entrance_portal.png) | ![09_dark_mode_cyberpunk_view](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/09_dark_mode_cyberpunk_view.png) |
-| *Illuminated dual-sided "▲ TITAN AEROSPACE" company signage, automated sliding glass airlock doors, RFID scanner pedestals, and tacky mat runner.* | *Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches the entire 3D environment to a dark metallic reflective grid with glowing cyan laser tracks.* |
+| *Illuminated dual-sided "▲ TITAN AEROSPACE" company signage, automated sliding glass airlock doors, RFID scanner pedestals, and tacky mat runner.* | *Authentic dark strategy environment with electric cyan grid (`0x00f3ff`), atmospheric floating dust motes, cyan AGV headlights, and glowing dark SCADA HUD.* |
 
 ---
 

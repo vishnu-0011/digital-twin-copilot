@@ -23,7 +23,9 @@ import {
 
 let scene, camera, renderer, controls;
 let containerEl;
-let ambientLight, dirLight, fillLight;
+let ambientLight, dirLight, fillLight, hemiLight;
+let dustParticles = null;
+const dustCount = 200;
 let factoryFloor;
 const machines = new Map(); // id -> THREE.Group
 
@@ -166,10 +168,13 @@ export function initScene(container) {
   // 7. Radar Scanner Plane
   setupRadarScanner();
 
-  // 8. Event Listeners
+  // 8. Atmospheric Industrial Dust Particles (Cyberpunk dark mode)
+  setupAtmosphericDustMotes();
+
+  // 9. Event Listeners
   window.addEventListener('resize', onWindowResize);
 
-  // 9. Start Animation Loop
+  // 10. Start Animation Loop
   animate(0);
 
   return { scene, camera, renderer, controls, machines };
@@ -178,6 +183,10 @@ export function initScene(container) {
 function setupLighting() {
   ambientLight = new THREE.AmbientLight(0xffffff, 1.25);
   scene.add(ambientLight);
+
+  hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x070a10, 0.0);
+  hemiLight.position.set(0, 30, 0);
+  scene.add(hemiLight);
 
   dirLight = new THREE.DirectionalLight(0xffffff, 1.35);
   dirLight.position.set(24, 38, 24);
@@ -198,6 +207,27 @@ function setupLighting() {
   scene.add(fillLight);
 }
 
+function setupAtmosphericDustMotes() {
+  const dustGeo = new THREE.BufferGeometry();
+  const dustPositions = new Float32Array(dustCount * 3);
+  for (let i = 0; i < dustCount; i++) {
+    dustPositions[i * 3] = (Math.random() - 0.5) * 60;
+    dustPositions[i * 3 + 1] = 0.5 + Math.random() * 12;
+    dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 44;
+  }
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+  const dustMat = new THREE.PointsMaterial({
+    color: 0x38bdf8,
+    size: 0.18,
+    transparent: true,
+    opacity: 0.45,
+    blending: THREE.AdditiveBlending,
+  });
+  dustParticles = new THREE.Points(dustGeo, dustMat);
+  dustParticles.visible = false;
+  scene.add(dustParticles);
+}
+
 export function setSceneTheme(themeName) {
   const isLight = themeName !== 'dark';
   setFactoryTheme(isLight);
@@ -207,20 +237,44 @@ export function setSceneTheme(themeName) {
     scene.fog.color.setHex(0xf1f5f9);
     ambientLight.color.setHex(0xffffff);
     ambientLight.intensity = 1.25;
+    if (hemiLight) hemiLight.intensity = 0.0;
     dirLight.color.setHex(0xffffff);
     dirLight.intensity = 1.35;
     fillLight.color.setHex(0xe2e8f0);
     fillLight.intensity = 0.6;
+    if (dustParticles) dustParticles.visible = false;
+    if (radarMesh) radarMesh.material.color.setHex(0x0284c7);
   } else {
+    // AUTHENTIC CYBERPUNK STRATEGY DARK THEME
     scene.background.setHex(0x090c12);
     scene.fog.color.setHex(0x090c12);
-    ambientLight.color.setHex(0x64748b);
-    ambientLight.intensity = 0.65;
-    dirLight.color.setHex(0x00f3ff);
-    dirLight.intensity = 1.2;
-    fillLight.color.setHex(0x1e293b);
-    fillLight.intensity = 0.4;
+    ambientLight.color.setHex(0x182436);
+    ambientLight.intensity = 1.4;
+    if (hemiLight) {
+      hemiLight.color.setHex(0x38bdf8);
+      hemiLight.groundColor.setHex(0x070a10);
+      hemiLight.intensity = 0.75;
+    }
+    dirLight.color.setHex(0xffffff);
+    dirLight.intensity = 2.2;
+    fillLight.color.setHex(0x00f3ff);
+    fillLight.intensity = 0.35;
+    if (dustParticles) dustParticles.visible = true;
+    if (radarMesh) radarMesh.material.color.setHex(0x00f3ff);
   }
+
+  // Dynamic AGV spotlight & laser beam adaptation
+  [agvRobot1, agvRobot2].forEach(agv => {
+    if (agv) {
+      if (agv.driveLight) {
+        agv.driveLight.color.setHex(isLight ? 0x0284c7 : 0x00f3ff);
+        agv.driveLight.intensity = isLight ? 2.0 : 3.5;
+      }
+      if (agv.lidarCone) {
+        agv.lidarCone.material.color.setHex(isLight ? 0x0284c7 : 0x00f3ff);
+      }
+    }
+  });
 }
 
 function setupRadarScanner() {
@@ -469,6 +523,16 @@ function animate(time) {
       radarMesh.material.opacity = 0;
       radarMesh.position.z = -20;
     }
+  }
+
+  // 13. Atmospheric Dust Particles Gentle Drift (Dark Mode)
+  if (dustParticles && dustParticles.visible) {
+    dustParticles.rotation.y = time * 0.00003;
+    const pos = dustParticles.geometry.attributes.position.array;
+    for (let i = 1; i < dustCount * 3; i += 3) {
+      pos[i] += Math.sin(time * 0.001 + i) * 0.003;
+    }
+    dustParticles.geometry.attributes.position.needsUpdate = true;
   }
 
   // Render Scene

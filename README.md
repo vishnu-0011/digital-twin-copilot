@@ -75,7 +75,7 @@ Below are live screenshots of the hardware-accelerated 3D operations center capt
 ---
 
 ### 9. 🌙 Cyberpunk Strategy Theme (Instant Toggle)
-*Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches the entire 3D environment to a dark metallic reflective grid with glowing cyan laser radar tracks and high-contrast night HUD.*
+*Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches to the authentic dark cyberpunk strategy environment: deep obsidian reflective epoxy slab, electric neon cyan floor grid (`0x00f3ff`), atmospheric floating dust motes, cyan AGV driving headlights & LiDAR cones, glowing "TITAN AEROSPACE" entrance portal, and high-contrast dark SCADA telemetry.*
 ![Dark Mode Cyberpunk View](docs/screenshots/09_dark_mode_cyberpunk_view.png)
 
 ---

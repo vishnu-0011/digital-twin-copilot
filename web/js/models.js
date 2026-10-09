@@ -114,12 +114,18 @@ export const MAT = {
   }),
 };
 
-let factoryGridHelper = null;
+let gridHelperLight = null;
+let gridHelperDark = null;
 
 /**
  * Dynamically toggles material colors between Executive Cleanroom (light) and Cyberpunk (dark)
  */
 export function setFactoryTheme(isLight) {
+  if (gridHelperLight && gridHelperDark) {
+    gridHelperLight.visible = isLight;
+    gridHelperDark.visible = !isLight;
+  }
+
   if (isLight) {
     MAT.floorEpoxy.color.setHex(0xf3f4f6);
     MAT.floorEpoxy.roughness = 0.22;
@@ -131,6 +137,7 @@ export function setFactoryTheme(isLight) {
     MAT.trackCyan.color.setHex(0x0284c7);
     MAT.laserCyan.color.setHex(0x0284c7);
   } else {
+    // AUTHENTIC CYBERPUNK STRATEGY PALETTE
     MAT.floorEpoxy.color.setHex(0x090d15);
     MAT.floorEpoxy.roughness = 0.35;
     MAT.floorRim.color.setHex(0x05070c);
@@ -144,7 +151,7 @@ export function setFactoryTheme(isLight) {
 }
 
 /**
- * 1. FACTORY FLOOR & ENVIRONMENT (64m x 48m with 4 Bays, ASRS Racks, Crane, Dual AMRs)
+ * 1. FACTORY FLOOR & ENVIRONMENT (64m x 48m with 4 Bays, ASRS Racks, Dual AMRs)
  */
 export function createFactoryFloor(scene) {
   const group = new THREE.Group();
@@ -162,10 +169,16 @@ export function createFactoryFloor(scene) {
   rimMesh.position.y = -0.7;
   group.add(rimMesh);
 
-  // Tactical Floor Grid
-  factoryGridHelper = new THREE.GridHelper(60, 60, 0x0284c7, 0x94a3b8);
-  factoryGridHelper.position.y = 0.01;
-  group.add(factoryGridHelper);
+  // Tactical Floor Grids: Light Mode (Subtle Slate/Cobalt) and Dark Mode (Electric Neon Cyan / Deep Slate)
+  gridHelperLight = new THREE.GridHelper(60, 60, 0x0284c7, 0x94a3b8);
+  gridHelperLight.position.y = 0.01;
+  gridHelperLight.visible = true;
+  group.add(gridHelperLight);
+
+  gridHelperDark = new THREE.GridHelper(60, 60, 0x00f3ff, 0x1e293b);
+  gridHelperDark.position.y = 0.01;
+  gridHelperDark.visible = false;
+  group.add(gridHelperDark);
 
   // 4 ZONED FOUNDATION PADS
   const padsConfig = [

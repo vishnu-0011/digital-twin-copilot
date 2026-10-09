@@ -1,33 +1,26 @@
 ---
-phase: 05-cleanroom-entrance-declutter
+phase: 06-restore-authentic-dark-mode
 plan: 01
 type: execute
 tracer_first: true
 ---
 
-# Plan: Cleanroom Perimeter Declutter, Architectural Entrance & Motion Video
+# Plan: Authentic Cyberpunk Dark Mode Restoration
 
 ## Objective
-Remove all perimeter vertical pillars, construct an executive architectural entrance with illuminated "TITAN AEROSPACE" branding in Three.js, record a 3-second motion loop video/GIF of the factory, embed it in the README, and push to GitHub.
-
-## Requirements Addressed
-- REQ-DECLUTTER-01, REQ-ENTRANCE-01, REQ-SIGNAGE-02, REQ-PORTAL-03, REQ-VIDEO-01, REQ-DOCS-01, REQ-GIT-01
+Preserve Executive Cleanroom Light Mode as the default while restoring the authentic cyberpunk strategy dark theme to its original visual glory (atmospheric lighting, floating dust particles, electric cyan floor grid, neon headlights, and dark sci-fi glassmorphic HUD).
 
 ## Execution Waves
 
-### Wave 1: 3D Declutter & Architectural Entrance Creation (Tracer Slice)
-- Task 1.1: Remove the 12 perimeter structural steel columns from `web/js/models.js`.
-- Task 1.2: Implement `createCleanroomEntrancePortal(parentGroup)` in `web/js/models.js`:
-  - Canvas texture generation for illuminated "TITAN AEROSPACE" signage with cyan/gold accents.
-  - Airlock glass doors, stainless steel framing, air shower canopy, green status beacon, and threshold graphics.
-- Task 1.3: Add Director camera preset for "Entrance" or update overview camera framing in `web/js/scene.js`.
+### Wave 1: 3D Scene Dark Mode Lighting & Particle Physics (Tracer)
+- Task 1.1: In `web/js/scene.js`, restore hemisphere lighting, ambient slate-blue, key floodlight, and atmospheric dust motes (`dustParticles`) active during dark mode.
+- Task 1.2: In `web/js/models.js`, update `setFactoryTheme(isLight)` to swap the floor grid helper colors dynamically (`0x00f3ff`/`0x1e293b` for dark, `0x0284c7`/`0x94a3b8` for light), and set electric cyan materials for tracks, lasers, and AGVs.
 
-### Wave 2: Verification & High-Res Media Capture
-- Task 2.1: Validate JS syntax with `node --check` across `web/js/*.js`.
-- Task 2.2: Develop `record_video.py` to record Playwright `.webm` and generate smooth 3-second animated `.gif`.
-- Task 2.3: Re-run `capture_screenshots.py` for updated 1080p screenshots showcasing the new entrance and open perimeter.
+### Wave 2: CSS Cyberpunk Polish & UI Contrast
+- Task 2.1: Polish `body[data-theme="dark"]` in `web/css/style.css` for floating badges, bottom ribbon, header, and SCADA drawer.
+- Task 2.2: Verify JavaScript syntax (`node --check web/js/*.js`).
 
-### Wave 3: Documentation & Shipping
-- Task 3.1: Update `README.md` embedding the animated GIF and video links.
-- Task 3.2: Update `pr_body.md` with new features and media.
-- Task 3.3: Pre-push verification (`10a19yashwant@gmail.com` via `github-personal`), git commit, and push to PR branch.
+### Wave 3: Verification, Screenshot Recapture & Shipping
+- Task 3.1: Run Playwright to recapture `docs/screenshots/09_dark_mode_cyberpunk_view.png`.
+- Task 3.2: Verify backend test suite (`python -m unittest tests/test_api_web.py`).
+- Task 3.3: Pre-push verification (`10a19yashwant@gmail.com` via `github-personal`), git commit, and push.
