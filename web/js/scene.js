@@ -78,6 +78,9 @@ export function initScene(container) {
   controls.maxPolarAngle = Math.PI / 2.05; // Prevent going beneath floor
   controls.minDistance = 10;
   controls.maxDistance = 75;
+  controls.addEventListener('start', () => {
+    agvFollowMode = false;
+  });
 
   // 5. Lighting
   setupLighting();
@@ -176,7 +179,38 @@ export function triggerRadarScan() {
   }
 }
 
+let agvFollowMode = false;
+
+export function setCameraPreset(preset) {
+  if (preset === 'agv') {
+    agvFollowMode = true;
+    targetCamPos = null;
+    targetLookAt = null;
+    return;
+  }
+
+  agvFollowMode = false;
+  if (preset === 'global' || preset === 'overview') {
+    targetCamPos = defaultCamPos.clone();
+    targetLookAt = defaultLookAt.clone();
+  } else if (preset === 'cnc') {
+    targetCamPos = new THREE.Vector3(-8 + 7, 7, -4 + 7);
+    targetLookAt = new THREE.Vector3(-8, 2.8, -4);
+  } else if (preset === 'press') {
+    targetCamPos = new THREE.Vector3(8 + 8, 9, -4 + 8);
+    targetLookAt = new THREE.Vector3(8, 4.2, -4);
+  } else if (preset === 'conv') {
+    targetCamPos = new THREE.Vector3(8, 6.5, 6 + 9);
+    targetLookAt = new THREE.Vector3(0, 1.8, 6);
+  }
+}
+
+export function isAgvFollowMode() {
+  return agvFollowMode;
+}
+
 export function focusOnMachine(machineId) {
+  agvFollowMode = false;
   const machine = machines.get(machineId);
   if (!machine) return;
 
@@ -187,8 +221,7 @@ export function focusOnMachine(machineId) {
 }
 
 export function resetCamera() {
-  targetCamPos = defaultCamPos.clone();
-  targetLookAt = defaultLookAt.clone();
+  setCameraPreset('global');
 }
 
 export function updateMachineStates(fleetData) {
@@ -271,8 +304,14 @@ function animate(time) {
   // 1. Controls update
   controls.update();
 
-  // 2. Camera transition tweening
-  if (targetCamPos && targetLookAt) {
+  // 2. Camera transition & AGV tracking
+  if (agvFollowMode && agvRobot) {
+    const agvPos = agvRobot.position;
+    const desiredLookAt = new THREE.Vector3(agvPos.x, agvPos.y + 1.2, agvPos.z);
+    const desiredCamPos = new THREE.Vector3(agvPos.x + 7, agvPos.y + 6, agvPos.z + 7);
+    camera.position.lerp(desiredCamPos, 0.06);
+    controls.target.lerp(desiredLookAt, 0.06);
+  } else if (targetCamPos && targetLookAt) {
     camera.position.lerp(targetCamPos, 0.05);
     controls.target.lerp(targetLookAt, 0.05);
 

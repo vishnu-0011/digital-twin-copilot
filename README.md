@@ -79,12 +79,15 @@ python -m agents.orchestrator
 
 ## 3D Isometric Strategy-Game Operations Center (`http://localhost:8000/`)
 
-The primary frontend is an interactive **3D isometric strategy-game style operations center**, inspired by RTS industrial games (Factorio/SCADA) and modern sci-fi glassmorphism:
+The primary frontend is an interactive **3D isometric strategy-game style operations center**, modeled for **Titan Aerospace Precision Fab**, inspired by RTS industrial games (Factorio/SCADA) and modern sci-fi glassmorphism:
 
-- **Procedural 3D Machinery**: Fully animated 3D models for `CNC-01` (spindle rotation, enclosure), `PRESS-01` (hydraulic ram stamping cycle), `CONV-01` (continuous looping cargo pallets), and `AGV-01` (autonomous patrol rover navigating factory track).
+- **Enterprise Identity (Titan Aerospace)**: Models a mission-critical aerospace line fabricating Inconel 718 turbine blades and titanium airframe bulkheads.
+- **End-to-End Process Pipeline Ribbon (`/pipeline/flow`)**: Dockable bottom workflow bar featuring two selectable modes:
+  - **Manufacturing Line Flow**: Real-time part transit from Ingot Ingestion &rarr; CNC Milling &rarr; 1000T Hydraulic Forge &rarr; Laser QC Conveyor &rarr; Autonomous AGV Dispatch with live WIP counts and bottleneck detection.
+  - **AI Reasoning Chain**: 60Hz Telemetry &rarr; Zero-Leakage Physics &rarr; 2021 Dilated TCN &rarr; Isolation Forest Anomaly Gate &rarr; ChromaDB SOP Matcher &rarr; 15% Asymmetric Risk-Aware Scheduler.
+- **Camera Preset Director Bar**: Floating quick-access bar offering instant 1-click cinematic camera framing (`🌐 Global Overview`, `⚙️ CNC Mill`, `🔨 1000T Press`, `📦 Conveyor`, `🤖 Follow AGV Chase Cam`).
+- **Tabbed SCADA Drawer**: Clean 3-tab layout (`📊 Telemetry`, `🧠 2021 TCN Prognostics`, `📋 Titan SOP Protocol`) featuring a dual-channel 60 FPS oscilloscope (Vibration RMS + Thermal gradient) and ISO 10816 vibration classification.
 - **Physical Wear Cues**: When machines accumulate wear, the 3D models exhibit dynamic high-frequency vibration jitter, pulsing heat aura spheres, and glowing multi-state halos.
-- **Floating 3D Holographic Badges**: Real-time screen-space tracking markers showing machine status (`HEALTHY` 🟢, `WARNING` 🟡, `CRITICAL` 🔴, `REPAIRING` 🔧) and predicted RUL cycles directly above each machine.
-- **Holographic SCADA Inspection Drawer**: Clicking any machine smoothly focuses the 3D camera and slides out an inspection drawer featuring a live 60 FPS oscilloscope vibration canvas, 2021 TCN RUL projections (with 15% safety buffer), local SOP recommendations, and an instant "Trigger Maintenance" action.
 - **Factory Laser Radar Sweep**: "Scan Factory" sweeps a glowing laser plane across the factory floor, executes the agent anomaly detection cycle, and alerts on degraded units.
 - **Procedural Web Audio API Synthesizer**: Zero audio asset downloads; produces high-tech UI blips, radar sweeps, alarms, and repair completion chimes with audio mute toggle.
 - **Zero-Build, 100% Offline**: Built with Three.js via ES6 modules and served directly by FastAPI at `http://localhost:8000/`. Zero Node.js or npm dependencies required.

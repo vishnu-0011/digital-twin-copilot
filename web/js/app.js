@@ -1,7 +1,8 @@
 /**
- * Application Main Controller
- * =============================
- * Connects Three.js 3D isometric scene, HUD overlays,
+ * Application Main Controller (Titan Aerospace Precision Fab)
+ * ============================================================
+ * Connects Three.js 3D isometric scene, Camera Director,
+ * Process Pipeline Flow Bar, SCADA Inspection Drawer,
  * Web Audio sound effects, and FastAPI backend endpoints.
  */
 
@@ -11,6 +12,7 @@ import {
   triggerRadarScan,
   focusOnMachine,
   resetCamera,
+  setCameraPreset,
   pickMachine,
   getMachineScreenPositions
 } from './scene.js';
@@ -22,6 +24,7 @@ import {
   populateDrawer,
   closeDrawer,
   getSelectedMachineId,
+  renderPipelineFlow,
   addLogMessage
 } from './hud.js';
 
@@ -44,15 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Initialize 3D WebGL Scene
   initScene(container);
 
-  // 2. Initialize HUD & Badges
+  // 2. Initialize HUD, Badges & Pipeline UI
   initHUD(selectMachine);
 
-  // 3. Setup UI Event Listeners
+  // 3. Setup UI Event Listeners (Controls & Camera Director)
   setupControls(container);
 
-  // 4. Start Telemetry Polling
-  fetchFleetData();
-  pollIntervalId = setInterval(fetchFleetData, 1800);
+  // 4. Start Telemetry & Pipeline Polling
+  fetchAllData();
+  pollIntervalId = setInterval(fetchAllData, 1800);
 
   // 5. Keep floating badges synchronized on each animation tick
   function syncBadges() {
@@ -61,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   syncBadges();
 
-  addLogMessage("Digital Twin Copilot operational. 2021 TCN model active.", "READY");
+  addLogMessage("Titan Aerospace Precision Fab operations center online. 2021 TCN engine active.", "READY");
 });
 
 function setupControls(canvasContainer) {
@@ -77,6 +80,27 @@ function setupControls(canvasContainer) {
     }
   });
 
+  // Camera Director Bar Presets
+  const directorButtons = document.querySelectorAll('.btn-director');
+  directorButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      playClick();
+      directorButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const preset = btn.getAttribute('data-preset');
+      setCameraPreset(preset);
+
+      if (preset === 'global') {
+        addLogMessage("Camera reset to tactical isometric overview.", "VIEW");
+      } else if (preset === 'agv') {
+        addLogMessage("Engaged dynamic AGV Chase Cam tracking logistics rover.", "CHASE");
+      } else {
+        addLogMessage(`Camera director focused on ${preset.toUpperCase()} workcell.`, "FOCUS");
+      }
+    });
+  });
+
   // "⚡ Scan Factory" Radar button
   const radarBtn = document.getElementById('btn-radar');
   if (radarBtn) {
@@ -84,7 +108,7 @@ function setupControls(canvasContainer) {
       playClick();
       playScan();
       triggerRadarScan();
-      addLogMessage("Initiating factory radar sweep & anomaly detection...", "SCAN");
+      addLogMessage("Initiating factory laser radar sweep & anomaly detection...", "SCAN");
 
       try {
         const resp = await fetch('/monitor/check', { method: 'POST' });
@@ -96,7 +120,7 @@ function setupControls(canvasContainer) {
         } else {
           addLogMessage("Radar sweep complete: All units within normal vibration parameters.", "NOMINAL");
         }
-        await fetchFleetData();
+        await fetchAllData();
       } catch (err) {
         console.error("Monitor check failed:", err);
         addLogMessage("Radar telemetry check completed.", "SCAN");
@@ -110,7 +134,7 @@ function setupControls(canvasContainer) {
     stepBtn.addEventListener('click', async () => {
       playClick();
       stepBtn.disabled = true;
-      addLogMessage("Stepping physical twin +5 hours forward...", "TWIN");
+      addLogMessage("Stepping physical twin +1800s forward...", "TWIN");
 
       try {
         await fetch('/simulate', {
@@ -118,7 +142,7 @@ function setupControls(canvasContainer) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ duration_s: 1800 })
         });
-        await fetchFleetData();
+        await fetchAllData();
         addLogMessage("Simulation step complete (+1800s). Telemetry updated.", "TWIN");
       } catch (err) {
         console.error("Simulation step failed:", err);
@@ -133,7 +157,10 @@ function setupControls(canvasContainer) {
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
       playClick();
-      resetCamera();
+      setCameraPreset('global');
+      directorButtons.forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-preset') === 'global');
+      });
       closeDrawer();
       addLogMessage("Camera reset to tactical isometric overview.", "VIEW");
     });
@@ -180,12 +207,12 @@ function setupControls(canvasContainer) {
 
         if (res.status === 'SUCCESS') {
           playRepairSuccess();
-          addLogMessage(`✓ Maintenance successful on ${mId}. Wear reset to 0.0.`, "SUCCESS");
+          addLogMessage(`✓ Maintenance successful on ${mId}. Tool wear reset to 0.0.`, "SUCCESS");
         } else {
           addLogMessage(`Maintenance action note: ${res.message}`, "MAINT");
         }
 
-        await fetchFleetData();
+        await fetchAllData();
       } catch (err) {
         console.error("Maintenance failed:", err);
         addLogMessage(`Maintenance request error on ${mId}`, "ERROR");
@@ -203,6 +230,16 @@ function setupControls(canvasContainer) {
 export function selectMachine(machineId) {
   focusOnMachine(machineId);
 
+  // Sync director buttons
+  const directorButtons = document.querySelectorAll('.btn-director');
+  directorButtons.forEach(b => {
+    let preset = 'global';
+    if (machineId === 'CNC-01') preset = 'cnc';
+    else if (machineId === 'PRESS-01') preset = 'press';
+    else if (machineId === 'CONV-01') preset = 'conv';
+    b.classList.toggle('active', b.getAttribute('data-preset') === preset);
+  });
+
   const machineData = fleetCache.find(m => m.machine_id === machineId);
   if (machineData) {
     populateDrawer(machineData);
@@ -213,8 +250,15 @@ export function selectMachine(machineId) {
 }
 
 /**
- * Polls /fleet from backend and updates 3D scene & UI
+ * Polls /fleet and /pipeline/flow from backend
  */
+async function fetchAllData() {
+  await Promise.all([
+    fetchFleetData(),
+    fetchPipelineFlowData()
+  ]);
+}
+
 async function fetchFleetData() {
   try {
     const res = await fetch('/fleet');
@@ -240,5 +284,17 @@ async function fetchFleetData() {
     }
   } catch (err) {
     console.warn("Could not fetch /fleet:", err.message);
+  }
+}
+
+async function fetchPipelineFlowData() {
+  try {
+    const res = await fetch('/pipeline/flow');
+    if (!res.ok) return;
+
+    const data = await res.json();
+    renderPipelineFlow(data);
+  } catch (err) {
+    console.warn("Could not fetch /pipeline/flow:", err.message);
   }
 }

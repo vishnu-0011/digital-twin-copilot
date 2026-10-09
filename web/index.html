@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Smart Factory Digital Twin — 3D Operations Center</title>
+  <title>Titan Aerospace — 3D Digital Twin Operations Center</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
 </head>
 <body>
 
@@ -18,10 +18,10 @@
   <!-- Top Glassmorphic Strategy HUD -->
   <header id="top-hud">
     <div class="brand-section">
-      <div class="brand-logo">DT</div>
+      <div class="brand-logo">TA</div>
       <div class="brand-title">
-        <h1>Digital Twin Copilot</h1>
-        <span><span class="pulse-dot"></span> 2021 TCN ENGINE • STRATEGY SCADA</span>
+        <h1>Titan Aerospace</h1>
+        <span><span class="pulse-dot"></span> PRECISION FAB &bull; 2021 TCN DIGITAL TWIN</span>
       </div>
     </div>
 
@@ -31,16 +31,20 @@
         <span class="kpi-val" id="kpi-health">--%</span>
       </div>
       <div class="kpi-item">
-        <span class="kpi-label">Operational</span>
+        <span class="kpi-label">Workcells</span>
         <span class="kpi-val" id="kpi-units">3/3</span>
       </div>
       <div class="kpi-item">
-        <span class="kpi-label">Min Fleet RUL</span>
+        <span class="kpi-label">Min Tool RUL</span>
         <span class="kpi-val" id="kpi-min-rul">-- cyc</span>
       </div>
       <div class="kpi-item">
-        <span class="kpi-label">Factory OEE</span>
+        <span class="kpi-label">Facility OEE</span>
         <span class="kpi-val" id="kpi-oee">98.4%</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Parts Done</span>
+        <span class="kpi-val" id="kpi-throughput" style="color: var(--color-emerald)">0</span>
       </div>
     </div>
 
@@ -60,79 +64,116 @@
     </div>
   </header>
 
+  <!-- Floating Tactical Camera Director Bar -->
+  <nav id="camera-director-bar" aria-label="Camera Presets">
+    <span class="director-title">DIRECTOR:</span>
+    <button class="btn-director active" data-preset="global" title="Isometric Factory Overview">🌐 Overview</button>
+    <button class="btn-director" data-preset="cnc" title="Focus CNC-01 Milling Center">⚙️ CNC Mill</button>
+    <button class="btn-director" data-preset="press" title="Focus PRESS-01 Hydraulic Stamping">🔨 1000T Press</button>
+    <button class="btn-director" data-preset="conv" title="Focus CONV-01 Assembly Line">📦 Conveyor</button>
+    <button class="btn-director" data-preset="agv" title="Live Chase Cam following Patrol AGV">🤖 Follow AGV</button>
+  </nav>
+
   <!-- Holographic Inspection Drawer (Slide-out SCADA) -->
   <aside id="machine-drawer">
     <div class="drawer-header">
       <div class="drawer-title-group">
         <h2 id="drawer-m-id">CNC-01</h2>
-        <p><span id="drawer-m-type">Milling Center</span> &bull; <span id="drawer-m-status">HEALTHY</span></p>
+        <p><span id="drawer-m-type">5-Axis Turbine Mill</span> &bull; <span id="drawer-m-status">HEALTHY</span></p>
       </div>
       <button id="btn-drawer-close" class="drawer-close-btn" title="Close Panel">&times;</button>
     </div>
 
+    <!-- Drawer Navigation Tabs -->
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" data-tab="telemetry">📊 Telemetry</button>
+      <button class="drawer-tab" data-tab="tcn">🧠 TCN Prognostics</button>
+      <button class="drawer-tab" data-tab="sop">📋 Titan SOP</button>
+    </div>
+
     <div class="drawer-content">
-      <!-- 1. Physical Wear Level Card -->
-      <div class="scada-card">
-        <div class="scada-card-title">
-          <span>Physical Wear Progression</span>
-          <span id="drawer-wear-val" style="color: var(--color-cyan)">12%</span>
+      <!-- Tab 1: Telemetry & Dual-Channel Oscilloscope -->
+      <div id="pane-telemetry" class="drawer-tab-pane active">
+        <!-- Physical Wear Progression -->
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Physical Tool Wear</span>
+            <span id="drawer-wear-val" style="color: var(--color-cyan)">12%</span>
+          </div>
+          <div class="wear-track">
+            <div id="drawer-wear-fill" class="wear-fill" style="width: 12%"></div>
+          </div>
         </div>
-        <div class="wear-track">
-          <div id="drawer-wear-fill" class="wear-fill" style="width: 12%"></div>
-        </div>
-      </div>
 
-      <!-- 2. 2021 TCN Prognostics Prediction Card -->
-      <div class="scada-card tcn-card">
-        <div class="scada-card-title">
-          <span>2021 TCN Remaining Useful Life</span>
-          <span style="color: var(--color-cyan)">MODEL: TCN-1D</span>
-        </div>
-        <div class="tcn-hero-metric">
-          <span class="tcn-cycles-big" id="drawer-rul-cycles">142</span>
-          <span class="tcn-unit">Cycles</span>
-        </div>
-        <div id="drawer-rul-hours" style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono)">
-          &asymp; 63.9 operating hrs
-        </div>
-        <span class="tcn-badge-tag">Dilated ResNet 1D &bull; 15% Asymmetric Safety Buffer</span>
-      </div>
-
-      <!-- 3. Sensor Telemetry & Live Waveform -->
-      <div class="scada-card">
-        <div class="scada-card-title">
-          <span>Live Vibration Spectrum</span>
-          <span style="font-size: 10px; color: var(--color-cyan)">60Hz SENSOR</span>
-        </div>
-        <canvas id="vibration-canvas"></canvas>
-        <div class="telemetry-grid" style="margin-top: 10px">
-          <div class="telemetry-cell">
-            <div class="t-label">Vibration RMS</div>
-            <div class="t-val" id="drawer-vib-val">0.18 mm/s</div>
+        <!-- Oscilloscope Canvas -->
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Live Oscilloscope Spectrum</span>
+            <span style="font-size: 10px; color: var(--color-cyan)">60Hz &bull; CH1: VIB / CH2: THERMAL</span>
           </div>
-          <div class="telemetry-cell">
-            <div class="t-label">Core Temp</div>
-            <div class="t-val" id="drawer-temp-val">42.5 &deg;C</div>
-          </div>
-          <div class="telemetry-cell">
-            <div class="t-label">Load Factor</div>
-            <div class="t-val" id="drawer-load-val">82%</div>
-          </div>
-          <div class="telemetry-cell">
-            <div class="t-label">Health Grade</div>
-            <div class="t-val" style="color: var(--color-emerald)">CLASS A</div>
+          <canvas id="vibration-canvas"></canvas>
+          <div class="telemetry-grid" style="margin-top: 10px">
+            <div class="telemetry-cell">
+              <div class="t-label">Vibration RMS</div>
+              <div class="t-val" id="drawer-vib-val">0.18 mm/s</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Core Thermal</div>
+              <div class="t-val" id="drawer-temp-val">42.5 &deg;C</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Load Factor</div>
+              <div class="t-val" id="drawer-load-val">82%</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">ISO 10816 Class</div>
+              <div class="t-val" id="drawer-iso-val" style="color: var(--color-emerald)">Zone A (Good)</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 4. Plant SOP Grounded Recommendations -->
-      <div class="scada-card">
-        <div class="scada-card-title">
-          <span>Local SOP Maintenance Protocol</span>
-          <span style="font-size: 10px; color: var(--color-amber)">OFFLINE NLP</span>
+      <!-- Tab 2: 2021 TCN Prognostics Prediction Card -->
+      <div id="pane-tcn" class="drawer-tab-pane">
+        <div class="scada-card tcn-card">
+          <div class="scada-card-title">
+            <span>2021 TCN Remaining Useful Life</span>
+            <span style="color: var(--color-cyan)">MODEL: DILATED-1D-TCN</span>
+          </div>
+          <div class="tcn-hero-metric">
+            <span class="tcn-cycles-big" id="drawer-rul-cycles">142</span>
+            <span class="tcn-unit">Cycles</span>
+          </div>
+          <div id="drawer-rul-hours" style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono)">
+            &asymp; 63.9 operating hrs
+          </div>
+          <div class="tcn-breakdown-box">
+            <div class="tcn-spec-row">
+              <span>Receptive Field:</span>
+              <strong>d = 1, 2, 4, 8 (Residual Causal)</strong>
+            </div>
+            <div class="tcn-spec-row">
+              <span>Safety Margin:</span>
+              <strong style="color: var(--color-amber)">-15% Asymmetric Buffer Applied</strong>
+            </div>
+            <div class="tcn-spec-row">
+              <span>Feature Integrity:</span>
+              <strong style="color: var(--color-emerald)">Zero Leakage (Observable Only)</strong>
+            </div>
+          </div>
         </div>
-        <div id="drawer-sop-content" class="sop-box">
-          <!-- Populated by JavaScript -->
+      </div>
+
+      <!-- Tab 3: Plant SOP Grounded Recommendations -->
+      <div id="pane-sop" class="drawer-tab-pane">
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Titan Aerospace Standard Operating Procedure</span>
+            <span style="font-size: 10px; color: var(--color-amber)">OFFLINE NLP</span>
+          </div>
+          <div id="drawer-sop-content" class="sop-box">
+            <!-- Populated by JavaScript -->
+          </div>
         </div>
       </div>
     </div>
@@ -145,12 +186,31 @@
     </div>
   </aside>
 
-  <!-- Bottom Event Stream / Copilot Ticker -->
-  <footer id="bottom-feed">
-    <span class="feed-tag" id="feed-tag">SYSTEM</span>
-    <span class="feed-message" id="feed-msg">3D Digital Twin Strategy Operations Center ready.</span>
-    <span class="feed-time" id="feed-time">--:--:--</span>
-  </footer>
+  <!-- End-to-End Process Pipeline & Flow Bar -->
+  <section id="pipeline-ribbon">
+    <div class="ribbon-header">
+      <div class="ribbon-tabs">
+        <button id="tab-pipe-prod" class="tab-btn active">🏭 Manufacturing Line Flow</button>
+        <button id="tab-pipe-ai" class="tab-btn">🧠 AI Inference Reasoning Trace</button>
+      </div>
+      <div class="ribbon-meta">
+        <span class="pipe-meta-item">PARTS: <strong id="pipe-parts-count">0</strong></span>
+        <span class="pipe-meta-item">LINE BALANCE: <strong id="pipe-line-bal">96.8%</strong></span>
+        <span class="pipe-meta-item">DOWNTIME SAVED: <strong id="pipe-savings">$0</strong></span>
+        <button id="btn-ribbon-toggle" class="btn-icon" title="Toggle Pipeline Bar">&#9660;</button>
+      </div>
+    </div>
+
+    <!-- Mode 1: Physical Manufacturing Stages -->
+    <div id="pipeline-view-prod" class="pipeline-stages-track">
+      <!-- Populated dynamically by hud.js from /pipeline/flow -->
+    </div>
+
+    <!-- Mode 2: AI Reasoning Chain -->
+    <div id="pipeline-view-ai" class="pipeline-ai-track" style="display: none;">
+      <!-- Populated dynamically by hud.js from /pipeline/flow -->
+    </div>
+  </section>
 
   <!-- Three.js Offline Vendored Core & Controls -->
   <script src="/vendor/three.min.js"></script>

@@ -642,3 +642,350 @@ html, body {
   color: var(--text-dim);
   font-family: var(--font-mono);
 }
+
+/* ==========================================================================
+   FLOATING CAMERA DIRECTOR BAR
+   ========================================================================== */
+#camera-director-bar {
+  position: absolute;
+  top: 92px;
+  left: 20px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.director-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  margin-right: 4px;
+}
+
+.btn-director {
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-director:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-director.active {
+  color: var(--color-cyan);
+  background: rgba(0, 243, 255, 0.12);
+  border-color: rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+}
+
+/* ==========================================================================
+   END-TO-END PROCESS PIPELINE & FLOW RIBBON
+   ========================================================================== */
+#pipeline-ribbon {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  right: 20px;
+  z-index: 10;
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 243, 255, 0.03);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#pipeline-ribbon.collapsed .pipeline-stages-track,
+#pipeline-ribbon.collapsed .pipeline-ai-track {
+  display: none !important;
+}
+
+.ribbon-header {
+  height: 42px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ribbon-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tab-btn {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-sans);
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+}
+
+.tab-btn.active {
+  color: var(--color-cyan);
+  border-bottom-color: var(--color-cyan);
+}
+
+.ribbon-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.pipe-meta-item strong {
+  color: var(--color-cyan);
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 12px;
+  transition: color 0.15s, transform 0.2s;
+}
+
+.btn-icon:hover {
+  color: #fff;
+}
+
+/* Pipeline Track (Horizontal nodes) */
+.pipeline-stages-track {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.pipe-node {
+  background: rgba(18, 26, 42, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.pipe-node:hover {
+  border-color: rgba(0, 243, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.pipe-node.bottleneck {
+  border-color: var(--color-rose);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+  animation: pulse-border 1.5s infinite alternate;
+}
+
+.pipe-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pipe-stage-tag {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.pipe-status-pill {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.pipe-status-pill.nominal {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-emerald);
+}
+
+.pipe-status-pill.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--color-amber);
+}
+
+.pipe-status-pill.critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--color-rose);
+}
+
+.pipe-node-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pipe-node-component {
+  font-size: 10px;
+  color: var(--color-cyan);
+  font-family: var(--font-mono);
+}
+
+.pipe-node-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+/* AI Pipeline Track */
+.pipeline-ai-track {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.ai-step-card {
+  background: rgba(14, 22, 36, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-step-num {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--color-purple);
+  font-family: var(--font-mono);
+}
+
+.ai-step-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ai-step-metric {
+  font-size: 9px;
+  color: var(--color-cyan);
+  font-family: var(--font-mono);
+}
+
+.ai-step-desc {
+  font-size: 8px;
+  color: var(--text-dim);
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   TABBED SCADA DRAWER STYLING
+   ========================================================================== */
+.drawer-tabs {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.drawer-tab {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.drawer-tab:hover {
+  color: var(--text-main);
+}
+
+.drawer-tab.active {
+  color: var(--color-cyan);
+  border-bottom-color: var(--color-cyan);
+  background: rgba(0, 243, 255, 0.04);
+}
+
+.drawer-tab-pane {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.drawer-tab-pane.active {
+  display: flex;
+}
+
+.tcn-breakdown-box {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tcn-spec-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
