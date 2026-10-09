@@ -9,6 +9,16 @@
 [![ML Backend](https://img.shields.io/badge/Prognostics-2021%20PHM%20Winner%20TCN-00f3ff?style=for-the-badge&logo=pytorch)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/ml_pipeline/tcn_model.py)
 [![Architecture](https://img.shields.io/badge/Agent%20Graph-LangGraph%20Closed--Loop-8b5cf6?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/agents/orchestrator.py)
 [![Theme](https://img.shields.io/badge/UI%20Theme-Executive%20Cleanroom%20(Light%20%26%20Dark)-facc15?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web)
+[![Onboarding Guide](https://img.shields.io/badge/Documentation-About.md%20(Team%20Primer)-10b981?style=for-the-badge&logo=markdown)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/About.md)
+
+> [!IMPORTANT]
+> **New to the project or looking for an onboarding primer?**  
+> 📖 Check out [**`About.md`**](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/About.md) for a comprehensive, beginner-friendly guide written specifically for teammates with zero prior knowledge of this codebase. It covers:
+> - **The 60-Second Plain-English Pitch & Real-World Problem** ($22k/hr downtime & SCADA alarm fatigue)
+> - **How Data Is Collected From Machines** (SimPy 60Hz physics & the strict zero-feature-leakage rule)
+> - **How the ML Models Identify What Is Wrong** (2021 PHM winner TCN, Isolation Forest, ISO 10816 standards, SOP checklists)
+> - **Answers to Most Frequently Asked Business Questions** (ROI, air-gapped security, legacy retrofitting)
+> - **Step-by-Step Local Setup & Viva/Presentation Speaking Guide**
 
 ---
 
@@ -83,6 +93,25 @@ Below are live screenshots of the hardware-accelerated 3D operations center capt
 ### 10. 🚪 Executive Cleanroom Entrance Portal & "TITAN AEROSPACE" Branding
 *South perimeter cleanroom airlock entrance featuring illuminated dual-sided company signage (**"▲ TITAN AEROSPACE"**), automated sliding glass airlock doors with stainless steel handles, emerald green positive-pressure status beacon, security RFID card pedestals, and contamination control tacky floor runner.*
 ![Titan Aerospace Entrance Portal](docs/screenshots/10_titan_aerospace_entrance_portal.png)
+
+---
+
+## 📖 Teammate Master Guide & Architectural Deep-Dive (`About.md`)
+
+For teammates, reviewers, and stakeholders with **zero prior knowledge of this codebase**, we have prepared a comprehensive onboarding primer: [**`About.md`**](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/About.md).
+
+| Section | What You Will Learn | Direct Link |
+| :--- | :--- | :--- |
+| **1. The 60-Second Elevator Pitch** | Plain-English summary: SimCity meets NASA rocket factory diagnostic AI | [`About.md #1`](About.md#1--the-60-second-elevator-pitch-what-is-this) |
+| **2. The Real-World Problem** | Why unplanned downtime costs $22k/hr & how alarms overwhelm operators | [`About.md #2`](About.md#2--the-real-world-problem-we-are-solving) |
+| **3. What is a "Digital Twin"?** | Decoupling physical factory hardware from virtual mathematical models | [`About.md #3`](About.md#3--core-concept-what-is-a-digital-twin) |
+| **4. End-to-End System Pipeline** | Visual diagram showing data flow from physics simulation to 3D WebGL screen | [`About.md #4`](About.md#4--the-end-to-end-system-pipeline) |
+| **5. Machine Telemetry Ingestion** | How sensors collect vibration, temperature, cycle counts, and the Zero-Feature-Leakage rule | [`About.md #5`](About.md#5--how-we-collect-data-from-the-machines) |
+| **6. Machine Learning Diagnostics** | 2021 PHM winner Dilated TCN, Isolation Forest, ISO 10816 standards, and SOP checklists | [`About.md #6`](About.md#6--how-our-ml-models-detect--diagnose-problems) |
+| **7. Common Executive Questions** | Executive FAQ: ROI payback, 100% offline ITAR security, legacy retrofits, and alarm fatigue | [`About.md #7`](About.md#7--the-most-frequently-asked-business--executive-questions) |
+| **8. Codebase Directory Tour** | File-by-file guide explaining the purpose of every folder and module in the repo | [`About.md #8`](About.md#8--repository-tour-where-everything-lives) |
+| **9. Teammate Local Setup Guide** | 2-minute setup, verification tests, and interactive demo walkthrough | [`About.md #9`](About.md#9--teammate-setup-how-to-run-and-demo-it-locally) |
+| **10. How to Present This Project** | A 4-step speaking script ready for project presentations, reviews, or vivas | [`About.md #10`](About.md#10--how-to-present--pitch-this-in-a-presentation-or-viva) |
 
 ---
 

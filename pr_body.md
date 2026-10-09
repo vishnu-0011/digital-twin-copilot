@@ -78,6 +78,10 @@
 * **Perimeter Declutter**: Removed all 12 perimeter structural columns and overhead gantry crane clutter, delivering an unencumbered, crystal-clear 3D RTS camera view.
 * **Dedicated Director Preset**: Added a `🚪 Entrance` camera preset button in the Director bar to glide the viewport directly to the front airlock portal.
 
+#### 6. Teammate Master Guide & Architectural Deep-Dive (`About.md`)
+* Added comprehensive, beginner-friendly **`About.md`** for teammates and reviewers with zero prior knowledge of the project.
+* Covers plain-English pitch, physical vs digital twin concept, telemetry ingestion & zero-feature leakage, 2021 PHM TCN model mechanics, ISO 10816 standards, executive FAQ (ROI, air-gapped security, brownfield retrofit, alarm fatigue), file-by-file directory tour, local demo guide, and presentation pitch script.
+
 ---
 
 ### 🧪 Verification
