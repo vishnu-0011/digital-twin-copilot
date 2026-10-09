@@ -5,12 +5,17 @@
 
 ---
 
-### 📸 Visual Showcase: Executive Cleanroom Mega-Factory (9 Live Views)
+### 🎥 Live Motion Demonstration (3-Second Tour)
+![Titan Aerospace Operations Tour](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/videos/factory_tour.gif)
+
+---
+
+### 📸 Visual Showcase: Executive Cleanroom Mega-Factory (10 Live Views)
 
 | 🌐 **1. Executive Cleanroom Mega-Factory (Overview)** | ⚙️ **2. Bay 1: CNC Machining Centers** |
 | :---: | :---: |
 | ![01_cleanroom_mega_factory_overview](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/01_cleanroom_mega_factory_overview.png) | ![02_bay1_cnc_machining_centers](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/02_bay1_cnc_machining_centers.png) |
-| *Full 64m × 48m cleanroom epoxy slab with 8 workcells across 4 bays, open unobstructed ceiling, and 10-stage pipeline ribbon.* | *`CNC-01` 5-Axis Heavy Roughing Mill and `CNC-02` High-Speed Airfoil Finishing Center with mist extraction & Siemens 840D.* |
+| *Full 64m × 48m cleanroom epoxy slab with 8 workcells across 4 bays, open unobstructed perimeter, and 10-stage pipeline ribbon.* | *`CNC-01` 5-Axis Heavy Roughing Mill and `CNC-02` High-Speed Airfoil Finishing Center with mist extraction & Siemens 840D.* |
 
 | 🔨 **3. Bay 2: Heavy Forming & Thermal Treatment** | 🤖 **4. Bay 3: Robotics & Quality Control** |
 | :---: | :---: |
@@ -27,10 +32,10 @@
 | ![07_cleanroom_scada_diagnostics](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/07_cleanroom_scada_diagnostics.png) | ![08_end_to_end_10stage_pipeline](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/08_end_to_end_10stage_pipeline.png) |
 | *Slide-out SCADA drawer with live 60 FPS oscilloscope, 2021 TCN RUL forecast, ISO 10816 bands, and closed-loop maintenance button.* | *Interactive docked ribbon mapping all 10 physical stages with real-time WIP counters, cycle times, and click-to-focus.* |
 
-| 🌙 **9. Cyberpunk Strategy Night Theme (Instant Toggle)** |
-| :---: |
-| ![09_dark_mode_cyberpunk_view](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/09_dark_mode_cyberpunk_view.png) |
-| *Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches the entire 3D environment to a dark metallic reflective grid with glowing cyan laser tracks.* |
+| 🚪 **9. Executive Entrance Portal & Signage** | 🌙 **10. Cyberpunk Strategy Night Theme** |
+| :---: | :---: |
+| ![10_titan_aerospace_entrance_portal](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/10_titan_aerospace_entrance_portal.png) | ![09_dark_mode_cyberpunk_view](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/09_dark_mode_cyberpunk_view.png) |
+| *Illuminated dual-sided "▲ TITAN AEROSPACE" company signage, automated sliding glass airlock doors, RFID scanner pedestals, and tacky mat runner.* | *Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches the entire 3D environment to a dark metallic reflective grid with glowing cyan laser tracks.* |
 
 ---
 
@@ -66,6 +71,12 @@
 * **Zero Feature Leakage**: Strictly observable sensors (`vibration_rms`, `temperature_c`, $\Delta\text{vib}$, $\Delta\text{temp}$).
 * **15% Asymmetric Safety Buffer**: $\text{RUL}_{\text{safe}} = 0.85 \times \text{RUL}_{\text{pred}}$ preventing catastrophic spindle tool crashes.
 * **Zero Node/NPM build overhead & zero API keys required**.
+
+#### 5. Executive Cleanroom Entrance Portal & Unobstructed Perimeter
+* **"TITAN AEROSPACE" Branding**: Dual-sided high-resolution illuminated signage rendered via dynamic HTML5 canvas texture with glowing cyan borders, aerospace chevron emblem, and ISO Class 6 operational tags.
+* **Architectural Airlock**: Frameless sliding glass doors with brushed stainless steel handles, emerald green positive-pressure status indicator strip, and RFID security card pedestals.
+* **Perimeter Declutter**: Removed all 12 perimeter structural columns and overhead gantry crane clutter, delivering an unencumbered, crystal-clear 3D RTS camera view.
+* **Dedicated Director Preset**: Added a `🚪 Entrance` camera preset button in the Director bar to glide the viewport directly to the front airlock portal.
 
 ---
 

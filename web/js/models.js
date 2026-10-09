@@ -20,6 +20,18 @@ export const MAT = {
   hazardDark: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 }),
   structuralSteel: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.35, metalness: 0.75 }),
   safetyRail: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.5 }),
+  portalArch: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.25, metalness: 0.8 }),
+  portalWhite: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2, metalness: 0.2 }),
+  portalGlass: new THREE.MeshPhysicalMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.35,
+    transmission: 0.85,
+    roughness: 0.05,
+    metalness: 0.15,
+  }),
+  portalBeaconGreen: new THREE.MeshBasicMaterial({ color: 0x10b981 }),
+  portalGlowCyan: new THREE.MeshBasicMaterial({ color: 0x00f3ff }),
 
   // High-Bay Warehouse Racking (ASRS)
   rackBlue: new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4, metalness: 0.6 }),
@@ -181,28 +193,8 @@ export function createFactoryFloor(scene) {
     group.add(borderMesh);
   });
 
-  // STRUCTURAL STEEL COLUMNS ALONG PERIMETER
-  const colGeo = new THREE.BoxGeometry(1.0, 16, 1.0);
-  const columnPositions = [
-    [-30, 8, -22], [30, 8, -22],
-    [-30, 8, 22], [30, 8, 22],
-    [-30, 8, 0], [30, 8, 0],
-    [0, 8, -22], [0, 8, 22],
-    [-15, 8, -22], [15, 8, -22],
-    [-15, 8, 22], [15, 8, 22],
-  ];
-
-  columnPositions.forEach(([cx, cy, cz]) => {
-    const col = new THREE.Mesh(colGeo, MAT.structuralSteel);
-    col.position.set(cx, cy, cz);
-    col.castShadow = true;
-    group.add(col);
-
-    const footGeo = new THREE.BoxGeometry(1.6, 0.3, 1.6);
-    const foot = new THREE.Mesh(footGeo, MAT.structuralSteel);
-    foot.position.set(cx, 0.15, cz);
-    group.add(foot);
-  });
+  // EXECUTIVE CLEANROOM ENTRANCE PORTAL & BRANDING (TITAN AEROSPACE)
+  createCleanroomEntrancePortal(group);
 
   // HIGH-BAY WAREHOUSE PALLET STORAGE RACKS (ASRS)
   createWarehouseRack(group, -22, -18);
@@ -291,6 +283,321 @@ function createDualCorridorPaths(parentGroup) {
   });
 
   parentGroup.add(corridorGroup);
+}
+
+/**
+ * Procedural Dynamic Signage Canvas Textures
+ */
+function createSignboardTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  // Background gradient: Aerospace carbon slate
+  const grad = ctx.createLinearGradient(0, 0, 2048, 512);
+  grad.addColorStop(0, '#030712');
+  grad.addColorStop(0.5, '#0b1329');
+  grad.addColorStop(1, '#030712');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 2048, 512);
+
+  // High-tech subtle grid pattern
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 2048; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 512);
+    ctx.stroke();
+  }
+  for (let y = 0; y < 512; y += 32) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(2048, y);
+    ctx.stroke();
+  }
+
+  // Neon Cyan Outer Border with double-stroke
+  ctx.strokeStyle = '#00f3ff';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(16, 16, 2016, 480);
+  ctx.strokeStyle = 'rgba(2, 132, 199, 0.6)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(32, 32, 1984, 448);
+
+  // Top Accent Header Bar
+  ctx.fillStyle = '#00f3ff';
+  ctx.fillRect(80, 48, 1888, 6);
+
+  // Top Tagline
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 36px "Segoe UI", -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('A E R O S P A C E   D I G I T A L   T W I N   F A C I L I T Y', 1024, 90);
+
+  // Logo Chevron & Company Main Title
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 128px "Segoe UI", Inter, sans-serif';
+  ctx.shadowColor = '#00f3ff';
+  ctx.shadowBlur = 24;
+  ctx.fillText('▲  TITAN AEROSPACE', 1024, 210);
+
+  // Reset shadow
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '600 44px "Segoe UI", sans-serif';
+  ctx.fillText('PRECISION PROPULSION & AIRFRAME ADVANCED MANUFACTURING', 1024, 305);
+
+  // Bottom Status Indicators Bar
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(60, 365, 1928, 90);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(60, 365, 1928, 90);
+
+  // Pill 1: Cleanroom Spec
+  ctx.fillStyle = '#10b981';
+  ctx.fillRect(90, 385, 360, 50);
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText('ISO CLASS 6 CLEANROOM', 270, 410);
+
+  // Pill 2: Airlock Status
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(490, 385, 420, 50);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('MAIN AIRLOCK • BAYS 01-04', 700, 410);
+
+  // Pill 3: Access Mode
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(950, 385, 420, 50);
+  ctx.fillStyle = '#0f172a';
+  ctx.fillText('AUTOMATED ACCESS ACTIVE', 1160, 410);
+
+  // Pill 4: Badge ID
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(1410, 385, 540, 50);
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('AUTHORIZED PERSONNEL ONLY', 1680, 410);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 8;
+  return texture;
+}
+
+function createThresholdMatTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  // Cleanroom tacky mat blue
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(0, 0, 1024, 512);
+
+  // Hazard border
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 16;
+  ctx.strokeRect(10, 10, 1004, 492);
+
+  // Diagonal hazard stripes on borders
+  ctx.fillStyle = '#0f172a';
+  for (let i = 0; i < 1024; i += 60) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i + 30, 0);
+    ctx.lineTo(i + 10, 30);
+    ctx.lineTo(i - 20, 30);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(i, 482);
+    ctx.lineTo(i + 30, 482);
+    ctx.lineTo(i + 10, 512);
+    ctx.lineTo(i - 20, 512);
+    ctx.fill();
+  }
+
+  // Inner box
+  ctx.fillStyle = '#0369a1';
+  ctx.fillRect(40, 50, 944, 412);
+
+  // Center Text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 52px "Segoe UI", Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('▲  TITAN AEROSPACE  ▲', 512, 170);
+
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 36px "Segoe UI", sans-serif';
+  ctx.fillText('CLEANROOM ENTRY THRESHOLD', 512, 240);
+
+  ctx.fillStyle = '#facc15';
+  ctx.font = 'bold 26px monospace';
+  ctx.fillText('DECONTAMINATION AIRLOCK • ISO-14644 CLASS 6', 512, 310);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '22px sans-serif';
+  ctx.fillText('STEP ON TACKY MAT PRIOR TO ENTERING PRODUCTION FLOOR', 512, 375);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 8;
+  return texture;
+}
+
+/**
+ * 1. EXECUTIVE CLEANROOM ENTRANCE PORTAL & BRANDING (TITAN AEROSPACE)
+ */
+function createCleanroomEntrancePortal(parentGroup) {
+  const portalRoot = new THREE.Group();
+  portalRoot.position.set(0, 0, 23.0);
+
+  // 1. FLOOR TACKY MAT & THRESHOLD RAMP
+  const matGeo = new THREE.PlaneGeometry(10.0, 3.2);
+  const matTex = createThresholdMatTexture();
+  const matMat = new THREE.MeshStandardMaterial({
+    map: matTex,
+    roughness: 0.4,
+    metalness: 0.1,
+  });
+  const matMesh = new THREE.Mesh(matGeo, matMat);
+  matMesh.rotation.x = -Math.PI / 2;
+  matMesh.position.set(0, 0.025, -0.6);
+  matMesh.receiveShadow = true;
+  portalRoot.add(matMesh);
+
+  // 2. ARCHITECTURAL PORTAL PYLONS (LEFT & RIGHT)
+  const pylonGeo = new THREE.BoxGeometry(1.2, 5.4, 1.6);
+  const leftPylon = new THREE.Mesh(pylonGeo, MAT.portalArch);
+  leftPylon.position.set(-5.6, 2.7, 0);
+  leftPylon.castShadow = true;
+  portalRoot.add(leftPylon);
+
+  const rightPylon = new THREE.Mesh(pylonGeo, MAT.portalArch);
+  rightPylon.position.set(5.6, 2.7, 0);
+  rightPylon.castShadow = true;
+  portalRoot.add(rightPylon);
+
+  // Pylon Decorative White Cleanroom Fascia Inserts
+  const pylonFasciaGeo = new THREE.BoxGeometry(0.9, 5.0, 0.1);
+  const leftFascia = new THREE.Mesh(pylonFasciaGeo, MAT.portalWhite);
+  leftFascia.position.set(-5.6, 2.7, 0.82);
+  portalRoot.add(leftFascia);
+
+  const rightFascia = new THREE.Mesh(pylonFasciaGeo, MAT.portalWhite);
+  rightFascia.position.set(5.6, 2.7, 0.82);
+  portalRoot.add(rightFascia);
+
+  // 3. OVERHEAD CANOPY LINTEL / FASCIA
+  const lintelGeo = new THREE.BoxGeometry(12.4, 1.4, 2.0);
+  const lintel = new THREE.Mesh(lintelGeo, MAT.portalArch);
+  lintel.position.set(0, 5.5, 0);
+  lintel.castShadow = true;
+  portalRoot.add(lintel);
+
+  // 4. ILLUMINATED TITAN AEROSPACE COMPANY SIGNBOARD (SOUTH FACE & NORTH FACE)
+  const signTex = createSignboardTexture();
+  const signMat = new THREE.MeshStandardMaterial({
+    map: signTex,
+    roughness: 0.2,
+    metalness: 0.3,
+    emissive: 0x0284c7,
+    emissiveIntensity: 0.35,
+  });
+
+  const signGeo = new THREE.PlaneGeometry(10.8, 1.3);
+
+  // South Face (facing approaching camera / entrance exterior)
+  const signSouth = new THREE.Mesh(signGeo, signMat);
+  signSouth.position.set(0, 5.5, 1.02);
+  portalRoot.add(signSouth);
+
+  // North Face (facing into factory floor)
+  const signNorth = new THREE.Mesh(signGeo, signMat);
+  signNorth.position.set(0, 5.5, -1.02);
+  signNorth.rotation.y = Math.PI;
+  portalRoot.add(signNorth);
+
+  // Glowing Cyan Accent Strip Under Signboard
+  const stripGeo = new THREE.BoxGeometry(11.2, 0.08, 0.08);
+  const stripSouth = new THREE.Mesh(stripGeo, MAT.portalGlowCyan);
+  stripSouth.position.set(0, 4.75, 1.03);
+  portalRoot.add(stripSouth);
+
+  const stripNorth = new THREE.Mesh(stripGeo, MAT.portalGlowCyan);
+  stripNorth.position.set(0, 4.75, -1.03);
+  portalRoot.add(stripNorth);
+
+  // 5. AIRLOCK HEADER BEACON (EMERALD GREEN "NOMINAL" STRIP)
+  const beaconGeo = new THREE.BoxGeometry(7.0, 0.12, 0.12);
+  const beacon = new THREE.Mesh(beaconGeo, MAT.portalBeaconGreen);
+  beacon.position.set(0, 4.65, 0);
+  portalRoot.add(beacon);
+
+  // 6. DUAL SLIDING GLASS AIRLOCK DOORS
+  const doorGeo = new THREE.BoxGeometry(2.35, 4.2, 0.08);
+
+  // Left Glass Door
+  const leftDoor = new THREE.Mesh(doorGeo, MAT.portalGlass);
+  leftDoor.position.set(-1.3, 2.2, 0);
+  portalRoot.add(leftDoor);
+
+  // Right Glass Door
+  const rightDoor = new THREE.Mesh(doorGeo, MAT.portalGlass);
+  rightDoor.position.set(1.3, 2.2, 0);
+  portalRoot.add(rightDoor);
+
+  // Door Metal Frames & Push-Pull Handles
+  const frameGeo = new THREE.BoxGeometry(0.12, 4.2, 0.12);
+  [-2.45, -0.15, 0.15, 2.45].forEach(fx => {
+    const frame = new THREE.Mesh(frameGeo, MAT.steelChrome);
+    frame.position.set(fx, 2.2, 0);
+    portalRoot.add(frame);
+  });
+
+  const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.8);
+  const leftHandle = new THREE.Mesh(handleGeo, MAT.steelChrome);
+  leftHandle.position.set(-0.35, 1.8, 0.1);
+  portalRoot.add(leftHandle);
+
+  const rightHandle = new THREE.Mesh(handleGeo, MAT.steelChrome);
+  rightHandle.position.set(0.35, 1.8, 0.1);
+  portalRoot.add(rightHandle);
+
+  // Frosted manifestation horizontal decals on glass
+  const decalGeo = new THREE.BoxGeometry(2.2, 0.06, 0.09);
+  [1.4, 1.7, 2.0].forEach(dy => {
+    const dL = new THREE.Mesh(decalGeo, MAT.portalWhite);
+    dL.position.set(-1.3, dy, 0);
+    portalRoot.add(dL);
+
+    const dR = new THREE.Mesh(decalGeo, MAT.portalWhite);
+    dR.position.set(1.3, dy, 0);
+    portalRoot.add(dR);
+  });
+
+  // 7. SECURITY BADGE ACCESS PEDESTALS (TURNSTILE / TERMINAL)
+  [-4.2, 4.2].forEach(px => {
+    const pedestalGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
+    const ped = new THREE.Mesh(pedestalGeo, MAT.machineDark);
+    ped.position.set(px, 0.6, 0.5);
+    portalRoot.add(ped);
+
+    // Screen scanner
+    const screenGeo = new THREE.BoxGeometry(0.25, 0.3, 0.02);
+    const screen = new THREE.Mesh(screenGeo, MAT.portalGlowCyan);
+    screen.position.set(px, 1.1, 0.71);
+    screen.rotation.x = -Math.PI / 8;
+    portalRoot.add(screen);
+  });
+
+  parentGroup.add(portalRoot);
+  return portalRoot;
 }
 
 /**

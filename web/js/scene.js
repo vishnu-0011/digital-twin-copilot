@@ -274,6 +274,10 @@ export function setCameraPreset(presetName) {
     case 'agv2':
       agv2FollowMode = true;
       break;
+    case 'entrance': // Main Entrance (TITAN AEROSPACE Portal)
+      targetCamPos = new THREE.Vector3(0, 7.5, 36.0);
+      targetLookAt = new THREE.Vector3(0, 3.6, 23.0);
+      break;
     default:
       // Focus on specific machine ID
       if (machines.has(presetName)) {

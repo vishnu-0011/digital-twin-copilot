@@ -1,38 +1,24 @@
-# Phase Context: Executive Cleanroom Mega-Factory (Light Theme & Expanded 8-Machine Fleet)
+# Phase Context: Cleanroom Perimeter Declutter & Executive Entrance Portal
 
 ## Problem & User Intent
-The user asked:
-> "why is the factory so small ? do we have only that data ? no nmore data is present other than that in our system ?"
-> "option 1 but try to use the light theme , this doesnt catch the eye of the HOD , ok ? and also remove the AI slops"
+The user requested:
+1. **Remove side pillars**: Eliminate all perimeter structural columns in the 3D scene to create an expansive, modern, unencumbered cleanroom vista.
+2. **Company Name & Factory Entrance in 3D Rendering**: Build an architectural entrance structure directly in Three.js featuring the company name **"TITAN AEROSPACE"** (Front South Portal aligned with user selection: executive glass airlock entrance, illuminated cyan/gold signage, automated sliding doors, and ISO-Class cleanroom floor threshold markings).
+3. **Record a 3-second Video**: Capture motion of the live operations center, save video/GIF artifacts, embed them into `README.md`, and commit/push the update to the PR branch.
 
-The user's Head of Department (HOD) / executive stakeholders require:
-1. **Scale**: A full-scale enterprise mega-factory with 8–10 distinct workcells across multiple bays, multiple AMRs, and deep multi-shift telemetry.
-2. **Executive Light Theme**: A clean, modern, high-contrast, professional light cleanroom aesthetic (Porsche / Apple / Siemens industrial cleanroom) rather than a moody dark theme, maximizing executive presentation clarity.
-3. **Zero AI Slop**: Elimination of buzzwordy AI fluff in favor of concrete industrial manufacturing reality (real machine models, ISO 10816 vibration classes, OEE breakdown, real cycle times, and physical SimPy dynamics).
-
-## Locked Architectural Decisions
-- **Enterprise Fleet Scale (8 Workcells + 2 AMRs)**:
-  - `CNC-01`: 5-Axis Inconel Turbine Roughing Mill
-  - `CNC-02`: 5-Axis High-Speed Airfoil Finishing Center
-  - `PRESS-01`: 1000-Ton Airframe Bulkhead Forging Press
-  - `PRESS-02`: 500-Ton Hydraulic Extrusion Press
-  - `FURN-01`: Vacuum Heat Treatment Carburizing Furnace
-  - `ROBOT-01`: 6-DOF Robotic Deburring & Polishing Workcell
-  - `CONV-01`: Main Avionics Assembly Conveyor
-  - `LASER-01`: Dual-Axis Laser Triangulation QC Arch
-  - `AGV-01` & `AGV-02`: Dual Autonomous Mobile Robots patrolling coordinated transit corridors.
-- **Executive Cleanroom Light Theme**:
-  - Pristine polished architectural white epoxy slab with crisp daylight floodlights and subtle soft shadows.
-  - Frost-white glassmorphic HUD, high-contrast dark slate typography (`#0f172a`), crisp emerald/amber/red status indicators.
-  - Light-themed dual-channel oscilloscope canvas with dark slate text and vivid vibration/temperature traces.
-  - Dynamic Theme Switcher (`☀️ Light / 🌙 Dark`) preserved for user flexibility.
-- **Backend & Physics Expansion**:
-  - Expand `DEFAULT_FLEET` in `digital_twin/simulator.py` to all 8 workcells.
-  - Expand `GET /pipeline/flow` to map all 8 physical stages and the 6-step AI reasoning trace.
-  - Full automated test suite compatibility across all 8 machines.
+## Mental Model & Core Abstractions
+- **Architectural Cleanroom Esthetic**: ISO Class 6 aerospace manufacturing facility without heavy ceiling trusses or obscuring perimeter posts. Polished white epoxy floor seamlessly transitions into a high-tech entrance portal.
+- **Front South Portal (`ENTRANCE-01`)**:
+  - Located at $X = 0, Z = 24$, greeting personnel entering the facility.
+  - Features an architectural portal arch with illuminated cyan/gold backlit signage rendered via dynamic HTML5 canvas texture: **"TITAN AEROSPACE"** with subtitle **"PRECISION FABRICATION • CLEANROOM ACCESS • BAYS 01-04"**.
+  - Dual automated frameless glass airlock doors with brushed stainless headers.
+  - Air-shower decontamination arch with perimeter LED status lighting (green nominal).
+  - High-visibility floor threshold warning stripes and stenciled entry typography: **"AUTHORIZED PERSONNEL ONLY • ISO CLASS 6"**.
+- **Perimeter Unobstructed View**:
+  - Removal of the 12 perimeter structural steel columns eliminates all camera line-of-sight clipping, giving a pure strategy-game isometric presentation.
 
 ## Verification & Backpressure Seams
-- Test suite: `./venv/bin/python -m unittest discover -s tests -p "test_*.py"`
-- JavaScript validation: `node --check web/js/*.js`
-- Live endpoint checks: `GET /fleet` (8 machines returned), `GET /pipeline/flow` (8 stages mapped).
-
+- **JavaScript Syntax**: `node --check web/js/*.js` (0 errors).
+- **Backend Tests**: `./venv/bin/python -m unittest tests/test_api_web.py` (all tests passing).
+- **Video & GIF Generation**: `record_video.py` producing `docs/videos/factory_tour.webm` and `docs/videos/factory_tour.gif`.
+- **Git Compliance**: Repo-local personal identity (`Yashwant00CR7` / `10a19yashwant@gmail.com`) via `github-personal`.

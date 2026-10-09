@@ -80,14 +80,22 @@ def capture_all():
         page.screenshot(path=f"{screenshots_dir}/08_end_to_end_10stage_pipeline.png")
         print("Captured: 08_end_to_end_10stage_pipeline.png")
 
-        # 9. Toggle Theme to Dark Mode
+        # 9. Main Entrance Portal: Cleanroom Access & 'TITAN AEROSPACE' Signage
+        page.click("button[data-preset='entrance']")
+        page.wait_for_timeout(2000)
+        page.screenshot(path=f"{screenshots_dir}/10_titan_aerospace_entrance_portal.png")
+        print("Captured: 10_titan_aerospace_entrance_portal.png")
+
+        # 10. Toggle Theme to Dark Mode
+        page.click("button[data-preset='global']")
+        page.wait_for_timeout(1000)
         page.evaluate("document.getElementById('btn-theme') && document.getElementById('btn-theme').click()")
         page.wait_for_timeout(1800)
         page.screenshot(path=f"{screenshots_dir}/09_dark_mode_cyberpunk_view.png")
         print("Captured: 09_dark_mode_cyberpunk_view.png")
         
         browser.close()
-        print("All 9 screenshots captured successfully!")
+        print("All 10 screenshots captured successfully!")
 
 if __name__ == "__main__":
     capture_all()

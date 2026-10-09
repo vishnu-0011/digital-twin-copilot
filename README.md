@@ -12,12 +12,22 @@
 
 ---
 
+## 🎥 Live Motion Demonstration (3-Second Cleanroom Tour)
+
+> **Continuous 60 FPS WebGL simulation loop:** Autonomous AMRs patrolling corridors, robotic deburring arm in motion, and live 10-stage WIP line flow.
+
+![Titan Aerospace Operations Tour](docs/videos/factory_tour.gif)
+
+*Native 720p 60 FPS recording available in [`docs/videos/factory_tour.webm`](docs/videos/factory_tour.webm).*
+
+---
+
 ## 📸 Visual Showcase: Executive Cleanroom Mega-Factory
 
 Below are live screenshots of the hardware-accelerated 3D operations center captured directly from the running WebGL simulation across multiple camera angles and operational states:
 
 ### 1. 🌐 Global Factory Overview (Executive Cleanroom Mega-Factory)
-*Full plant overview featuring an expanded 64m × 48m polished white epoxy cleanroom floor, multi-tier High-Bay Storage Racks (ASRS), perimeter structural columns, 8 specialized workcells across 4 zoned production bays, floating screen-space holographic telemetry badges, and the live 10-stage manufacturing line flow ribbon.*
+*Full plant overview featuring an expanded 64m × 48m polished white epoxy cleanroom floor, unobstructed open-perimeter vista (all pillars and overhead clutter removed), architectural entrance portal with glowing "TITAN AEROSPACE" company signage, 8 specialized workcells across 4 zoned bays, floating screen-space telemetry badges, and live 10-stage process pipeline.*
 ![Global Cleanroom Factory Overview](docs/screenshots/01_cleanroom_mega_factory_overview.png)
 
 ---
@@ -67,6 +77,12 @@ Below are live screenshots of the hardware-accelerated 3D operations center capt
 ### 9. 🌙 Cyberpunk Strategy Theme (Instant Toggle)
 *Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches the entire 3D environment to a dark metallic reflective grid with glowing cyan laser radar tracks and high-contrast night HUD.*
 ![Dark Mode Cyberpunk View](docs/screenshots/09_dark_mode_cyberpunk_view.png)
+
+---
+
+### 10. 🚪 Executive Cleanroom Entrance Portal & "TITAN AEROSPACE" Branding
+*South perimeter cleanroom airlock entrance featuring illuminated dual-sided company signage (**"▲ TITAN AEROSPACE"**), automated sliding glass airlock doors with stainless steel handles, emerald green positive-pressure status beacon, security RFID card pedestals, and contamination control tacky floor runner.*
+![Titan Aerospace Entrance Portal](docs/screenshots/10_titan_aerospace_entrance_portal.png)
 
 ---
 

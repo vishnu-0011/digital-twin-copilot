@@ -1,19 +1,20 @@
 # GSD Project State: Titan Aerospace Digital Twin Copilot
 
-**Active Milestone:** v4.0 - Executive Cleanroom Mega-Factory (Light Theme & 8-Machine Fleet)
-**Current Phase:** Phase 1 - Mega-Factory Physics Scale & Executive Cleanroom UI
-**Status:** Complete (All 4 Waves Executed & Verified)
-**Last Updated:** 2026-10-09 15:35:00
+**Active Milestone:** v4.1 - Cleanroom Perimeter Declutter, Architectural Entrance & Motion Showcase
+**Current Phase:** Phase 5 - Cleanroom Entrance & Media Showcase
+**Status:** Complete (All 3 Waves Executed & Verified)
+**Last Updated:** 2026-10-09 16:23:00
 **Active Workstream:** feat/3d-strategy-game-ui
 
 ## Active Decisions & Constraints
-- **Fleet Scale:** 8 distinct aerospace workcells (`CNC-01`, `CNC-02`, `PRESS-01`, `PRESS-02`, `FURN-01`, `ROBOT-01`, `CONV-01`, `LASER-01`) across 4 zoned bays + 2 roving AMRs (`AGV-01`, `AGV-02`).
-- **Executive Cleanroom Light Theme:** Polished white epoxy floor, crisp daylight illumination, frost-white glassmorphic HUD with high-contrast slate typography (`#0f172a`), emerald/amber/red status indicators, and toggleable theme support (`☀️ Light / 🌙 Dark`).
-- **Zero AI Slop:** Real industrial machinery taxonomy, ISO 10816 vibration severity zones A-D, actual manufacturing cycle times, and physical SimPy discrete-event dynamics.
-- **100% Offline & Pure ML:** Zero API keys, zero node build tools, vendored Three.js.
+- **Perimeter Declutter:** All 12 perimeter structural steel columns removed, eliminating all camera occlusion and vertical clutter.
+- **Architectural Entrance:** Front South Portal at $Z \approx 23.0$, featuring illuminated "TITAN AEROSPACE" company signage, dual sliding glass doors, emerald green status indicator, security badge pedestals, and tacky mat runner.
+- **Director Camera:** Dedicated `🚪 Entrance` preset button added for instantaneous camera gliding.
+- **Motion Capture:** 3-second motion loop recorded as `.webm` (native Playwright) and compiled as an optimized 2.2MB `.gif` (Pillow) embedded directly in `README.md` and `pr_body.md`.
+- **Git Compliance:** Strictly personal git identity (`Yashwant00CR7` / `10a19yashwant@gmail.com`) via `github-personal` SSH remote.
 
 ## Current Position
-- Phase: 01-mega-factory-light-cleanroom
-- Total Waves: 4
-- Completed Waves: 4 (Wave 1: Physics & API; Wave 2: Executive Light Theme UI; Wave 3: 3D Models & 4 Bays; Wave 4: Verification, 9 Screenshots, Documentation)
-- Next Action: Ship to branch and present walkthrough to user
+- Phase: 05-cleanroom-entrance-declutter
+- Total Waves: 3
+- Completed Waves: 3 (Wave 1: 3D Entrance & Declutter; Wave 2: Video Recording & 1080p Screenshots; Wave 3: README & PR Documentation)
+- Next Action: Pre-push verification, commit and push to PR branch
