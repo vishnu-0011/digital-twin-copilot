@@ -152,6 +152,27 @@ function setupControls(canvasContainer) {
     });
   }
 
+  // "⟲ Reset Shift" Fleet button
+  const resetFleetBtn = document.getElementById('btn-reset-fleet');
+  if (resetFleetBtn) {
+    resetFleetBtn.addEventListener('click', async () => {
+      playClick();
+      resetFleetBtn.disabled = true;
+      addLogMessage("Resetting shift: Restoring all workcells to nominal status...", "SHIFT");
+
+      try {
+        await fetch('/fleet/reset', { method: 'POST' });
+        playRepairSuccess();
+        await fetchAllData();
+        addLogMessage("Shift reset complete. All workcells operating at nominal wear.", "SUCCESS");
+      } catch (err) {
+        console.error("Fleet reset failed:", err);
+      } finally {
+        resetFleetBtn.disabled = false;
+      }
+    });
+  }
+
   // "⟲ Reset View" button
   const resetBtn = document.getElementById('btn-reset-cam');
   if (resetBtn) {

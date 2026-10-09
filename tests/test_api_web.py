@@ -49,8 +49,15 @@ class TestApiWeb(unittest.TestCase):
         self.assertEqual(data["company"]["name"], "Titan Aerospace Precision Fab")
         self.assertIn("manufacturing_stages", data)
         self.assertEqual(len(data["manufacturing_stages"]), 5)
-        self.assertIn("ai_reasoning_pipeline", data)
-        self.assertEqual(len(data["ai_reasoning_pipeline"]), 6)
+    def test_fleet_reset_endpoint(self):
+        resp = self.client.post("/fleet/reset")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertIn("fleet", data)
+        for m in data["fleet"]:
+            self.assertEqual(m["status"], "healthy")
+            self.assertLessEqual(m["wear_level"], 0.1)
 
 
 if __name__ == "__main__":

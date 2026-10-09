@@ -22,6 +22,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from digital_twin.simulator import FactoryTwin
+from digital_twin.models import MachineStatus
 from ml_pipeline.anomaly_detector import AnomalyDetector
 from ml_pipeline.rul_predictor import RULPredictor, label_rul
 from rag.knowledge_base import MaintenanceKnowledgeBase
@@ -34,9 +35,10 @@ app_state: dict = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    twin = FactoryTwin()
-    twin.run(duration_s=20000)  # warm up so ML models have failure examples
-    history = twin.history_dataframe()
+    # 1. Warm up offline ML models with synthetic run-to-failure historical data
+    training_twin = FactoryTwin(seed=42)
+    training_twin.run(duration_s=20000)
+    history = training_twin.history_dataframe()
 
     detector = AnomalyDetector().fit(history)
     predictor = RULPredictor().fit(label_rul(history))
@@ -44,11 +46,15 @@ async def lifespan(app: FastAPI):
     kb = MaintenanceKnowledgeBase()
     kb.ingest_directory()
 
-    app_state["twin"] = twin
+    # 2. Live production plant starts fresh in an active nominal shift (~20 min run-in)
+    live_twin = FactoryTwin(seed=101)
+    live_twin.run(duration_s=1200)
+
+    app_state["twin"] = live_twin
     app_state["detector"] = detector
     app_state["predictor"] = predictor
     app_state["kb"] = kb
-    app_state["graph"] = build_copilot_graph(twin, detector, predictor, kb)
+    app_state["graph"] = build_copilot_graph(live_twin, detector, predictor, kb)
 
     yield
     app_state.clear()
@@ -115,10 +121,32 @@ class MaintenanceTriggerRequest(BaseModel):
 @app.post("/maintenance/trigger")
 def trigger_maintenance(req: MaintenanceTriggerRequest):
     twin: FactoryTwin = app_state["twin"]
-    scheduled = twin.schedule_maintenance(req.machine_id)
+    m_twin = twin.machines.get(req.machine_id)
+    if m_twin:
+        m_twin.wear_level = 0.0
+        m_twin.status = MachineStatus.HEALTHY
+        m_twin._emit_state()
+        scheduled = True
+    else:
+        scheduled = False
     return {
         "machine_id": req.machine_id,
         "scheduled": scheduled,
+        "fleet": [s.to_dict() for s in twin.get_latest_states()],
+    }
+
+
+@app.post("/fleet/reset")
+def reset_fleet():
+    """Resets all machines in the live factory twin back to nominal fresh-shift status."""
+    twin: FactoryTwin = app_state["twin"]
+    for m in twin.machines.values():
+        m.wear_level = 0.05
+        m.status = MachineStatus.HEALTHY
+        m._emit_state()
+    return {
+        "status": "SUCCESS",
+        "message": "All workcells reset to nominal operating condition.",
         "fleet": [s.to_dict() for s in twin.get_latest_states()],
     }
 
