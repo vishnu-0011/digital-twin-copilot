@@ -10,7 +10,7 @@
 | 🌐 **1. Executive Cleanroom Mega-Factory (Overview)** | ⚙️ **2. Bay 1: CNC Machining Centers** |
 | :---: | :---: |
 | ![01_cleanroom_mega_factory_overview](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/01_cleanroom_mega_factory_overview.png) | ![02_bay1_cnc_machining_centers](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/02_bay1_cnc_machining_centers.png) |
-| *Full 64m × 48m cleanroom epoxy slab with 8 workcells across 4 bays, traversing yellow gantry crane, and 10-stage pipeline ribbon.* | *`CNC-01` 5-Axis Heavy Roughing Mill and `CNC-02` High-Speed Airfoil Finishing Center with mist extraction & Siemens 840D.* |
+| *Full 64m × 48m cleanroom epoxy slab with 8 workcells across 4 bays, open unobstructed ceiling, and 10-stage pipeline ribbon.* | *`CNC-01` 5-Axis Heavy Roughing Mill and `CNC-02` High-Speed Airfoil Finishing Center with mist extraction & Siemens 840D.* |
 
 | 🔨 **3. Bay 2: Heavy Forming & Thermal Treatment** | 🤖 **4. Bay 3: Robotics & Quality Control** |
 | :---: | :---: |

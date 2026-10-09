@@ -19,7 +19,6 @@ export const MAT = {
   hazardYellow: new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.2 }),
   hazardDark: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 }),
   structuralSteel: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.35, metalness: 0.75 }),
-  craneYellow: new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.35, metalness: 0.35 }),
   safetyRail: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.5 }),
 
   // High-Bay Warehouse Racking (ASRS)
@@ -214,10 +213,6 @@ export function createFactoryFloor(scene) {
   // DUAL AMR NAVIGATION CORRIDORS
   createDualCorridorPaths(group);
 
-  // OVERHEAD HEAVY INDUSTRIAL GANTRY CRANE
-  const gantryGroup = createTraversingGantryCrane(group);
-  group.gantryCrane = gantryGroup;
-
   scene.add(group);
   return group;
 }
@@ -296,62 +291,6 @@ function createDualCorridorPaths(parentGroup) {
   });
 
   parentGroup.add(corridorGroup);
-}
-
-function createTraversingGantryCrane(parentGroup) {
-  const gantryRoot = new THREE.Group();
-
-  const runwayGeo = new THREE.BoxGeometry(60, 0.8, 0.8);
-  const rearRunway = new THREE.Mesh(runwayGeo, MAT.craneYellow);
-  rearRunway.position.set(0, 13.5, -20);
-  rearRunway.castShadow = true;
-  gantryRoot.add(rearRunway);
-
-  const frontRunway = new THREE.Mesh(runwayGeo, MAT.craneYellow);
-  frontRunway.position.set(0, 13.5, 20);
-  frontRunway.castShadow = true;
-  gantryRoot.add(frontRunway);
-
-  const bridge = new THREE.Group();
-  bridge.position.set(0, 13.8, 0);
-
-  const girderGeo = new THREE.BoxGeometry(0.8, 1.0, 40.0);
-  const girder1 = new THREE.Mesh(girderGeo, MAT.craneYellow);
-  girder1.position.x = -0.7;
-  girder1.castShadow = true;
-  bridge.add(girder1);
-
-  const girder2 = new THREE.Mesh(girderGeo, MAT.craneYellow);
-  girder2.position.x = 0.7;
-  girder2.castShadow = true;
-  bridge.add(girder2);
-
-  const trolleyGroup = new THREE.Group();
-  trolleyGroup.position.set(0, 0.8, -6);
-
-  const hoistGeo = new THREE.BoxGeometry(2.0, 1.2, 2.0);
-  const hoist = new THREE.Mesh(hoistGeo, MAT.machineDark);
-  trolleyGroup.add(hoist);
-
-  const cableGeo = new THREE.CylinderGeometry(0.04, 0.04, 4.5);
-  const cable = new THREE.Mesh(cableGeo, MAT.steelChrome);
-  cable.position.set(0, -2.8, 0);
-  trolleyGroup.add(cable);
-
-  const ringGeo = new THREE.TorusGeometry(1.2, 0.2, 12, 32);
-  const ringPayload = new THREE.Mesh(ringGeo, MAT.workpieceAlloy);
-  ringPayload.rotation.x = Math.PI / 2;
-  ringPayload.position.set(0, -5.8, 0);
-  trolleyGroup.add(ringPayload);
-
-  bridge.add(trolleyGroup);
-  gantryRoot.add(bridge);
-
-  gantryRoot.bridge = bridge;
-  gantryRoot.trolley = trolleyGroup;
-  parentGroup.add(gantryRoot);
-
-  return gantryRoot;
 }
 
 /**

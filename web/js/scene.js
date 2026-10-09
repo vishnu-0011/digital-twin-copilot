@@ -377,14 +377,7 @@ function animate(time) {
   }
   controls.update();
 
-  // 2. Traversing Gantry Crane Animation
-  if (factoryFloor && factoryFloor.gantryCrane) {
-    const crane = factoryFloor.gantryCrane;
-    if (crane.bridge) crane.bridge.position.z = Math.sin(t * 0.25) * 12;
-    if (crane.trolley) crane.trolley.position.x = Math.cos(t * 0.4) * 16;
-  }
-
-  // 3. CNC-01 Animation
+  // 2. CNC-01 Animation
   const cnc1 = machines.get("CNC-01");
   if (cnc1 && cnc1.toolCarriage) {
     cnc1.toolCarriage.position.x = Math.sin(t * 2.2) * 0.8;

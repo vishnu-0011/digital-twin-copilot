@@ -17,7 +17,7 @@
 Below are live screenshots of the hardware-accelerated 3D operations center captured directly from the running WebGL simulation across multiple camera angles and operational states:
 
 ### 1. 🌐 Global Factory Overview (Executive Cleanroom Mega-Factory)
-*Full plant overview featuring an expanded 64m × 48m polished white epoxy cleanroom floor, multi-tier High-Bay Storage Racks (ASRS), dynamically traversing overhead gantry crane, 8 specialized workcells across 4 zoned production bays, floating screen-space holographic telemetry badges, and the live 10-stage manufacturing line flow ribbon.*
+*Full plant overview featuring an expanded 64m × 48m polished white epoxy cleanroom floor, multi-tier High-Bay Storage Racks (ASRS), perimeter structural columns, 8 specialized workcells across 4 zoned production bays, floating screen-space holographic telemetry badges, and the live 10-stage manufacturing line flow ribbon.*
 ![Global Cleanroom Factory Overview](docs/screenshots/01_cleanroom_mega_factory_overview.png)
 
 ---
