@@ -1,51 +1,46 @@
-# PRD: 2021 Competition Winning Strategy - Pure ML Digital Twin Copilot
+# PRD: 3D Isometric Strategy-Game Factory Twin UI
 
 ## Problem & User Intent
-The user requires an upgrade to the Digital Twin Copilot by adopting the **2021 PHM Competition Winning Strategy** (Team "IJoinedTooLate": Dilated Temporal Convolutions, variable-length sequence inputs, degradation-aware sampling, and piecewise linear RUL targets), while making the entire system **100% Pure Machine Learning & Offline** with **zero API keys and zero paid tiers**.
+The user requests a complete redesign of the user interface into an interactive **3D isometric strategy-game style operations center**, inspired by the reference concept (`darkvex.ai`), where managing the factory floor feels like playing an RTS/strategy game (Factorio/SimCity meets high-tech industrial SCADA). The UI must connect end-to-end to our SimPy Digital Twin, the 2021 TCN ML Prognostics engine, the local NLP SOP Diagnosis engine, and closed-loop maintenance actions.
 
 ## Mental Model & Core Abstractions
-1. **Temporal Degradation as a Sequence:** Degradation is not an instantaneous snapshot. It is a temporal progression. The model evaluates a sequence of recent cycles rather than isolated instantaneous values.
-2. **Zero Feature Leakage:** In a real factory, internal microscopic tool wear is unobservable during operation. The model predicts Remaining Useful Life (RUL) strictly from observable sensor dynamics (`vibration_rms`, `temperature_c`, $\Delta \text{vibration}$, rolling stats).
-3. **Piecewise Linear Target ($RUL_{\text{max}}$):** During early cycles when equipment is healthy, wear is negligible; capping target RUL prevents noisy gradient updates on healthy states and focuses model capacity on the degradation trajectory.
-4. **Pure ML Offline Diagnosis:** Diagnosis is performed locally using TF-IDF NLP similarity and structured rule matching against Standard Operating Procedures (SOPs), completely eliminating LLM costs, API keys, rate limits, and hallucinations.
-5. **Asymmetric Industrial Risk:** Overestimating machine life causes catastrophic tooling crashes. The scheduler enforces an asymmetric safety factor ($\text{RUL}_{\text{safe}} = 0.85 \times \text{RUL}_{\text{pred}}$).
-
-## Architectural Decisions & Constraints
-- **Deep Learning Framework:** PyTorch for the Dilated 1D Temporal Convolutional Network (TCN). CPU-optimized, runs fast on local machines.
-- **Unified Predictor Interface:** `RULPredictor` retains `.fit()`, `.predict()`, and `.predict_latest()` methods so calling agents remain decoupled from model internals.
-- **No External LLM / Zero API Key:** Remove `GROQ_API_KEY` requirement from `agents/diagnosis_agent.py`. The diagnosis agent uses local semantic SOP matching.
-- **Backward Compatibility:** All existing endpoints (`/fleet`, `/simulate`, `/monitor/check`, `/whatif`) and Streamlit dashboard must function seamlessly without breaking.
+1. **The 3D Factory Floor:** An isometric orthographic 3D scene featuring interactive procedural industrial assets (`CNC-01` Mill, `PRESS-01` Hydraulic Press, `CONV-01` Conveyor Line, and an autonomous patrol AGV).
+2. **Visual Telemetry & Physical Wear Cues:** Machines visually reflect their physical degradation: high wear triggers dynamic vibration jitter, glowing heat auras, and color-coded holographic status rings.
+3. **Floating 3D Holographic Badges:** Hovering 3D markers display real-time status (`HEALTHY` 🟢, `WARNING` 🟡, `CRITICAL` 🔴, `REPAIRING` 🔧) and predicted RUL cycles directly above the assets.
+4. **Click-to-Inspect Holographic Drawer:** Clicking any 3D asset smoothly zooms the camera in and slides out a glassmorphic HUD detailing real-time sensor waveforms, 2021 TCN predictions (with 15% safety buffer), plant SOP diagnoses, and an instant "Trigger Maintenance" action.
+5. **Radar Scan & Copilot Actions:** A "Scan Factory" button triggers a glowing laser radar sweep across the 3D grid, executing `/monitor/check` and highlighting flagged machines.
+6. **Zero-Build, High-Performance WebGL:** Built with Three.js via vanilla ES6 modules and modern CSS glassmorphism, served directly by FastAPI at `http://localhost:8000/`. Zero Node.js build overhead, 60 FPS hardware-accelerated.
 
 ## Verification & Backpressure
-Command(s) to verify after each task:
-- Verification: `./venv/bin/python -m unittest discover -s tests -p "test_*.py"`
-- End-to-end Orchestration: `./venv/bin/python -m agents.orchestrator`
+Command(s) to verify:
+- Automated tests: `./venv/bin/python -m unittest discover -s tests -p "test_*.py"`
+- Static web assets validation: HTTP GET `http://localhost:8000/` and API endpoints.
 
 ---
 
 ## Discrete Tasks
 
-### Task 1: Observable Feature Engineering & Piecewise Linear RUL Target
-- **Objective:** Fix sensor feature leakage by eliminating `wear_level` from input features, implement temporal sequence feature extraction ($\Delta \text{vibration}$, rolling mean/std), and implement the piecewise linear RUL target function in `ml_pipeline/rul_predictor.py`.
-- **Acceptance Criteria:** Unit tests confirm piecewise target clipping at $RUL_{\text{max}}$ and feature extraction without `wear_level` in input columns.
-- **Target Files:** `ml_pipeline/features.py`, `ml_pipeline/rul_predictor.py`, `tests/test_features.py`.
+### Task 1: FastAPI Static Web Mounting & Maintenance Action API
+- **Objective:** Configure FastAPI in `api/main.py` to serve static web files from `web/` at `/`, and add a dedicated `POST /maintenance/trigger` endpoint so the 3D UI can manually trigger maintenance and reset wear on individual machines.
+- **Acceptance Criteria:** `GET /` serves HTML, and `POST /maintenance/trigger` successfully triggers maintenance on any valid machine ID.
+- **Target Files:** `api/main.py`, `tests/test_api_web.py`.
 
-### Task 2: PyTorch Dilated Temporal Convolutional Network (TCN)
-- **Objective:** Implement the 2021 competition winning model architecture: 1D Dilated Convolutions with exponentially growing receptive fields ($d \in [1, 2, 4, 8]$), residual connections, layer normalization, variable-length sequence handling, and degradation-aware batching.
-- **Acceptance Criteria:** Model trains on synthetic or benchmark sequences, converges, and outputs predicted RUL cycles with valid shape and non-negative bounds.
-- **Target Files:** `ml_pipeline/tcn_model.py`, `ml_pipeline/rul_predictor.py`, `tests/test_tcn.py`.
+### Task 2: 3D Scene Engine & Procedural Industrial Machinery Models
+- **Objective:** Build the core Three.js WebGL scene with an isometric/orthographic camera, soft shadows, an industrial grid floor, and animated procedural 3D models for the CNC Mill, Hydraulic Press, Conveyor Belt, and roaming AGV robot.
+- **Acceptance Criteria:** 3D scene renders cleanly with working animations (spindle spinning, press stamping, conveyor moving parts, AGV pathfinding) and visual wear effects (jitter and heat glow).
+- **Target Files:** `web/js/scene.js`, `web/js/models.js`.
 
-### Task 3: 100% Pure ML Local Diagnosis Engine (Zero LLM / Zero API Key)
-- **Objective:** Replace `_call_groq()` in `agents/diagnosis_agent.py` with a pure ML/NLP local diagnostic matcher that retrieves relevant SOP sections via TF-IDF similarity, extracts structured diagnostic findings (`likely_cause`, `recommended_action`, `urgency`, `confidence`), and runs completely offline without any API keys.
-- **Acceptance Criteria:** `diagnosis_agent` produces structured diagnosis dictionaries for flagged machines with zero external network requests and zero environment variables required.
-- **Target Files:** `agents/diagnosis_agent.py`, `tests/test_diagnosis_ml.py`.
+### Task 3: Sci-Fi Glassmorphic HUD & Web Audio Synthesizer
+- **Objective:** Build the modern dark-mode glassmorphic HUD overlay (top OEE & production metrics, speed toggles, simulation controls, floating 3D machine badges) and a procedural Web Audio API sound synthesizer with mute control.
+- **Acceptance Criteria:** HUD overlays render crisply with responsive styling, floating 3D labels track machine positions accurately, and audio plays subtle UI feedback on user actions.
+- **Target Files:** `web/css/style.css`, `web/js/hud.js`, `web/js/audio.js`.
 
-### Task 4: Monitor & Scheduler Temporal Buffer Integration with Safety Margins
-- **Objective:** Update `agents/monitor_agent.py` and `agents/tools.py` to extract temporal sequence windows from the digital twin history for the TCN model. Update `agents/scheduler_agent.py` to apply the competition-winning asymmetric safety factor on predicted RUL.
-- **Acceptance Criteria:** Monitor agent correctly passes historical cycle sequences to the TCN model, and Scheduler agent triggers maintenance conservatively based on safety-adjusted RUL thresholds.
-- **Target Files:** `agents/monitor_agent.py`, `agents/tools.py`, `agents/scheduler_agent.py`, `tests/test_agent_flow.py`.
+### Task 4: Interactive Inspection Panel, Radar Scan & Full State Sync
+- **Objective:** Wire machine click-to-focus interactions, the slide-out holographic inspection drawer (live vibration graphs, 2021 TCN RUL, SOP diagnosis cards, maintenance action button), and the "Scan Factory" laser radar sweep. Sync real-time state with `/fleet`, `/simulate`, and `/monitor/check`.
+- **Acceptance Criteria:** Clicking any machine focuses the 3D camera and displays live telemetry & TCN forecasts; clicking "Trigger Maintenance" immediately repairs the machine in 3D and resets wear; "Scan Factory" sweeps the grid and executes the agent cycle.
+- **Target Files:** `web/js/app.js`, `web/index.html`.
 
-### Task 5: End-to-End Orchestrator, Streamlit UI, and Full Verification
-- **Objective:** Wire the entire upgraded pipeline through `agents/orchestrator.py` and update the Streamlit dashboard in `dashboard/app.py` to display TCN sequence forecasts and local ML diagnosis cards. Run full test suite.
-- **Acceptance Criteria:** Full test suite passes, `python -m agents.orchestrator` executes cleanly without any API keys, and dashboard launches with active telemetry.
-- **Target Files:** `agents/orchestrator.py`, `dashboard/app.py`, `README.md`.
+### Task 5: End-to-End Testing, Polish & Documentation
+- **Objective:** Test the entire application across unit tests and live API requests, ensure smooth 60 FPS rendering, add documentation in `README.md`, and verify zero console errors.
+- **Acceptance Criteria:** Full test suite passes, FastAPI serves the 3D Strategy Game UI at `http://localhost:8000/`, and documentation is updated.
+- **Target Files:** `README.md`, `tests/test_api_web.py`.

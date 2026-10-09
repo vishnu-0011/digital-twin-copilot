@@ -77,15 +77,40 @@ python -m unittest discover -s tests -p "test_*.py"
 python -m agents.orchestrator
 ```
 
-**Run the Full Stack (API + Dashboard):**
+## 3D Isometric Strategy-Game Operations Center (`http://localhost:8000/`)
 
-*Terminal 1 (Backend API):*
+The primary frontend is an interactive **3D isometric strategy-game style operations center**, inspired by RTS industrial games (Factorio/SCADA) and modern sci-fi glassmorphism:
+
+- **Procedural 3D Machinery**: Fully animated 3D models for `CNC-01` (spindle rotation, enclosure), `PRESS-01` (hydraulic ram stamping cycle), `CONV-01` (continuous looping cargo pallets), and `AGV-01` (autonomous patrol rover navigating factory track).
+- **Physical Wear Cues**: When machines accumulate wear, the 3D models exhibit dynamic high-frequency vibration jitter, pulsing heat aura spheres, and glowing multi-state halos.
+- **Floating 3D Holographic Badges**: Real-time screen-space tracking markers showing machine status (`HEALTHY` 🟢, `WARNING` 🟡, `CRITICAL` 🔴, `REPAIRING` 🔧) and predicted RUL cycles directly above each machine.
+- **Holographic SCADA Inspection Drawer**: Clicking any machine smoothly focuses the 3D camera and slides out an inspection drawer featuring a live 60 FPS oscilloscope vibration canvas, 2021 TCN RUL projections (with 15% safety buffer), local SOP recommendations, and an instant "Trigger Maintenance" action.
+- **Factory Laser Radar Sweep**: "Scan Factory" sweeps a glowing laser plane across the factory floor, executes the agent anomaly detection cycle, and alerts on degraded units.
+- **Procedural Web Audio API Synthesizer**: Zero audio asset downloads; produces high-tech UI blips, radar sweeps, alarms, and repair completion chimes with audio mute toggle.
+- **Zero-Build, 100% Offline**: Built with Three.js via ES6 modules and served directly by FastAPI at `http://localhost:8000/`. Zero Node.js or npm dependencies required.
+
+---
+
+## Running it
+
+**Run the Automated Unit Tests:**
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+**Run Full Agent Pipeline in Console:**
+```bash
+python -m agents.orchestrator
+```
+
+**Launch the 3D Strategy Game Operations Center:**
 ```bash
 uvicorn api.main:app --reload --port 8000
 ```
+Open **`http://localhost:8000/`** in any web browser to enter the 3D Tactical Factory Operations Center!
 
-*Terminal 2 (Interactive Streamlit Dashboard):*
+*(Optional) Secondary Streamlit Metrics View:*
 ```bash
 streamlit run dashboard/app.py
 ```
-Open `http://localhost:8501` to view the live fleet metrics, trigger what-if simulations, and watch the autonomous agent loop detect wear and schedule maintenance.
+Open `http://localhost:8501` to view the tabular analytics and what-if simulation panel.

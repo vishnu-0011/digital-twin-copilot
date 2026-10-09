@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Smart Factory Digital Twin — 3D Operations Center</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>">
+</head>
+<body>
+
+  <!-- 3D WebGL Canvas Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Screen-Space 3D Floating Holographic Badges -->
+  <div id="floating-badges-layer"></div>
+
+  <!-- Top Glassmorphic Strategy HUD -->
+  <header id="top-hud">
+    <div class="brand-section">
+      <div class="brand-logo">DT</div>
+      <div class="brand-title">
+        <h1>Digital Twin Copilot</h1>
+        <span><span class="pulse-dot"></span> 2021 TCN ENGINE • STRATEGY SCADA</span>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-item">
+        <span class="kpi-label">Fleet Health</span>
+        <span class="kpi-val" id="kpi-health">--%</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Operational</span>
+        <span class="kpi-val" id="kpi-units">3/3</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Min Fleet RUL</span>
+        <span class="kpi-val" id="kpi-min-rul">-- cyc</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Factory OEE</span>
+        <span class="kpi-val" id="kpi-oee">98.4%</span>
+      </div>
+    </div>
+
+    <div class="controls-group">
+      <button id="btn-radar" class="btn-hud btn-scan" title="Sweep laser radar & run anomaly detection">
+        ⚡ Scan Factory
+      </button>
+      <button id="btn-step" class="btn-hud btn-step" title="Advance simulation cycle">
+        ▶ Step Twin
+      </button>
+      <button id="btn-reset-cam" class="btn-hud" title="Reset camera to isometric view">
+        ⟲ Reset View
+      </button>
+      <button id="btn-audio" class="btn-hud" title="Toggle audio sound effects">
+        🔊 Audio
+      </button>
+    </div>
+  </header>
+
+  <!-- Holographic Inspection Drawer (Slide-out SCADA) -->
+  <aside id="machine-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <h2 id="drawer-m-id">CNC-01</h2>
+        <p><span id="drawer-m-type">Milling Center</span> &bull; <span id="drawer-m-status">HEALTHY</span></p>
+      </div>
+      <button id="btn-drawer-close" class="drawer-close-btn" title="Close Panel">&times;</button>
+    </div>
+
+    <div class="drawer-content">
+      <!-- 1. Physical Wear Level Card -->
+      <div class="scada-card">
+        <div class="scada-card-title">
+          <span>Physical Wear Progression</span>
+          <span id="drawer-wear-val" style="color: var(--color-cyan)">12%</span>
+        </div>
+        <div class="wear-track">
+          <div id="drawer-wear-fill" class="wear-fill" style="width: 12%"></div>
+        </div>
+      </div>
+
+      <!-- 2. 2021 TCN Prognostics Prediction Card -->
+      <div class="scada-card tcn-card">
+        <div class="scada-card-title">
+          <span>2021 TCN Remaining Useful Life</span>
+          <span style="color: var(--color-cyan)">MODEL: TCN-1D</span>
+        </div>
+        <div class="tcn-hero-metric">
+          <span class="tcn-cycles-big" id="drawer-rul-cycles">142</span>
+          <span class="tcn-unit">Cycles</span>
+        </div>
+        <div id="drawer-rul-hours" style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono)">
+          &asymp; 63.9 operating hrs
+        </div>
+        <span class="tcn-badge-tag">Dilated ResNet 1D &bull; 15% Asymmetric Safety Buffer</span>
+      </div>
+
+      <!-- 3. Sensor Telemetry & Live Waveform -->
+      <div class="scada-card">
+        <div class="scada-card-title">
+          <span>Live Vibration Spectrum</span>
+          <span style="font-size: 10px; color: var(--color-cyan)">60Hz SENSOR</span>
+        </div>
+        <canvas id="vibration-canvas"></canvas>
+        <div class="telemetry-grid" style="margin-top: 10px">
+          <div class="telemetry-cell">
+            <div class="t-label">Vibration RMS</div>
+            <div class="t-val" id="drawer-vib-val">0.18 mm/s</div>
+          </div>
+          <div class="telemetry-cell">
+            <div class="t-label">Core Temp</div>
+            <div class="t-val" id="drawer-temp-val">42.5 &deg;C</div>
+          </div>
+          <div class="telemetry-cell">
+            <div class="t-label">Load Factor</div>
+            <div class="t-val" id="drawer-load-val">82%</div>
+          </div>
+          <div class="telemetry-cell">
+            <div class="t-label">Health Grade</div>
+            <div class="t-val" style="color: var(--color-emerald)">CLASS A</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Plant SOP Grounded Recommendations -->
+      <div class="scada-card">
+        <div class="scada-card-title">
+          <span>Local SOP Maintenance Protocol</span>
+          <span style="font-size: 10px; color: var(--color-amber)">OFFLINE NLP</span>
+        </div>
+        <div id="drawer-sop-content" class="sop-box">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer Action Footer -->
+    <div class="drawer-footer">
+      <button id="btn-repair" class="btn-repair">
+        🔧 Trigger Maintenance & Reset Wear
+      </button>
+    </div>
+  </aside>
+
+  <!-- Bottom Event Stream / Copilot Ticker -->
+  <footer id="bottom-feed">
+    <span class="feed-tag" id="feed-tag">SYSTEM</span>
+    <span class="feed-message" id="feed-msg">3D Digital Twin Strategy Operations Center ready.</span>
+    <span class="feed-time" id="feed-time">--:--:--</span>
+  </footer>
+
+  <!-- Three.js Offline Vendored Core & Controls -->
+  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/OrbitControls.js"></script>
+
+  <!-- Application Main Controller -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

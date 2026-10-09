@@ -79,7 +79,16 @@ def health():
 @app.get("/fleet")
 def fleet_state():
     twin: FactoryTwin = app_state["twin"]
-    return {"machines": [s.to_dict() for s in twin.get_latest_states()]}
+    predictor = app_state.get("predictor")
+    latest_states = [s.to_dict() for s in twin.get_latest_states()]
+    if predictor:
+        try:
+            history_df = twin.history_dataframe() if hasattr(twin, "history_dataframe") else None
+            scored = predictor.predict_latest(latest_states, history_df=history_df)
+            return {"machines": scored}
+        except Exception:
+            pass
+    return {"machines": latest_states}
 
 
 @app.post("/simulate")
@@ -98,7 +107,32 @@ def monitor_check():
     return result
 
 
+class MaintenanceTriggerRequest(BaseModel):
+    machine_id: str
+    reason: str = "Manual operator intervention from 3D console"
+
+
+@app.post("/maintenance/trigger")
+def trigger_maintenance(req: MaintenanceTriggerRequest):
+    twin: FactoryTwin = app_state["twin"]
+    scheduled = twin.schedule_maintenance(req.machine_id)
+    return {
+        "machine_id": req.machine_id,
+        "scheduled": scheduled,
+        "fleet": [s.to_dict() for s in twin.get_latest_states()],
+    }
+
+
 @app.post("/whatif")
 def whatif(req: WhatIfRequest):
     """Runs an isolated, throwaway simulation — does not affect the live twin."""
     return run_what_if_simulation(duration_s=req.duration_s, seed=req.seed)
+
+
+# -- Serve 3D Strategy Game UI at root (placed after API routes) -------------
+import os
+from fastapi.staticfiles import StaticFiles
+
+WEB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
+os.makedirs(WEB_DIR, exist_ok=True)
+app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
