@@ -1,22 +1,25 @@
 # GSD Project State: Titan Aerospace Digital Twin Copilot
 
-**Active Milestone:** v2.0 - End-to-End Pipeline & SCADA Polish
-**Current Phase:** Phase 1 - End-to-End Pipeline & SCADA UI Refinement
-**Status:** Phase Complete (All 5 Tasks Verified)
-**Last Updated:** 2026-10-09 12:45:00
+**Active Milestone:** v3.0 - AAA 3D Machinery & Industrial Factory Floor Overhaul
+**Current Phase:** Phase 1 - Full Darkvex RTS Aerospace Complex 3D Overhaul
+**Status:** Phase Complete (Verified)
+**Last Updated:** 2026-10-09 13:12:00
 **Active Workstream:** main
 
 ## Active Decisions & Constraints
-- **Company Identity:** "Titan Aerospace Precision Fab" — High-precision turbine & avionics component manufacturing.
-- **Manufacturing Flow:** Raw Ingot Billet → CNC Milling (Turbine Blades) → 1000T Hydraulic Press (Bulkhead Forging) → Assembly Conveyor (QC Inspection Gate) → AGV Rover (Hangar Dispatch).
-- **Dual Pipeline View:** Unified interactive flow bar showing both (1) Physical Production Line Flow (work-in-progress, cycle times, throughput) and (2) AI Reasoning Trace (60Hz Sensors → Zero-Leakage Features → 2021 Dilated TCN → Isolation Forest → ChromaDB SOP → Risk-Aware Scheduler → Closed-Loop Twin).
-- **Camera Director Mode:** One-click cinematic camera director presets (Overview, CNC-01, Press, Conveyor, AGV Follow Cam) with smooth lerping and auto-disengage on manual orbit.
-- **High-Fidelity SCADA Drawer:** Tabbed SCADA drawer with dual-trace oscilloscope (vibration RMS + thermal gradient), probability curve, and actionable SOP checkmarks.
-- **Zero API Keys & Zero Build Overhead:** 100% offline, zero npm/node runtime dependencies, served by FastAPI.
+- **Visual Blueprint:** Full Darkvex RTS Aerospace Complex (`darkvex.ai`):
+  - High-Bay Warehouse Storage Racking (ASRS) along perimeter with pallets & barcodes.
+  - Dynamically traversing overhead yellow industrial gantry crane spanning the facility.
+  - Rectangular hazard-striped runway corridor matching AMR navigation circuit.
+  - DMG MORI style enclosed 5-axis CNC with sliding glass doors, chip auger, tool carousel, and interior cyan worklight.
+  - 1000-Ton hydraulic press with oil reservoir, manifold, photoelectric safety light curtains, and stamping shockwave ring.
+  - Modular dual-rail conveyor with E-stop pull cords, enclosed Laser QC Inspection Tunnel with digital HUD readout.
+  - Armored AMR rover with rotating 3D LiDAR cone, roving floor headlights, flashing amber beacon, and payload.
+  - Atmospheric industrial dust motes particle cloud and machine worklights.
+- **Performance & Compatibility:** 100% offline procedural Three.js WebGL geometry, zero external asset downloads, 60 FPS hardware acceleration.
 
 ## Current Position
-- Phase: 01-pipeline-scada-refinement
-- Total Plans: 5
-- Completed Plans: 5
-- Verification: 15/15 unit tests passing
-- Next Action: Ship Phase & Push to Remote
+- Phase: 01-3d-models-darkvex-refactor
+- Total Tasks: 4
+- Completed Tasks: 4
+- Next Action: Ready to Ship / Review

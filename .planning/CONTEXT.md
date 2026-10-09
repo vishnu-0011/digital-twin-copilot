@@ -20,15 +20,20 @@ The user requested an end-to-end monitoring pipeline of the entire manufacturing
 4. **Cinematic Director Mode:** Camera smooth-glides between presets and can latch on to the mobile AGV rover in dynamic follow-cam mode.
 
 ## Locked Architectural Decisions
+- **Visual Design:** Full Darkvex RTS Aerospace Complex (`darkvex.ai`):
+  - **Environment & Warehouse:** Multi-tier High-Bay Storage Racking (ASRS) along perimeter walls stocked with aerospace palletized crates and glowing barcoded waypoints; continuous gliding overhead yellow industrial gantry crane spanning the facility; rectangular hazard-striped floor runway corridor matching AMR navigation path.
+  - **CNC-01 Milling Center:** DMG MORI style enclosed 5-axis aerodynamic machining center with dual sliding safety glass doors, internal swarf chip auger chute with scrap bin, side tool carousel magazine with collet holders, coolant spray nozzles, translating X/Z toolhead carriage, and interior cyan worklight.
+  - **PRESS-01 1000-Ton Forging Press:** Overhead hydraulic fluid reservoir tank with fluid sight gauge, dual nitrogen accumulators, manifold block with braided stainless hoses, infrared photoelectric safety light curtains (glowing ruby beams), polished chrome ram, and hot titanium billet with stamping impact shockwaves.
+  - **CONV-01 Assembly & QC Tunnel:** Extruded aluminum dual-rail conveyor with emergency E-stop pull cords, enclosed Laser QC Inspection Tunnel arch with overhead digital HUD readout and pulsing vertical laser triangulation plane, and palletized avionics/blade fixtures.
+  - **AGV-01 AMR Autonomous Rover:** Low-profile industrial AMR with side hazard chevron skirts, rotating 3D LiDAR cone beam, forward LED driving headlights that cast light on the floor, flashing amber safety beacon, and cargo pallet payload.
+  - **Atmospheric FX:** Subtle floating industrial dust motes particle cloud, dynamic roving spotlight following the AMR, and machine interior worklights.
 - **Unified Pipeline Ribbon:** Dockable/collapsible ribbon with two selectable tabs: `[🏭 Physical Production Flow]` and `[🧠 AI Inference Trace]`.
 - **Camera Director Bar:** Floating sleek glassmorphic pill bar offering instant 1-click camera transitions (`Global`, `CNC-01`, `PRESS-01`, `CONV-01`, `AGV-01 Follow`).
-- **Tabbed SCADA Drawer:** Inspection drawer partitioned into:
-  - Tab 1: **Telemetry & Dual Oscilloscope** (Vibration RMS + Temperature thermal curve).
-  - Tab 2: **2021 TCN Prognostics** (Cycle forecast, hours remaining, 15% safety buffer breakdown).
-  - Tab 3: **Aerospace SOP Protocol** (Grounded ISO 10816 root-cause steps with checkboxes).
-- **Zero API Keys & Zero Build Tools:** 100% offline, pure Python/PyTorch/FastAPI backend, vanilla Three.js + ES6 frontend.
+- **Tabbed SCADA Drawer:** Telemetry oscilloscope, 2021 TCN RUL breakdown, and ISO 10816 SOP protocol.
+- **Zero External Downloads / Zero Build Tools:** 100% offline procedural Three.js WebGL geometry, zero external glTF/OBJ downloads, 60 FPS performance.
 
 ## Verification & Backpressure Seams
 - Automated test command: `./venv/bin/python -m unittest discover -s tests -p "test_*.py"`
-- Live API response checks: `GET /fleet`, `GET /pipeline/flow`, `POST /simulate`, `POST /maintenance/trigger`.
-- Visual validation: WebGL scene rendering at 60 FPS without console errors.
+- JavaScript syntax check: `node --check web/js/*.js`
+- Live API response checks: `GET /fleet`, `GET /pipeline/flow`, `POST /simulate`
+- WebGL scene rendering at 60 FPS without console errors.

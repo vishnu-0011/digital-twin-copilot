@@ -107,10 +107,13 @@ export function initScene(container) {
   // 7. Radar Scanner Plane
   setupRadarScanner();
 
-  // 8. Event Listeners
+  // 8. Atmospheric Industrial Dust Particles
+  setupAtmosphericDustMotes();
+
+  // 9. Event Listeners
   window.addEventListener('resize', onWindowResize);
 
-  // 9. Start Animation Loop
+  // 10. Start Animation Loop
   animate(0);
 
   return { scene, camera, renderer, controls, machines };
@@ -143,17 +146,49 @@ function setupLighting() {
   scene.add(dirLight);
 
   // Cyan and Orange Strategy Accent Lights
-  const cyanPoint = new THREE.PointLight(0x00f3ff, 2.5, 25);
+  const cyanPoint = new THREE.PointLight(0x00f3ff, 2.8, 25);
   cyanPoint.position.set(-8, 5, -3);
   scene.add(cyanPoint);
 
-  const orangePoint = new THREE.PointLight(0xff6b2b, 2.5, 25);
+  const orangePoint = new THREE.PointLight(0xff6b2b, 2.8, 25);
   orangePoint.position.set(8, 6, -3);
   scene.add(orangePoint);
 
-  const greenPoint = new THREE.PointLight(0x10b981, 1.8, 25);
+  const greenPoint = new THREE.PointLight(0x10b981, 2.0, 25);
   greenPoint.position.set(0, 4, 7);
   scene.add(greenPoint);
+
+  // Machine Interior Worklights
+  const cncWorklight = new THREE.PointLight(0x38bdf8, 1.8, 8);
+  cncWorklight.position.set(-8, 3.5, -3.2);
+  scene.add(cncWorklight);
+
+  const pressForgeGlow = new THREE.PointLight(0xff3b00, 2.2, 10);
+  pressForgeGlow.position.set(8, 2.4, -4);
+  scene.add(pressForgeGlow);
+}
+
+let dustParticles = null;
+const dustCount = 180;
+
+function setupAtmosphericDustMotes() {
+  const dustGeo = new THREE.BufferGeometry();
+  const dustPositions = new Float32Array(dustCount * 3);
+  for (let i = 0; i < dustCount; i++) {
+    dustPositions[i * 3] = (Math.random() - 0.5) * 44;
+    dustPositions[i * 3 + 1] = 0.5 + Math.random() * 11;
+    dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 32;
+  }
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+  const dustMat = new THREE.PointsMaterial({
+    color: 0x38bdf8,
+    size: 0.16,
+    transparent: true,
+    opacity: 0.45,
+    blending: THREE.AdditiveBlending,
+  });
+  dustParticles = new THREE.Points(dustGeo, dustMat);
+  scene.add(dustParticles);
 }
 
 function setupRadarScanner() {
@@ -304,7 +339,31 @@ function animate(time) {
   // 1. Controls update
   controls.update();
 
-  // 2. Camera transition & AGV tracking
+  // 2. Dynamic Traversing Overhead Gantry Crane (Bridge along X, Trolley along Z)
+  if (factoryFloor && factoryFloor.gantryCrane) {
+    const gantry = factoryFloor.gantryCrane;
+    if (gantry.bridge) {
+      gantry.bridge.position.x = Math.sin(t * 0.08) * 8.0;
+    }
+    if (gantry.trolley) {
+      gantry.trolley.position.z = Math.sin(t * 0.18) * 5.5;
+      if (gantry.trolley.strobe) {
+        gantry.trolley.strobe.material.opacity = (Math.sin(t * 8) > 0) ? 1.0 : 0.2;
+      }
+    }
+  }
+
+  // 3. Atmospheric Dust Motes Gentle Drift
+  if (dustParticles) {
+    const pos = dustParticles.geometry.attributes.position.array;
+    for (let i = 0; i < dustCount; i++) {
+      pos[i * 3 + 1] += Math.sin(t + i) * 0.003;
+      pos[i * 3] += Math.cos(t * 0.5 + i) * 0.002;
+    }
+    dustParticles.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // 4. Camera transition & AGV tracking
   if (agvFollowMode && agvRobot) {
     const agvPos = agvRobot.position;
     const desiredLookAt = new THREE.Vector3(agvPos.x, agvPos.y + 1.2, agvPos.z);
@@ -321,17 +380,30 @@ function animate(time) {
     }
   }
 
-  // 3. CNC-01 Spindle & Vibration
-  if (cncMill && cncMill.spindleTool) {
+  // 5. CNC-01 Spindle, Carriage, Coolant Mist & Vibration
+  if (cncMill) {
     const cncState = telemetryState["CNC-01"];
     const isRunning = cncState && cncState.status !== "CRITICAL";
+
     if (isRunning) {
-      cncMill.spindleTool.rotation.y += 0.35;
+      if (cncMill.spindleTool) cncMill.spindleTool.rotation.y += 0.45;
+      if (cncMill.spindleChuck) cncMill.spindleChuck.rotation.y += 0.45;
+      if (cncMill.turbineBlade) cncMill.turbineBlade.rotation.y += 0.008;
+
+      // Dynamic translating carriage during cutting
+      if (cncMill.toolCarriage) {
+        cncMill.toolCarriage.position.x = Math.sin(t * 1.6) * 1.1;
+      }
+
+      // Coolant Mist pulse
+      if (cncMill.coolantMist) {
+        cncMill.coolantMist.material.opacity = 0.25 + Math.sin(t * 5.0) * 0.15;
+      }
     }
 
     // Dynamic physical wear vibration jitter
-    if (cncState && cncState.wear > 0.5) {
-      const jitter = (cncState.wear - 0.4) * 0.035;
+    if (cncState && cncState.wear > 0.35) {
+      const jitter = (cncState.wear - 0.25) * 0.045;
       cncMill.position.x = -8 + (Math.random() - 0.5) * jitter;
       cncMill.position.z = -4 + (Math.random() - 0.5) * jitter;
     } else {
@@ -339,19 +411,37 @@ function animate(time) {
     }
   }
 
-  // 4. PRESS-01 Hydraulic Ram Stamping
+  // 6. PRESS-01 Hydraulic Ram Stamping, Hot Billet & Shockwave
   if (hydraulicPress && hydraulicPress.ramMesh) {
     const pressState = telemetryState["PRESS-01"];
     const isRunning = pressState && pressState.status !== "CRITICAL";
+
     if (isRunning) {
-      // Stamping cycle: sinusoidal plunge
-      const ramY = 4.5 + Math.sin(t * 3.2) * 1.6;
+      // Stamping cycle: heavy downward compression plunge
+      const cyclePhase = (Math.sin(t * 2.6) + 1) / 2; // 0 (bottom impact) to 1 (top return)
+      const ramY = 3.6 + cyclePhase * 2.8;
       hydraulicPress.ramMesh.position.y = ramY;
+
+      // Hot Billet compression glow
+      if (hydraulicPress.hotBillet) {
+        hydraulicPress.hotBillet.material.emissiveIntensity = 0.5 + (1 - cyclePhase) * 0.6;
+      }
+
+      // Stamping shockwave ring pulse on bottom impact
+      if (hydraulicPress.shockwaveRing) {
+        if (cyclePhase < 0.1) {
+          hydraulicPress.shockwaveRing.material.opacity = 0.85;
+          hydraulicPress.shockwaveRing.scale.set(1.0, 1.0, 1.0);
+        } else if (hydraulicPress.shockwaveRing.material.opacity > 0.02) {
+          hydraulicPress.shockwaveRing.material.opacity *= 0.9;
+          hydraulicPress.shockwaveRing.scale.multiplyScalar(1.03);
+        }
+      }
     }
 
     // Wear shudder
-    if (pressState && pressState.wear > 0.6) {
-      const jitter = (pressState.wear - 0.5) * 0.03;
+    if (pressState && pressState.wear > 0.5) {
+      const jitter = (pressState.wear - 0.4) * 0.04;
       hydraulicPress.position.x = 8 + (Math.random() - 0.5) * jitter;
       hydraulicPress.position.z = -4 + (Math.random() - 0.5) * jitter;
     } else {
@@ -359,22 +449,44 @@ function animate(time) {
     }
   }
 
-  // 5. CONV-01 Conveyor looping pallets
+  // 7. CONV-01 Conveyor looping pallets & Laser QC Tunnel
   if (conveyorLine && conveyorLine.crates) {
     const convState = telemetryState["CONV-01"];
     const isRunning = convState && convState.status !== "CRITICAL";
+
     if (isRunning) {
       conveyorLine.crates.forEach(crate => {
-        crate.position.x += 0.05;
-        if (crate.position.x > 9.5) {
-          crate.position.x = -9.5;
+        crate.position.x += 0.045;
+        if (crate.position.x > 10.5) {
+          crate.position.x = -10.5;
         }
       });
+
+      // Active Laser QC inspection tunnel scanning plane
+      if (conveyorLine.tunnelLaser) {
+        conveyorLine.tunnelLaser.position.x = Math.sin(t * 3.5) * 0.45;
+        conveyorLine.tunnelLaser.material.opacity = 0.35 + Math.sin(t * 8.0) * 0.2;
+      }
     }
   }
 
-  // 6. AGV Autonomous Navigation
+  // 8. AGV Autonomous Navigation & LIDAR Cone
   updateAGVNavigation();
+
+  if (agvRobot) {
+    if (agvRobot.wheels) {
+      agvRobot.wheels.forEach(w => { w.rotation.x += 0.15; });
+    }
+    if (agvRobot.lidarPuck) {
+      agvRobot.lidarPuck.rotation.y += 0.2;
+    }
+    if (agvRobot.lidarCone) {
+      agvRobot.lidarCone.material.opacity = 0.15 + Math.sin(t * 6.0) * 0.06;
+    }
+    if (agvRobot.strobeBeacon) {
+      agvRobot.strobeBeacon.material.opacity = (Math.sin(t * 12.0) > 0) ? 1.0 : 0.2;
+    }
+  }
 
   // 7. Radar Scan Sweep
   if (radarScanning && radarMesh) {

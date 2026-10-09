@@ -28,3 +28,11 @@
 ### Non-Functional & Verification
 - **REQ-09**: Zero external API keys, zero node/npm build dependencies, 100% offline self-containment.
 - **REQ-10**: Full automated test coverage passing `./venv/bin/python -m unittest discover -s tests -p "test_*.py"`.
+
+### 3D Models Refactor & Darkvex RTS Strategy Aesthetic
+- **REQ-11**: Procedural High-Bay Storage Racking (ASRS) along perimeter walls with multi-tier steel shelves, stacked aerospace pallets, and barcode indicator beacons.
+- **REQ-12**: Dynamic traversing overhead yellow industrial gantry crane with motorized winch cable and hoist trolley slowly traveling across the facility bay.
+- **REQ-13**: DMG MORI style enclosed 5-axis CNC-01 milling center with dual sliding safety glass doors, internal swarf chip auger chute with scrap bin, side tool carousel magazine with collets, coolant spray nozzles, translating carriage, and interior cyan worklight.
+- **REQ-14**: PRESS-01 1000-Ton hydraulic forging press with overhead oil reservoir, nitrogen accumulators, manifold with braided hoses, infrared photoelectric safety light curtains, polished chrome ram, and stamping shockwave ring + hot billet thermal radiation.
+- **REQ-15**: CONV-01 modular dual-rail conveyor with emergency E-stop pull cords, enclosed Laser QC Inspection Tunnel with digital HUD readout and vertical laser triangulation scan sheet, passing aerospace turbine pallets.
+- **REQ-16**: AGV-01 AMR autonomous rover with rotating 3D LiDAR cone, roving forward driving headlights casting light on the floor, flashing amber safety beacon, and subtle floating industrial dust motes particle cloud.

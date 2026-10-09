@@ -1,33 +1,30 @@
-# Plan: End-to-End Pipeline & SCADA UI Refinement
+# Plan: Darkvex RTS Aerospace Complex 3D Models & Atmosphere Overhaul
 
-## Backpressure Command
-`./venv/bin/python -m unittest discover -s tests -p "test_*.py"`
+## Backpressure Commands
+- Test Suite: `./venv/bin/python -m unittest discover -s tests -p "test_*.py"`
+- JavaScript Validation: `node --check web/js/*.js`
+- Live Health & API Check: `curl -s http://localhost:8000/health && curl -s http://localhost:8000/fleet`
 
 ---
 
-## Tasks
+## Execution Waves
 
-### Task 1: Pipeline Data Model & API Endpoints (Tracer)
-- **Objective:** Add `/pipeline/flow` endpoint in `api/main.py` that computes Titan Aerospace production stages (WIP units, throughput, cycle times, bottleneck alert) and AI inference trace status. Update `digital_twin/models.py` and `tests/test_api_web.py`.
-- **Target Files:** `api/main.py`, `tests/test_api_web.py`.
-- **Verification:** Unit test `tests/test_api_web.py` passes for `/pipeline/flow`.
+### Wave 1: Environment, High-Bay Storage Racks (ASRS) & Dynamic Gantry Crane
+- **Task 1.1**: Build procedural High-Bay Warehouse Pallet Storage Racks (ASRS) along perimeter walls in `web/js/models.js` with structural steel uprights, multi-tier crossbeams, loaded aerospace parts pallets, and glowing barcode ID badges.
+- **Task 1.2**: Upgrade the overhead yellow industrial gantry crane to span across the facility with dual runway tracks, motorized end-trucks, and dynamic traversal motion in `web/js/scene.js`.
+- **Task 1.3**: Replace circular runway track with a rectangular industrial hazard-striped navigation corridor aligned with the AMR waypoints.
 
-### Task 2: Camera Preset Director & Dynamic AGV Follow Cam
-- **Objective:** Add camera preset methods in `web/js/scene.js` (`setCameraPreset('global' | 'cnc' | 'press' | 'conv' | 'agv')`) with cinematic easing and continuous tracking in `animate()` loop when in AGV follow mode. Add director buttons to `web/index.html`.
-- **Target Files:** `web/js/scene.js`, `web/index.html`, `web/js/app.js`.
-- **Verification:** Verify camera moves smoothly to each target and follows AGV without jitter.
+### Wave 2: CNC-01 Milling Center & PRESS-01 Forging Press Deep Detailing
+- **Task 2.1**: Upgrade `CNC-01` into a DMG MORI style enclosed 5-axis machining center with sliding safety doors, side tool carousel magazine with tool holders, swarf chip auger chute with chip bin, coolant spray nozzles, and internal cyan worklight.
+- **Task 2.2**: Upgrade `PRESS-01` with overhead hydraulic oil reservoir tank with sight gauge, hydraulic manifold block with braided stainless hoses, infrared photoelectric safety light curtains (glowing ruby beams), polished chrome ram, and stamping shockwave ring + hot billet thermal radiation.
 
-### Task 3: Interactive End-to-End Pipeline & Flow Bar UI
-- **Objective:** Build the dual-mode process pipeline ribbon docked at the bottom/top of the screen. Mode 1 shows Titan Aerospace production stages (Ingot → CNC → Press → Conveyor → AGV) with animated WIP part badges and bottleneck highlights. Mode 2 shows the live AI Reasoning Chain.
-- **Target Files:** `web/index.html`, `web/css/style.css`, `web/js/hud.js`, `web/js/app.js`.
-- **Verification:** Clicking tab switches modes; live data updates from `/pipeline/flow`.
+### Wave 3: CONV-01 Laser QC Inspection Gate, AGV-01 AMR Headlights & Atmospheric Particles
+- **Task 3.1**: Upgrade `CONV-01` with emergency E-stop pull cords, an enclosed Laser QC Inspection Tunnel arch with overhead digital HUD readout and pulsing vertical laser triangulation plane, and palletized turbine/avionics fixtures.
+- **Task 3.2**: Upgrade `AGV-01` AMR with rotating 3D LiDAR cone, forward roving headlights that illuminate the floor in front of the vehicle, flashing amber safety beacon, and secured payload pallet.
+- **Task 3.3**: Add subtle industrial atmospheric dust motes particle cloud (`THREE.Points`) and dynamic machine interior worklights in `web/js/scene.js`.
 
-### Task 4: Refined SCADA Inspection Drawer & Dual-Trace Oscilloscope
-- **Objective:** Refactor `#machine-drawer` into a 3-tab layout: (1) Telemetry & Dual-Trace Oscilloscope (Vibration RMS + Temperature gradient on canvas), (2) 2021 TCN Prognostics with 15% safety buffer breakdown, (3) Titan Aerospace SOP protocols with actionable checkmarks and ISO 10816 vibration classification.
-- **Target Files:** `web/index.html`, `web/css/style.css`, `web/js/hud.js`.
-- **Verification:** Waveform canvas renders dual channels smoothly; tabs switch cleanly.
-
-### Task 5: Testing, Polish, Audio Feedback & Documentation
-- **Objective:** Run full test suite (`python -m unittest discover -s tests`), polish Web Audio clicks and transitions, update documentation in `README.md`, and verify zero console errors.
-- **Target Files:** `tests/test_api_web.py`, `README.md`, `web/js/audio.js`.
-- **Verification:** All 15+ automated tests pass; application serves 3D UI at `http://localhost:8000/`.
+### Wave 4: Integration, Full Regression & Final Verification Gate
+- **Task 4.1**: Verify ES6 syntax across all JS modules with `node --check web/js/*.js`.
+- **Task 4.2**: Verify full Python test suite with `./venv/bin/python -m unittest discover -s tests -p "test_*.py"`.
+- **Task 4.3**: Verify WebGL rendering performance, camera director transitions, and SCADA drawer interactions.
+- **Task 4.4**: Produce `VERIFICATION.md` and commit atomic outcomes following git identity rules.
