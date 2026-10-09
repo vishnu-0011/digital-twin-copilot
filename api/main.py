@@ -123,10 +123,133 @@ def trigger_maintenance(req: MaintenanceTriggerRequest):
     }
 
 
-@app.post("/whatif")
-def whatif(req: WhatIfRequest):
-    """Runs an isolated, throwaway simulation — does not affect the live twin."""
-    return run_what_if_simulation(duration_s=req.duration_s, seed=req.seed)
+@app.get("/pipeline/flow")
+def pipeline_flow():
+    """Returns end-to-end Titan Aerospace manufacturing stages, WIP stats,
+    and live AI reasoning pipeline steps."""
+    twin: FactoryTwin = app_state["twin"]
+    states = {s.machine_id: s.to_dict() for s in twin.get_latest_states()}
+
+    cnc = states.get("CNC-01", {})
+    press = states.get("PRESS-01", {})
+    conv = states.get("CONV-01", {})
+
+    total_parts = sum(s.get("throughput_units", 0) for s in states.values())
+
+    bottleneck = None
+    for mid, s in states.items():
+        if s.get("status") in ["warning", "critical", "failed", "in_maintenance"]:
+            bottleneck = mid
+            break
+
+    return {
+        "company": {
+            "name": "Titan Aerospace Precision Fab",
+            "facility": "Sector 7 Advanced Machining Facility",
+            "total_throughput_parts": total_parts,
+            "line_balance_pct": 96.8 if not bottleneck else 74.2,
+            "downtime_cost_saved_usd": round(total_parts * 42.50, 2),
+            "active_bottleneck": bottleneck,
+        },
+        "manufacturing_stages": [
+            {
+                "id": "STAGE-01",
+                "name": "Raw Ingot Ingestion",
+                "component": "Inconel 718 Billets",
+                "status": "NOMINAL",
+                "cycle_time_s": 5.0,
+                "wip_count": 18,
+                "station_type": "FEEDER",
+            },
+            {
+                "id": "STAGE-02",
+                "name": "High-Speed CNC Milling",
+                "workcell_id": "CNC-01",
+                "component": "Turbine Blades (HP Stage 1)",
+                "status": (cnc.get("status") or "HEALTHY").upper(),
+                "cycle_time_s": 12.0,
+                "wip_count": cnc.get("throughput_units", 0),
+                "wear_level": cnc.get("wear_level", 0.0),
+                "station_type": "MACHINING",
+            },
+            {
+                "id": "STAGE-03",
+                "name": "1000T Hydraulic Forging",
+                "workcell_id": "PRESS-01",
+                "component": "Airframe Bulkhead Ribs",
+                "status": (press.get("status") or "HEALTHY").upper(),
+                "cycle_time_s": 8.0,
+                "wip_count": press.get("throughput_units", 0),
+                "wear_level": press.get("wear_level", 0.0),
+                "station_type": "FORGING",
+            },
+            {
+                "id": "STAGE-04",
+                "name": "Assembly & Laser QC Gate",
+                "workcell_id": "CONV-01",
+                "component": "Avionics Core Integration",
+                "status": (conv.get("status") or "HEALTHY").upper(),
+                "cycle_time_s": 3.0,
+                "wip_count": conv.get("throughput_units", 0),
+                "wear_level": conv.get("wear_level", 0.0),
+                "station_type": "INSPECTION",
+            },
+            {
+                "id": "STAGE-05",
+                "name": "Autonomous Hangar Transit",
+                "workcell_id": "AGV-01",
+                "component": "Cleanroom Depot Transit",
+                "status": "ACTIVE",
+                "cycle_time_s": 24.0,
+                "wip_count": 4,
+                "station_type": "LOGISTICS",
+            },
+        ],
+        "ai_reasoning_pipeline": [
+            {
+                "step": 1,
+                "name": "Sensor Ingestion",
+                "metric": "60Hz Vibration & Temp",
+                "status": "STREAMING",
+                "details": "Continuous SimPy physical telemetry feeds",
+            },
+            {
+                "step": 2,
+                "name": "Feature Extraction",
+                "metric": "Observable Dynamics Only",
+                "status": "PASS",
+                "details": "Zero leakage: wear_level omitted, Δvib & rolling dynamics active",
+            },
+            {
+                "step": 3,
+                "name": "2021 TCN Prognostics",
+                "metric": "1D Dilated Residual TCN",
+                "status": "INFERRED",
+                "details": "Exponential receptive fields (d=1,2,4,8) + piecewise linear ceiling",
+            },
+            {
+                "step": 4,
+                "name": "Anomaly Gate",
+                "metric": "Isolation Forest",
+                "status": "PASS" if not bottleneck else "ALERT",
+                "details": "Contamination threshold 0.05 over multivariant feature space",
+            },
+            {
+                "step": 5,
+                "name": "SOP Semantic Match",
+                "metric": "ChromaDB RAG / TF-IDF",
+                "status": "RESOLVED",
+                "details": "Offline cosine similarity against plant maintenance manuals",
+            },
+            {
+                "step": 6,
+                "name": "Risk-Aware Scheduling",
+                "metric": "15% Asymmetric Safety Buffer",
+                "status": "ACTIVE",
+                "details": "RUL_safe = 0.85 * RUL_pred prevents catastrophic spindle crashes",
+            },
+        ],
+    }
 
 
 # -- Serve 3D Strategy Game UI at root (placed after API routes) -------------

@@ -41,6 +41,17 @@ class TestApiWeb(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("text/html", resp.headers["content-type"])
 
+    def test_pipeline_flow_endpoint(self):
+        resp = self.client.get("/pipeline/flow")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("company", data)
+        self.assertEqual(data["company"]["name"], "Titan Aerospace Precision Fab")
+        self.assertIn("manufacturing_stages", data)
+        self.assertEqual(len(data["manufacturing_stages"]), 5)
+        self.assertIn("ai_reasoning_pipeline", data)
+        self.assertEqual(len(data["ai_reasoning_pipeline"]), 6)
+
 
 if __name__ == "__main__":
     unittest.main()
