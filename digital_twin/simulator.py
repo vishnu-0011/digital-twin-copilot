@@ -39,6 +39,15 @@ DEFAULT_FLEET: list[MachineConfig] = [
         maintenance_duration_s=600.0,
     ),
     MachineConfig(
+        machine_id="CNC-02",
+        machine_type="CNC_MILL",
+        nominal_cycle_time_s=10.0,
+        wear_rate_mean=0.0015,
+        wear_rate_std=0.0005,
+        failure_wear_threshold=1.0,
+        maintenance_duration_s=500.0,
+    ),
+    MachineConfig(
         machine_id="PRESS-01",
         machine_type="HYDRAULIC_PRESS",
         nominal_cycle_time_s=8.0,
@@ -46,6 +55,33 @@ DEFAULT_FLEET: list[MachineConfig] = [
         wear_rate_std=0.0011,
         failure_wear_threshold=1.0,
         maintenance_duration_s=900.0,
+    ),
+    MachineConfig(
+        machine_id="PRESS-02",
+        machine_type="HYDRAULIC_PRESS",
+        nominal_cycle_time_s=6.0,
+        wear_rate_mean=0.0020,
+        wear_rate_std=0.0008,
+        failure_wear_threshold=1.0,
+        maintenance_duration_s=750.0,
+    ),
+    MachineConfig(
+        machine_id="FURN-01",
+        machine_type="FURNACE",
+        nominal_cycle_time_s=15.0,
+        wear_rate_mean=0.0012,
+        wear_rate_std=0.0004,
+        failure_wear_threshold=1.0,
+        maintenance_duration_s=1200.0,
+    ),
+    MachineConfig(
+        machine_id="ROBOT-01",
+        machine_type="ROBOT_ARM",
+        nominal_cycle_time_s=7.0,
+        wear_rate_mean=0.0014,
+        wear_rate_std=0.0005,
+        failure_wear_threshold=1.0,
+        maintenance_duration_s=450.0,
     ),
     MachineConfig(
         machine_id="CONV-01",
@@ -56,7 +92,17 @@ DEFAULT_FLEET: list[MachineConfig] = [
         failure_wear_threshold=1.0,
         maintenance_duration_s=300.0,
     ),
+    MachineConfig(
+        machine_id="LASER-01",
+        machine_type="METROLOGY",
+        nominal_cycle_time_s=4.0,
+        wear_rate_mean=0.0007,
+        wear_rate_std=0.0002,
+        failure_wear_threshold=1.0,
+        maintenance_duration_s=250.0,
+    ),
 ]
+
 
 
 class MachineTwin:

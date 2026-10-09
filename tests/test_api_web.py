@@ -27,7 +27,7 @@ class TestApiWeb(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("machines", data)
-        self.assertGreater(len(data["machines"]), 0)
+        self.assertEqual(len(data["machines"]), 8)
 
     def test_maintenance_trigger_endpoint(self):
         resp = self.client.post("/maintenance/trigger", json={"machine_id": "CNC-01"})
@@ -48,7 +48,7 @@ class TestApiWeb(unittest.TestCase):
         self.assertIn("company", data)
         self.assertEqual(data["company"]["name"], "Titan Aerospace Precision Fab")
         self.assertIn("manufacturing_stages", data)
-        self.assertEqual(len(data["manufacturing_stages"]), 5)
+        self.assertEqual(len(data["manufacturing_stages"]), 10)
     def test_fleet_reset_endpoint(self):
         resp = self.client.post("/fleet/reset")
         self.assertEqual(resp.status_code, 200)

@@ -13,6 +13,7 @@ import {
   focusOnMachine,
   resetCamera,
   setCameraPreset,
+  setSceneTheme,
   pickMachine,
   getMachineScreenPositions
 } from './scene.js';
@@ -47,8 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Initialize 3D WebGL Scene
   initScene(container);
 
+  // Apply default theme to Three.js scene
+  const initialTheme = localStorage.getItem('titan_theme') || 'light';
+  setSceneTheme(initialTheme);
+
   // 2. Initialize HUD, Badges & Pipeline UI
-  initHUD(selectMachine);
+  initHUD(selectMachine, (theme) => setSceneTheme(theme));
 
   // 3. Setup UI Event Listeners (Controls & Camera Director)
   setupControls(container);
@@ -255,9 +260,10 @@ export function selectMachine(machineId) {
   const directorButtons = document.querySelectorAll('.btn-director');
   directorButtons.forEach(b => {
     let preset = 'global';
-    if (machineId === 'CNC-01') preset = 'cnc';
-    else if (machineId === 'PRESS-01') preset = 'press';
-    else if (machineId === 'CONV-01') preset = 'conv';
+    if (machineId === 'CNC-01' || machineId === 'CNC-02') preset = 'bay1';
+    else if (machineId === 'PRESS-01' || machineId === 'PRESS-02' || machineId === 'FURN-01') preset = 'bay2';
+    else if (machineId === 'ROBOT-01' || machineId === 'LASER-01') preset = 'bay3';
+    else if (machineId === 'CONV-01') preset = 'bay4';
     b.classList.toggle('active', b.getAttribute('data-preset') === preset);
   });
 

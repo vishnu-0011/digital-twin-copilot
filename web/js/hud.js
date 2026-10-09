@@ -3,7 +3,7 @@
  * ===================================================
  * Manages top KPI bar, 3D floating holographic labels,
  * tabbed inspection drawer, dual-channel oscilloscope,
- * and the End-to-End Process Pipeline Ribbon.
+ * theme toggle, and the 10-Stage Process Pipeline Ribbon.
  */
 
 import { playClick } from './audio.js';
@@ -11,14 +11,16 @@ import { playClick } from './audio.js';
 let badgeContainer = null;
 const badgeElements = new Map(); // id -> HTMLElement
 let selectedMachineId = null;
+let machineSelectCallback = null;
 
 // Oscilloscope dual buffers
 const vibrationBuffer = new Array(70).fill(0.12);
 const tempBuffer = new Array(70).fill(42.0);
 let waveformAnimId = null;
 
-export function initHUD(onSelectMachine) {
+export function initHUD(onSelectMachine, onToggleTheme) {
   badgeContainer = document.getElementById('floating-badges-layer');
+  machineSelectCallback = onSelectMachine;
 
   // Initialize dual oscilloscope canvas
   startWaveformRenderer();
@@ -28,6 +30,34 @@ export function initHUD(onSelectMachine) {
 
   // Setup Pipeline Ribbon Tabs & Collapsible behavior
   setupPipelineRibbon();
+
+  // Setup Theme Switcher
+  setupThemeToggle(onToggleTheme);
+}
+
+/**
+ * Handles Light/Dark Mode Switcher
+ */
+function setupThemeToggle(onToggleTheme) {
+  const themeBtn = document.getElementById('btn-theme');
+  if (!themeBtn) return;
+
+  // Default is Executive Cleanroom Light Theme
+  let currentTheme = localStorage.getItem('titan_theme') || 'light';
+  document.body.setAttribute('data-theme', currentTheme);
+  themeBtn.textContent = currentTheme === 'light' ? '☀️ Light' : '🌙 Dark';
+
+  themeBtn.addEventListener('click', () => {
+    playClick();
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.body.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('titan_theme', currentTheme);
+    themeBtn.textContent = currentTheme === 'light' ? '☀️ Light' : '🌙 Dark';
+
+    if (onToggleTheme) {
+      onToggleTheme(currentTheme);
+    }
+  });
 }
 
 /**
@@ -69,13 +99,13 @@ export function updateFloatingBadges(projectedPositions, onSelectMachine) {
     el.style.top = `${item.y}px`;
 
     if (item.state) {
-      el.setAttribute('data-status', item.state.status || 'HEALTHY');
+      el.setAttribute('data-status', (item.state.status || 'HEALTHY').toUpperCase());
       const rulEl = el.querySelector('.badge-rul');
       if (rulEl) {
         if (item.state.rul != null) {
           rulEl.textContent = `RUL ${item.state.rul}c`;
         } else {
-          rulEl.textContent = item.state.status || 'RUN';
+          rulEl.textContent = (item.state.status || 'RUN').toUpperCase();
         }
       }
     }
@@ -83,7 +113,7 @@ export function updateFloatingBadges(projectedPositions, onSelectMachine) {
 }
 
 /**
- * Updates top bar production KPIs
+ * Updates top bar production KPIs across the 8-machine fleet
  */
 export function updateTopKPIs(fleetData) {
   if (!fleetData || !Array.isArray(fleetData)) return;
@@ -95,7 +125,8 @@ export function updateTopKPIs(fleetData) {
   let totalParts = 0;
 
   fleetData.forEach(m => {
-    if (m.status === 'HEALTHY' || m.status === 'healthy') healthyCount++;
+    const stat = (m.status || '').toLowerCase();
+    if (stat === 'healthy') healthyCount++;
     totalWear += (m.wear_level || 0);
     totalParts += (m.throughput_units || 0);
     const rul = m.predicted_rul_cycles != null ? m.predicted_rul_cycles : m.rul_cycles;
@@ -151,14 +182,14 @@ function setupPipelineRibbon() {
   const viewProd = document.getElementById('pipeline-view-prod');
   const viewAi = document.getElementById('pipeline-view-ai');
   const toggleBtn = document.getElementById('btn-ribbon-toggle');
-  const ribbon = document.getElementById('pipeline-ribbon');
+  const ribbon = document.getElementById('process-pipeline-ribbon');
 
   if (tabProd && tabAi && viewProd && viewAi) {
     tabProd.addEventListener('click', () => {
       playClick();
       tabProd.classList.add('active');
       tabAi.classList.remove('active');
-      viewProd.style.display = 'grid';
+      viewProd.style.display = 'flex';
       viewAi.style.display = 'none';
     });
 
@@ -181,7 +212,7 @@ function setupPipelineRibbon() {
 }
 
 /**
- * Renders end-to-end pipeline data fetched from /pipeline/flow
+ * Renders end-to-end 10-stage pipeline data fetched from /pipeline/flow
  */
 export function renderPipelineFlow(data) {
   if (!data) return;
@@ -197,7 +228,7 @@ export function renderPipelineFlow(data) {
     if (savingsEl) savingsEl.textContent = `$${(data.company.downtime_cost_saved_usd || 0).toLocaleString()}`;
   }
 
-  // 2. Manufacturing Stages Flow
+  // 2. Manufacturing Stages Flow across 10 stages
   const prodContainer = document.getElementById('pipeline-view-prod');
   if (prodContainer && Array.isArray(data.manufacturing_stages)) {
     prodContainer.innerHTML = data.manufacturing_stages.map(st => {
@@ -206,7 +237,7 @@ export function renderPipelineFlow(data) {
                         st.status === 'WARNING' ? 'warning' : 'critical';
 
       return `
-        <div class="pipe-node ${isWarn ? 'bottleneck' : ''}" title="${st.name}">
+        <div class="pipe-node ${isWarn ? 'bottleneck' : ''}" data-workcell="${st.workcell_id || ''}" title="Click to inspect ${st.name}">
           <div class="pipe-node-header">
             <span class="pipe-stage-tag">${st.id}</span>
             <span class="pipe-status-pill ${pillClass}">${st.status}</span>
@@ -220,6 +251,17 @@ export function renderPipelineFlow(data) {
         </div>
       `;
     }).join('');
+
+    // Attach click listeners to pipe nodes to select machine
+    prodContainer.querySelectorAll('.pipe-node').forEach(node => {
+      const wId = node.getAttribute('data-workcell');
+      if (wId) {
+        node.addEventListener('click', () => {
+          playClick();
+          if (machineSelectCallback) machineSelectCallback(wId);
+        });
+      }
+    });
   }
 
   // 3. AI Reasoning Pipeline Steps
@@ -249,16 +291,23 @@ export function populateDrawer(machineData) {
   const drawer = document.getElementById('machine-drawer');
   if (!drawer) return;
 
-  // Title & Subtitle
+  // Title & Machine Taxonomy for all 8 machines
   const titleEl = document.getElementById('drawer-m-id');
   const typeEl = document.getElementById('drawer-m-type');
   if (titleEl) titleEl.textContent = machineData.machine_id;
-  
-  let friendlyType = "Titan Precision Workcell";
-  if (machineData.machine_id === "CNC-01") friendlyType = "5-Axis High-Speed Turbine Mill";
-  else if (machineData.machine_id === "PRESS-01") friendlyType = "1000-Ton Hydraulic Forging Press";
-  else if (machineData.machine_id === "CONV-01") friendlyType = "Avionics Assembly & Laser QC Gate";
 
+  const taxonomy = {
+    "CNC-01": "5-Axis Heavy Roughing Mill (Inconel Billets)",
+    "CNC-02": "5-Axis High-Speed Airfoil Finishing Center",
+    "PRESS-01": "1000-Ton Airframe Bulkhead Forging Press",
+    "PRESS-02": "500-Ton Hydraulic Extrusion Press",
+    "FURN-01": "Vacuum Carburizing Heat Treatment Furnace",
+    "ROBOT-01": "6-DOF Robotic Deburring & Polishing Workcell",
+    "LASER-01": "Dual Laser Triangulation QC Metrology Arch",
+    "CONV-01": "Modular Dual-Rail Avionics Assembly Line",
+  };
+
+  const friendlyType = taxonomy[machineData.machine_id] || "Titan Aerospace Precision Workcell";
   if (typeEl) typeEl.textContent = friendlyType;
 
   // Status Badge
@@ -332,8 +381,8 @@ export function populateDrawer(machineData) {
   if (sopBox) {
     if (rawStatus === 'CRITICAL' || rawStatus === 'WARNING' || rawStatus === 'FAILED' || rawStatus === 'DEGRADING') {
       sopBox.innerHTML = `
-        <div class="sop-title">⚠️ SOP-AERO-04: High-Harmonic Bearing Vibration Mitigation</div>
-        <div class="sop-cause">Harmonic vibration peaks detected along spindle rotational axis. Risk of micro-fractures in Inconel turbine blade profiles.</div>
+        <div class="sop-title">⚠️ SOP-AERO-04: High-Harmonic Vibration Mitigation</div>
+        <div class="sop-cause">Harmonic vibration peaks detected along rotational axis. Risk of micro-fractures in aerospace components.</div>
         <ul class="sop-actions">
           <li><input type="checkbox" checked disabled> Immediate 30% feed-rate derating applied by copilot</li>
           <li><input type="checkbox" checked disabled> Lubrication pressure verification: Nominal 4.2 bar</li>
@@ -343,12 +392,12 @@ export function populateDrawer(machineData) {
       `;
     } else {
       sopBox.innerHTML = `
-        <div class="sop-title" style="color: var(--color-emerald)">✓ SOP-AERO-01: Standard Turbine Machining Protocol</div>
+        <div class="sop-title" style="color: var(--color-emerald)">✓ SOP-AERO-01: Standard Aerospace Operating Protocol</div>
         <div class="sop-cause">Telemetry within ISO 10816 Zone A tolerance limits. Tooling profile nominal.</div>
         <ul class="sop-actions">
           <li><input type="checkbox" checked disabled> Continuous 60Hz SimPy telemetry stream active</li>
           <li><input type="checkbox" checked disabled> Zero-leakage observable physics model verified</li>
-          <li><input type="checkbox"> Routine tool surface laser inspection scheduled at shift change</li>
+          <li><input type="checkbox"> Routine surface laser inspection scheduled at shift change</li>
         </ul>
       `;
     }
@@ -407,8 +456,10 @@ function startWaveformRenderer() {
 
     ctx.clearRect(0, 0, w, h);
 
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+
     // Grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, h / 2);
@@ -422,11 +473,10 @@ function startWaveformRenderer() {
     const step = w / (vibrationBuffer.length - 1);
 
     // Channel 2: Thermal Curve (Amber background trace)
-    ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+    ctx.strokeStyle = isDark ? 'rgba(245, 158, 11, 0.75)' : '#d97706';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     tempBuffer.forEach((tempVal, i) => {
-      // Temp normalized between 30°C and 90°C
       const normTemp = Math.max(0, Math.min(1.0, (tempVal - 30) / 60));
       const y = h - (normTemp * (h - 10)) - 5;
       const x = i * step;
@@ -435,11 +485,13 @@ function startWaveformRenderer() {
     });
     ctx.stroke();
 
-    // Channel 1: Vibration RMS (Cyan foreground waveform)
-    ctx.strokeStyle = '#00f3ff';
+    // Channel 1: Vibration RMS (Cobalt / Cyan foreground waveform)
+    ctx.strokeStyle = isDark ? '#00f3ff' : '#0284c7';
     ctx.lineWidth = 2;
-    ctx.shadowColor = 'rgba(0, 243, 255, 0.6)';
-    ctx.shadowBlur = 6;
+    if (isDark) {
+      ctx.shadowColor = 'rgba(0, 243, 255, 0.6)';
+      ctx.shadowBlur = 6;
+    }
     ctx.beginPath();
     vibrationBuffer.forEach((vibVal, i) => {
       const jitter = (Math.random() - 0.5) * 0.03;

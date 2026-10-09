@@ -36,3 +36,15 @@
 - **REQ-14**: PRESS-01 1000-Ton hydraulic forging press with overhead oil reservoir, nitrogen accumulators, manifold with braided hoses, infrared photoelectric safety light curtains, polished chrome ram, and stamping shockwave ring + hot billet thermal radiation.
 - **REQ-15**: CONV-01 modular dual-rail conveyor with emergency E-stop pull cords, enclosed Laser QC Inspection Tunnel with digital HUD readout and vertical laser triangulation scan sheet, passing aerospace turbine pallets.
 - **REQ-16**: AGV-01 AMR autonomous rover with rotating 3D LiDAR cone, roving forward driving headlights casting light on the floor, flashing amber safety beacon, and subtle floating industrial dust motes particle cloud.
+
+### Milestone v4.0: Executive Cleanroom Mega-Factory & Expanded Fleet
+- **REQ-17**: Mega-Factory physics scaling: SimPy simulation with 8 distinct aerospace machine configurations (CNC-01, CNC-02, PRESS-01, PRESS-02, FURN-01, ROBOT-01, CONV-01, LASER-01) with realistic cycle times, wear increments, and 10-stage manufacturing pipeline.
+- **REQ-18**: Executive Cleanroom Light Theme: Default architectural light cleanroom styling (`data-theme="light"`), polished white epoxy floor, dark slate typography (`#0f172a`), translucent frosted HUD, daylight lighting, and interactive `☀️ Light / 🌙 Dark` toggle.
+- **REQ-19**: 8 Distinct Procedural Machinery Workcells in 3D across 4 zoned bays:
+  - Bay 1: Machining (CNC-01 Roughing Mill + CNC-02 Airfoil Finishing Center)
+  - Bay 2: Heavy Forming & Thermal (PRESS-01 1000T Forging Press + PRESS-02 500T Extrusion Press + FURN-01 Vacuum Carburizing Furnace)
+  - Bay 3: Robotics & Metrology (ROBOT-01 6-DOF Robotic Arm Cell + LASER-01 Dual Laser Triangulation QC Arch)
+  - Bay 4: Assembly Line (CONV-01 Dual-rail line)
+  - Logistics Fleet: Dual roving AMRs (AGV-01 and AGV-02) with independent coordinated routes and payloads.
+- **REQ-20**: Zero AI slop: Concrete industrial engineering metrics (ISO 10816 vibration zones A/B/C/D, real cycle times, OEE calculation, WIP counts, physics-driven wear).
+

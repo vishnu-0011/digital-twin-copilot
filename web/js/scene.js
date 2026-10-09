@@ -1,22 +1,56 @@
 /**
  * 3D Isometric Factory Scene Engine
+ * Titan Aerospace Precision Fab
  * ===================================
  * Manages Three.js WebGL scene, lighting, isometric camera,
- * machine models, animation loops, raycasting, and radar sweep.
+ * 8 distinct machine models across 4 zoned bays + 2 roving AMRs,
+ * animation loops, raycasting, and theme switching.
  */
 
 import {
   createFactoryFloor,
   createCNCMill,
+  createAirfoilFinishingCenter,
   createHydraulicPress,
+  createExtrusionPress,
+  createVacuumFurnace,
+  createRoboticCell,
+  createLaserQCArch,
   createConveyorLine,
-  createAGVRobot
+  createAGVRobot,
+  setFactoryTheme
 } from './models.js';
 
 let scene, camera, renderer, controls;
 let containerEl;
-let factoryFloor, cncMill, hydraulicPress, conveyorLine, agvRobot;
+let ambientLight, dirLight, fillLight;
+let factoryFloor;
 const machines = new Map(); // id -> THREE.Group
+
+// AGV Logistics Fleet
+let agvRobot1, agvRobot2;
+let agv1FollowMode = false;
+let agv2FollowMode = false;
+
+// AGV-01 Outer Loop Waypoints
+const agv1Waypoints = [
+  new THREE.Vector3(-22, 0, -16),
+  new THREE.Vector3(22, 0, -16),
+  new THREE.Vector3(22, 0, 16),
+  new THREE.Vector3(-22, 0, 16),
+];
+let agv1CurrentWp = 0;
+let agv1Speed = 0.08;
+
+// AGV-02 Inner Cross-Bay Loop Waypoints
+const agv2Waypoints = [
+  new THREE.Vector3(0, 0, -12),
+  new THREE.Vector3(0, 0, 12),
+  new THREE.Vector3(-10, 0, 12),
+  new THREE.Vector3(-10, 0, -12),
+];
+let agv2CurrentWp = 0;
+let agv2Speed = 0.07;
 
 // Radar sweep state
 let radarMesh = null;
@@ -26,24 +60,19 @@ let radarProgress = 0;
 // Camera tween state
 let targetCamPos = null;
 let targetLookAt = null;
-let defaultCamPos = new THREE.Vector3(26, 22, 26);
-let defaultLookAt = new THREE.Vector3(0, 2, 0);
+const defaultCamPos = new THREE.Vector3(38, 32, 38);
+const defaultLookAt = new THREE.Vector3(0, 2, 0);
 
-// AGV Waypoint path
-const agvWaypoints = [
-  new THREE.Vector3(-14, 0, -10),
-  new THREE.Vector3(14, 0, -10),
-  new THREE.Vector3(14, 0, 11),
-  new THREE.Vector3(-14, 0, 11),
-];
-let agvCurrentWp = 0;
-let agvSpeed = 0.08;
-
-// Machine live telemetry state cache
+// Machine live telemetry state cache across all 8 machines
 const telemetryState = {
-  "CNC-01": { status: "HEALTHY", wear: 0.1, vibration: 0.15, rpm: 1200 },
-  "PRESS-01": { status: "HEALTHY", wear: 0.15, pressure: 210 },
-  "CONV-01": { status: "HEALTHY", wear: 0.05, speed: 1.0 }
+  "CNC-01": { status: "HEALTHY", wear: 0.05, vibration: 0.16, rpm: 1200 },
+  "CNC-02": { status: "HEALTHY", wear: 0.05, vibration: 0.14, rpm: 1800 },
+  "PRESS-01": { status: "HEALTHY", wear: 0.08, vibration: 0.22, pressure: 210 },
+  "PRESS-02": { status: "HEALTHY", wear: 0.06, vibration: 0.18, pressure: 160 },
+  "FURN-01": { status: "HEALTHY", wear: 0.04, vibration: 0.11, temp: 980 },
+  "ROBOT-01": { status: "HEALTHY", wear: 0.05, vibration: 0.15, load: 0.65 },
+  "LASER-01": { status: "HEALTHY", wear: 0.03, vibration: 0.08, accuracy: 0.999 },
+  "CONV-01": { status: "HEALTHY", wear: 0.04, vibration: 0.12, speed: 1.0 },
 };
 
 export function initScene(container) {
@@ -53,8 +82,8 @@ export function initScene(container) {
 
   // 1. Scene
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x090c12);
-  scene.fog = new THREE.FogExp2(0x090c12, 0.012);
+  scene.background = new THREE.Color(0xf1f5f9); // Cleanroom daylight default
+  scene.fog = new THREE.FogExp2(0xf1f5f9, 0.008);
 
   // 2. Camera (Isometric Perspective with low FOV for RTS strategy feel)
   camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 1000);
@@ -75,433 +104,377 @@ export function initScene(container) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.target.copy(defaultLookAt);
-  controls.maxPolarAngle = Math.PI / 2.05; // Prevent going beneath floor
-  controls.minDistance = 10;
-  controls.maxDistance = 75;
+  controls.maxPolarAngle = Math.PI / 2.05;
+  controls.minDistance = 12;
+  controls.maxDistance = 90;
   controls.addEventListener('start', () => {
-    agvFollowMode = false;
+    agv1FollowMode = false;
+    agv2FollowMode = false;
   });
 
-  // 5. Lighting
+  // 5. Lighting Setup
   setupLighting();
 
-  // 6. Build Factory Assets
+  // 6. Build Factory Assets (Floor & 8 Workcells)
   factoryFloor = createFactoryFloor(scene);
 
-  cncMill = createCNCMill({ x: -8, y: 0, z: -4 });
-  scene.add(cncMill);
-  machines.set("CNC-01", cncMill);
+  // Bay 1: Machining Bay
+  const cnc1 = createCNCMill({ x: -16, y: 0, z: -10 });
+  scene.add(cnc1);
+  machines.set("CNC-01", cnc1);
 
-  hydraulicPress = createHydraulicPress({ x: 8, y: 0, z: -4 });
-  scene.add(hydraulicPress);
-  machines.set("PRESS-01", hydraulicPress);
+  const cnc2 = createAirfoilFinishingCenter({ x: -6, y: 0, z: -10 });
+  scene.add(cnc2);
+  machines.set("CNC-02", cnc2);
 
-  conveyorLine = createConveyorLine({ x: 0, y: 0, z: 6 });
-  scene.add(conveyorLine);
-  machines.set("CONV-01", conveyorLine);
+  // Bay 2: Heavy Forming & Thermal Bay
+  const press1 = createHydraulicPress({ x: 7, y: 0, z: -11 });
+  scene.add(press1);
+  machines.set("PRESS-01", press1);
 
-  agvRobot = createAGVRobot();
-  agvRobot.position.copy(agvWaypoints[0]);
-  scene.add(agvRobot);
+  const press2 = createExtrusionPress({ x: 19, y: 0, z: -11 });
+  scene.add(press2);
+  machines.set("PRESS-02", press2);
+
+  const furn1 = createVacuumFurnace({ x: 13, y: 0, z: -2 });
+  scene.add(furn1);
+  machines.set("FURN-01", furn1);
+
+  // Bay 3: Robotics & Metrology Bay
+  const robot1 = createRoboticCell({ x: -16, y: 0, z: 8 });
+  scene.add(robot1);
+  machines.set("ROBOT-01", robot1);
+
+  const laser1 = createLaserQCArch({ x: -6, y: 0, z: 8 });
+  scene.add(laser1);
+  machines.set("LASER-01", laser1);
+
+  // Bay 4: Assembly Line Bay
+  const conv1 = createConveyorLine({ x: 13, y: 0, z: 8 });
+  scene.add(conv1);
+  machines.set("CONV-01", conv1);
+
+  // Logistics Fleet: Dual AMRs
+  agvRobot1 = createAGVRobot("AGV-01", "turbine");
+  agvRobot1.position.copy(agv1Waypoints[0]);
+  scene.add(agvRobot1);
+
+  agvRobot2 = createAGVRobot("AGV-02", "avionics");
+  agvRobot2.position.copy(agv2Waypoints[0]);
+  scene.add(agvRobot2);
 
   // 7. Radar Scanner Plane
   setupRadarScanner();
 
-  // 8. Atmospheric Industrial Dust Particles
-  setupAtmosphericDustMotes();
-
-  // 9. Event Listeners
+  // 8. Event Listeners
   window.addEventListener('resize', onWindowResize);
 
-  // 10. Start Animation Loop
+  // 9. Start Animation Loop
   animate(0);
 
   return { scene, camera, renderer, controls, machines };
 }
 
 function setupLighting() {
-  // Industrial Ambient Light
-  const ambientLight = new THREE.AmbientLight(0x182436, 1.4);
+  ambientLight = new THREE.AmbientLight(0xffffff, 1.25);
   scene.add(ambientLight);
 
-  // Hemisphere Light (Sky cyan / Ground charcoal)
-  const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x070a10, 0.7);
-  hemiLight.position.set(0, 30, 0);
-  scene.add(hemiLight);
-
-  // Main Factory Key Floodlight
-  const dirLight = new THREE.DirectionalLight(0xffffff, 2.4);
-  dirLight.position.set(24, 34, 18);
+  dirLight = new THREE.DirectionalLight(0xffffff, 1.35);
+  dirLight.position.set(24, 38, 24);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize.width = 2048;
   dirLight.shadow.mapSize.height = 2048;
   dirLight.shadow.camera.near = 0.5;
-  dirLight.shadow.camera.far = 80;
-  const d = 22;
-  dirLight.shadow.camera.left = -d;
-  dirLight.shadow.camera.right = d;
-  dirLight.shadow.camera.top = d;
-  dirLight.shadow.camera.bottom = -d;
-  dirLight.shadow.bias = -0.0005;
+  dirLight.shadow.camera.far = 120;
+  dirLight.shadow.camera.left = -34;
+  dirLight.shadow.camera.right = 34;
+  dirLight.shadow.camera.top = 28;
+  dirLight.shadow.camera.bottom = -28;
+  dirLight.shadow.bias = -0.0004;
   scene.add(dirLight);
 
-  // Cyan and Orange Strategy Accent Lights
-  const cyanPoint = new THREE.PointLight(0x00f3ff, 2.8, 25);
-  cyanPoint.position.set(-8, 5, -3);
-  scene.add(cyanPoint);
-
-  const orangePoint = new THREE.PointLight(0xff6b2b, 2.8, 25);
-  orangePoint.position.set(8, 6, -3);
-  scene.add(orangePoint);
-
-  const greenPoint = new THREE.PointLight(0x10b981, 2.0, 25);
-  greenPoint.position.set(0, 4, 7);
-  scene.add(greenPoint);
-
-  // Machine Interior Worklights
-  const cncWorklight = new THREE.PointLight(0x38bdf8, 1.8, 8);
-  cncWorklight.position.set(-8, 3.5, -3.2);
-  scene.add(cncWorklight);
-
-  const pressForgeGlow = new THREE.PointLight(0xff3b00, 2.2, 10);
-  pressForgeGlow.position.set(8, 2.4, -4);
-  scene.add(pressForgeGlow);
+  fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.6);
+  fillLight.position.set(-24, 20, -20);
+  scene.add(fillLight);
 }
 
-let dustParticles = null;
-const dustCount = 180;
+export function setSceneTheme(themeName) {
+  const isLight = themeName !== 'dark';
+  setFactoryTheme(isLight);
 
-function setupAtmosphericDustMotes() {
-  const dustGeo = new THREE.BufferGeometry();
-  const dustPositions = new Float32Array(dustCount * 3);
-  for (let i = 0; i < dustCount; i++) {
-    dustPositions[i * 3] = (Math.random() - 0.5) * 44;
-    dustPositions[i * 3 + 1] = 0.5 + Math.random() * 11;
-    dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 32;
+  if (isLight) {
+    scene.background.setHex(0xf1f5f9);
+    scene.fog.color.setHex(0xf1f5f9);
+    ambientLight.color.setHex(0xffffff);
+    ambientLight.intensity = 1.25;
+    dirLight.color.setHex(0xffffff);
+    dirLight.intensity = 1.35;
+    fillLight.color.setHex(0xe2e8f0);
+    fillLight.intensity = 0.6;
+  } else {
+    scene.background.setHex(0x090c12);
+    scene.fog.color.setHex(0x090c12);
+    ambientLight.color.setHex(0x64748b);
+    ambientLight.intensity = 0.65;
+    dirLight.color.setHex(0x00f3ff);
+    dirLight.intensity = 1.2;
+    fillLight.color.setHex(0x1e293b);
+    fillLight.intensity = 0.4;
   }
-  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
-  const dustMat = new THREE.PointsMaterial({
-    color: 0x38bdf8,
-    size: 0.16,
-    transparent: true,
-    opacity: 0.45,
-    blending: THREE.AdditiveBlending,
-  });
-  dustParticles = new THREE.Points(dustGeo, dustMat);
-  scene.add(dustParticles);
 }
 
 function setupRadarScanner() {
-  const radarGeo = new THREE.PlaneGeometry(36, 1.2);
+  const radarGeo = new THREE.PlaneGeometry(62, 4);
   const radarMat = new THREE.MeshBasicMaterial({
-    color: 0x00f3ff,
+    color: 0x0284c7,
     transparent: true,
-    opacity: 0.0,
+    opacity: 0,
     side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.AdditiveBlending
   });
   radarMesh = new THREE.Mesh(radarGeo, radarMat);
   radarMesh.rotation.x = -Math.PI / 2;
-  radarMesh.position.set(0, 0.05, -16);
+  radarMesh.position.set(0, 0.08, -20);
   scene.add(radarMesh);
 }
 
-export function triggerRadarScan() {
+export function triggerRadarSweep() {
   radarScanning = true;
   radarProgress = 0;
-  if (radarMesh) {
-    radarMesh.material.opacity = 0.85;
+}
+
+export function setCameraPreset(presetName) {
+  agv1FollowMode = false;
+  agv2FollowMode = false;
+
+  switch (presetName) {
+    case 'global':
+      targetCamPos = defaultCamPos.clone();
+      targetLookAt = defaultLookAt.clone();
+      break;
+    case 'bay1': // Machining Bay (CNC-01 & CNC-02)
+      targetCamPos = new THREE.Vector3(-11, 16, 2);
+      targetLookAt = new THREE.Vector3(-11, 2, -10);
+      break;
+    case 'bay2': // Forming & Heat (PRESS-01, PRESS-02, FURN-01)
+      targetCamPos = new THREE.Vector3(13, 18, 5);
+      targetLookAt = new THREE.Vector3(13, 3, -8);
+      break;
+    case 'bay3': // Robotics & QC (ROBOT-01, LASER-01)
+      targetCamPos = new THREE.Vector3(-11, 16, 20);
+      targetLookAt = new THREE.Vector3(-11, 2, 8);
+      break;
+    case 'bay4': // Assembly Line (CONV-01)
+      targetCamPos = new THREE.Vector3(13, 16, 20);
+      targetLookAt = new THREE.Vector3(13, 2, 8);
+      break;
+    case 'agv1':
+      agv1FollowMode = true;
+      break;
+    case 'agv2':
+      agv2FollowMode = true;
+      break;
+    default:
+      // Focus on specific machine ID
+      if (machines.has(presetName)) {
+        const m = machines.get(presetName);
+        targetCamPos = new THREE.Vector3(m.position.x + 8, m.position.y + 7, m.position.z + 8);
+        targetLookAt = new THREE.Vector3(m.position.x, m.position.y + 2, m.position.z);
+      }
+      break;
   }
 }
 
-let agvFollowMode = false;
-
-export function setCameraPreset(preset) {
-  if (preset === 'agv') {
-    agvFollowMode = true;
-    targetCamPos = null;
-    targetLookAt = null;
-    return;
-  }
-
-  agvFollowMode = false;
-  if (preset === 'global' || preset === 'overview') {
-    targetCamPos = defaultCamPos.clone();
-    targetLookAt = defaultLookAt.clone();
-  } else if (preset === 'cnc') {
-    targetCamPos = new THREE.Vector3(-8 + 7, 7, -4 + 7);
-    targetLookAt = new THREE.Vector3(-8, 2.8, -4);
-  } else if (preset === 'press') {
-    targetCamPos = new THREE.Vector3(8 + 8, 9, -4 + 8);
-    targetLookAt = new THREE.Vector3(8, 4.2, -4);
-  } else if (preset === 'conv') {
-    targetCamPos = new THREE.Vector3(8, 6.5, 6 + 9);
-    targetLookAt = new THREE.Vector3(0, 1.8, 6);
-  }
-}
-
-export function isAgvFollowMode() {
-  return agvFollowMode;
-}
-
-export function focusOnMachine(machineId) {
-  agvFollowMode = false;
-  const machine = machines.get(machineId);
-  if (!machine) return;
-
-  const mPos = machine.position;
-  // Offset camera for comfortable isometric inspection angle
-  targetCamPos = new THREE.Vector3(mPos.x + 10, mPos.y + 9, mPos.z + 10);
-  targetLookAt = new THREE.Vector3(mPos.x, mPos.y + 2.5, mPos.z);
-}
-
-export function resetCamera() {
-  setCameraPreset('global');
-}
-
-export function updateMachineStates(fleetData) {
+export function updateFleetTelemetry(fleetData) {
   if (!fleetData || !Array.isArray(fleetData)) return;
 
-  fleetData.forEach(item => {
-    const id = item.machine_id;
-    const machine = machines.get(id);
-    if (!machine) return;
-
-    // Cache telemetry
-    const rawStatus = (item.status || "HEALTHY").toUpperCase();
-    const rulVal = item.predicted_rul_cycles != null ? Math.round(item.predicted_rul_cycles) : (item.rul_cycles != null ? item.rul_cycles : null);
-    const tempVal = item.temperature_c != null ? item.temperature_c : (item.temperature || 42.0);
+  fleetData.forEach(m => {
+    const id = m.machine_id;
+    const group = machines.get(id);
 
     telemetryState[id] = {
-      status: rawStatus,
-      wear: item.wear_level || 0,
-      rul: rulVal,
-      temperature: tempVal,
-      vibration: item.vibration_rms || 0.15,
-      load: item.load_factor || 0.8
+      status: m.status || "HEALTHY",
+      wear: m.wear_level || 0,
+      vibration: m.vibration_rms || 0.15,
+      temp: m.temperature_c || 42.0,
+      rul: m.predicted_rul_cycles != null ? Math.round(m.predicted_rul_cycles) : m.rul_cycles,
+      throughput: m.throughput_units || 0,
     };
 
-    // Color definitions
-    let statusColor = 0x00ff88; // Healthy Green
-    if (rawStatus === "WARNING" || rawStatus === "DEGRADING") statusColor = 0xf59e0b; // Amber
-    else if (rawStatus === "CRITICAL" || rawStatus === "FAILED") statusColor = 0xef4444; // Red
-    else if (rawStatus === "REPAIRING" || rawStatus === "IN_MAINTENANCE") statusColor = 0x00d2ff; // Cyan
+    if (group && group.statusRing) {
+      const stat = (m.status || "HEALTHY").toUpperCase();
+      let col = 0x059669; // Emerald green
+      if (stat === "CRITICAL" || stat === "FAILED") col = 0xdc2626;
+      else if (stat === "WARNING" || stat === "DEGRADING") col = 0xd97706;
 
-    // Update Ground Halo
-    if (machine.statusRing) {
-      machine.statusRing.material.color.setHex(statusColor);
-    }
+      group.statusRing.material.color.setHex(col);
 
-    // Update Beacon Tower
-    if (machine.beaconLight) {
-      machine.beaconLight.material.color.setHex(statusColor);
-    }
-
-    // Update Heat Aura
-    if (machine.heatAura) {
-      const wear = item.wear_level || 0;
-      // Glow intensifies as wear rises above 0.4
-      const opacity = wear > 0.4 ? Math.min(0.65, (wear - 0.3) * 1.2) : 0.0;
-      machine.heatAura.material.opacity = opacity;
-      if (wear > 0.75) {
-        machine.heatAura.material.color.setHex(0xff0033);
-      } else {
-        machine.heatAura.material.color.setHex(0xff5500);
+      if (group.beaconLight) {
+        group.beaconLight.material.color.setHex(col);
       }
     }
   });
 }
 
 function updateAGVNavigation() {
-  if (!agvRobot) return;
+  // Update AGV-01 (Outer Loop)
+  if (agvRobot1) {
+    const target = agv1Waypoints[agv1CurrentWp];
+    const dx = target.x - agvRobot1.position.x;
+    const dz = target.z - agvRobot1.position.z;
+    const dist = Math.hypot(dx, dz);
 
-  const target = agvWaypoints[agvCurrentWp];
-  const dir = new THREE.Vector3().subVectors(target, agvRobot.position);
-  dir.y = 0;
-  const dist = dir.length();
+    if (dist < 0.5) {
+      agv1CurrentWp = (agv1CurrentWp + 1) % agv1Waypoints.length;
+    } else {
+      const angle = Math.atan2(dz, dx);
+      agvRobot1.position.x += Math.cos(angle) * agv1Speed;
+      agvRobot1.position.z += Math.sin(angle) * agv1Speed;
+      agvRobot1.rotation.y = -angle;
+    }
 
-  if (dist < 0.4) {
-    agvCurrentWp = (agvCurrentWp + 1) % agvWaypoints.length;
-  } else {
-    dir.normalize();
-    agvRobot.position.addScaledVector(dir, agvSpeed);
-    // Smooth rotation towards travel direction
-    const targetAngle = Math.atan2(dir.x, dir.z);
-    agvRobot.rotation.y = THREE.MathUtils.lerp(agvRobot.rotation.y, targetAngle, 0.1);
+    if (agv1FollowMode) {
+      camera.position.set(agvRobot1.position.x + 6, agvRobot1.position.y + 6, agvRobot1.position.z + 6);
+      controls.target.set(agvRobot1.position.x, agvRobot1.position.y + 1, agvRobot1.position.z);
+    }
+  }
+
+  // Update AGV-02 (Inner Cross-Bay Loop)
+  if (agvRobot2) {
+    const target = agv2Waypoints[agv2CurrentWp];
+    const dx = target.x - agvRobot2.position.x;
+    const dz = target.z - agvRobot2.position.z;
+    const dist = Math.hypot(dx, dz);
+
+    if (dist < 0.5) {
+      agv2CurrentWp = (agv2CurrentWp + 1) % agv2Waypoints.length;
+    } else {
+      const angle = Math.atan2(dz, dx);
+      agvRobot2.position.x += Math.cos(angle) * agv2Speed;
+      agvRobot2.position.z += Math.sin(angle) * agv2Speed;
+      agvRobot2.rotation.y = -angle;
+    }
+
+    if (agv2FollowMode) {
+      camera.position.set(agvRobot2.position.x + 6, agvRobot2.position.y + 6, agvRobot2.position.z + 6);
+      controls.target.set(agvRobot2.position.x, agvRobot2.position.y + 1, agvRobot2.position.z);
+    }
   }
 }
 
 function animate(time) {
   requestAnimationFrame(animate);
-
   const t = time * 0.001;
 
-  // 1. Controls update
-  controls.update();
-
-  // 2. Dynamic Traversing Overhead Gantry Crane (Bridge along X, Trolley along Z)
-  if (factoryFloor && factoryFloor.gantryCrane) {
-    const gantry = factoryFloor.gantryCrane;
-    if (gantry.bridge) {
-      gantry.bridge.position.x = Math.sin(t * 0.08) * 8.0;
-    }
-    if (gantry.trolley) {
-      gantry.trolley.position.z = Math.sin(t * 0.18) * 5.5;
-      if (gantry.trolley.strobe) {
-        gantry.trolley.strobe.material.opacity = (Math.sin(t * 8) > 0) ? 1.0 : 0.2;
-      }
-    }
-  }
-
-  // 3. Atmospheric Dust Motes Gentle Drift
-  if (dustParticles) {
-    const pos = dustParticles.geometry.attributes.position.array;
-    for (let i = 0; i < dustCount; i++) {
-      pos[i * 3 + 1] += Math.sin(t + i) * 0.003;
-      pos[i * 3] += Math.cos(t * 0.5 + i) * 0.002;
-    }
-    dustParticles.geometry.attributes.position.needsUpdate = true;
-  }
-
-  // 4. Camera transition & AGV tracking
-  if (agvFollowMode && agvRobot) {
-    const agvPos = agvRobot.position;
-    const desiredLookAt = new THREE.Vector3(agvPos.x, agvPos.y + 1.2, agvPos.z);
-    const desiredCamPos = new THREE.Vector3(agvPos.x + 7, agvPos.y + 6, agvPos.z + 7);
-    camera.position.lerp(desiredCamPos, 0.06);
-    controls.target.lerp(desiredLookAt, 0.06);
-  } else if (targetCamPos && targetLookAt) {
-    camera.position.lerp(targetCamPos, 0.05);
-    controls.target.lerp(targetLookAt, 0.05);
-
-    if (camera.position.distanceTo(targetCamPos) < 0.1 && controls.target.distanceTo(targetLookAt) < 0.1) {
+  // 1. Camera Tween
+  if (targetCamPos && targetLookAt && !agv1FollowMode && !agv2FollowMode) {
+    camera.position.lerp(targetCamPos, 0.06);
+    controls.target.lerp(targetLookAt, 0.06);
+    if (camera.position.distanceTo(targetCamPos) < 0.1) {
       targetCamPos = null;
       targetLookAt = null;
     }
   }
+  controls.update();
 
-  // 5. CNC-01 Spindle, Carriage, Coolant Mist & Vibration
-  if (cncMill) {
-    const cncState = telemetryState["CNC-01"];
-    const isRunning = cncState && cncState.status !== "CRITICAL";
+  // 2. Traversing Gantry Crane Animation
+  if (factoryFloor && factoryFloor.gantryCrane) {
+    const crane = factoryFloor.gantryCrane;
+    if (crane.bridge) crane.bridge.position.z = Math.sin(t * 0.25) * 12;
+    if (crane.trolley) crane.trolley.position.x = Math.cos(t * 0.4) * 16;
+  }
 
-    if (isRunning) {
-      if (cncMill.spindleTool) cncMill.spindleTool.rotation.y += 0.45;
-      if (cncMill.spindleChuck) cncMill.spindleChuck.rotation.y += 0.45;
-      if (cncMill.turbineBlade) cncMill.turbineBlade.rotation.y += 0.008;
+  // 3. CNC-01 Animation
+  const cnc1 = machines.get("CNC-01");
+  if (cnc1 && cnc1.toolCarriage) {
+    cnc1.toolCarriage.position.x = Math.sin(t * 2.2) * 0.8;
+    if (cnc1.spindleTool) cnc1.spindleTool.rotation.y += 0.45;
+  }
 
-      // Dynamic translating carriage during cutting
-      if (cncMill.toolCarriage) {
-        cncMill.toolCarriage.position.x = Math.sin(t * 1.6) * 1.1;
-      }
+  // 4. CNC-02 Animation
+  const cnc2 = machines.get("CNC-02");
+  if (cnc2 && cnc2.toolCarriage) {
+    cnc2.toolCarriage.position.x = Math.cos(t * 2.8) * 0.7;
+    if (cnc2.spindleTool) cnc2.spindleTool.rotation.y += 0.6;
+    if (cnc2.turbineBlade) cnc2.turbineBlade.rotation.z = Math.sin(t * 1.5) * 0.2;
+  }
 
-      // Coolant Mist pulse
-      if (cncMill.coolantMist) {
-        cncMill.coolantMist.material.opacity = 0.25 + Math.sin(t * 5.0) * 0.15;
-      }
-    }
-
-    // Dynamic physical wear vibration jitter
-    if (cncState && cncState.wear > 0.35) {
-      const jitter = (cncState.wear - 0.25) * 0.045;
-      cncMill.position.x = -8 + (Math.random() - 0.5) * jitter;
-      cncMill.position.z = -4 + (Math.random() - 0.5) * jitter;
-    } else {
-      cncMill.position.set(-8, 0, -4);
+  // 5. PRESS-01 Animation (Forging Press)
+  const press1 = machines.get("PRESS-01");
+  if (press1 && press1.ramMesh) {
+    const stroke = (Math.sin(t * 1.8) + 1) * 0.5; // 0 to 1
+    press1.ramMesh.position.y = 5.4 - stroke * 2.2;
+    if (stroke > 0.95 && press1.hotBillet) {
+      press1.hotBillet.material.emissiveIntensity = 1.0;
+    } else if (press1.hotBillet) {
+      press1.hotBillet.material.emissiveIntensity = 0.5;
     }
   }
 
-  // 6. PRESS-01 Hydraulic Ram Stamping, Hot Billet & Shockwave
-  if (hydraulicPress && hydraulicPress.ramMesh) {
-    const pressState = telemetryState["PRESS-01"];
-    const isRunning = pressState && pressState.status !== "CRITICAL";
+  // 6. PRESS-02 Animation (Extrusion Press)
+  const press2 = machines.get("PRESS-02");
+  if (press2 && press2.extrusionRam) {
+    press2.extrusionRam.position.x = -1.0 + Math.sin(t * 1.2) * 0.7;
+  }
 
-    if (isRunning) {
-      // Stamping cycle: heavy downward compression plunge
-      const cyclePhase = (Math.sin(t * 2.6) + 1) / 2; // 0 (bottom impact) to 1 (top return)
-      const ramY = 3.6 + cyclePhase * 2.8;
-      hydraulicPress.ramMesh.position.y = ramY;
+  // 7. FURN-01 Animation (Carburizing Furnace Glow)
+  const furn1 = machines.get("FURN-01");
+  if (furn1 && furn1.glowPort) {
+    const pulse = 0.7 + Math.sin(t * 3.0) * 0.3;
+    furn1.glowPort.material.opacity = pulse;
+  }
 
-      // Hot Billet compression glow
-      if (hydraulicPress.hotBillet) {
-        hydraulicPress.hotBillet.material.emissiveIntensity = 0.5 + (1 - cyclePhase) * 0.6;
-      }
+  // 8. ROBOT-01 Animation (6-DOF Arm Kinematics)
+  const robot1 = machines.get("ROBOT-01");
+  if (robot1) {
+    if (robot1.robotRoot) robot1.robotRoot.rotation.y = Math.sin(t * 0.9) * 0.4;
+    if (robot1.robotJ2) robot1.robotJ2.rotation.z = Math.sin(t * 1.4) * 0.15;
+    if (robot1.robotJ3) robot1.robotJ3.rotation.z = -Math.cos(t * 1.4) * 0.15;
+  }
 
-      // Stamping shockwave ring pulse on bottom impact
-      if (hydraulicPress.shockwaveRing) {
-        if (cyclePhase < 0.1) {
-          hydraulicPress.shockwaveRing.material.opacity = 0.85;
-          hydraulicPress.shockwaveRing.scale.set(1.0, 1.0, 1.0);
-        } else if (hydraulicPress.shockwaveRing.material.opacity > 0.02) {
-          hydraulicPress.shockwaveRing.material.opacity *= 0.9;
-          hydraulicPress.shockwaveRing.scale.multiplyScalar(1.03);
-        }
-      }
-    }
+  // 9. LASER-01 Animation (Metrology Scan Plane)
+  const laser1 = machines.get("LASER-01");
+  if (laser1 && laser1.laserPlane) {
+    laser1.laserPlane.position.x = Math.sin(t * 2.5) * 1.2;
+  }
 
-    // Wear shudder
-    if (pressState && pressState.wear > 0.5) {
-      const jitter = (pressState.wear - 0.4) * 0.04;
-      hydraulicPress.position.x = 8 + (Math.random() - 0.5) * jitter;
-      hydraulicPress.position.z = -4 + (Math.random() - 0.5) * jitter;
-    } else {
-      hydraulicPress.position.set(8, 0, -4);
+  // 10. CONV-01 Animation (Conveyor Pallets & Laser QC)
+  const conv1 = machines.get("CONV-01");
+  if (conv1 && conv1.crates) {
+    conv1.crates.forEach(crate => {
+      crate.position.x += 0.045;
+      if (crate.position.x > 10.0) crate.position.x = -10.0;
+    });
+    if (conv1.tunnelLaser) {
+      conv1.tunnelLaser.position.x = Math.sin(t * 3.5) * 0.45;
     }
   }
 
-  // 7. CONV-01 Conveyor looping pallets & Laser QC Tunnel
-  if (conveyorLine && conveyorLine.crates) {
-    const convState = telemetryState["CONV-01"];
-    const isRunning = convState && convState.status !== "CRITICAL";
-
-    if (isRunning) {
-      conveyorLine.crates.forEach(crate => {
-        crate.position.x += 0.045;
-        if (crate.position.x > 10.5) {
-          crate.position.x = -10.5;
-        }
-      });
-
-      // Active Laser QC inspection tunnel scanning plane
-      if (conveyorLine.tunnelLaser) {
-        conveyorLine.tunnelLaser.position.x = Math.sin(t * 3.5) * 0.45;
-        conveyorLine.tunnelLaser.material.opacity = 0.35 + Math.sin(t * 8.0) * 0.2;
-      }
-    }
-  }
-
-  // 8. AGV Autonomous Navigation & LIDAR Cone
+  // 11. AGV Navigation & Sensor Animation
   updateAGVNavigation();
 
-  if (agvRobot) {
-    if (agvRobot.wheels) {
-      agvRobot.wheels.forEach(w => { w.rotation.x += 0.15; });
+  [agvRobot1, agvRobot2].forEach(agv => {
+    if (agv) {
+      if (agv.wheels) agv.wheels.forEach(w => { w.rotation.x += 0.15; });
+      if (agv.lidarPuck) agv.lidarPuck.rotation.y += 0.2;
+      if (agv.lidarCone) agv.lidarCone.material.opacity = 0.15 + Math.sin(t * 6.0) * 0.06;
+      if (agv.strobeBeacon) agv.strobeBeacon.material.opacity = (Math.sin(t * 12.0) > 0) ? 1.0 : 0.2;
     }
-    if (agvRobot.lidarPuck) {
-      agvRobot.lidarPuck.rotation.y += 0.2;
-    }
-    if (agvRobot.lidarCone) {
-      agvRobot.lidarCone.material.opacity = 0.15 + Math.sin(t * 6.0) * 0.06;
-    }
-    if (agvRobot.strobeBeacon) {
-      agvRobot.strobeBeacon.material.opacity = (Math.sin(t * 12.0) > 0) ? 1.0 : 0.2;
-    }
-  }
+  });
 
-  // 7. Radar Scan Sweep
+  // 12. Radar Scan Sweep
   if (radarScanning && radarMesh) {
     radarProgress += 0.015;
-    radarMesh.position.z = -16 + radarProgress * 32;
+    radarMesh.position.z = -20 + radarProgress * 40;
     radarMesh.material.opacity = Math.sin(radarProgress * Math.PI) * 0.8;
-
     if (radarProgress >= 1.0) {
       radarScanning = false;
       radarMesh.material.opacity = 0;
-      radarMesh.position.z = -16;
+      radarMesh.position.z = -20;
     }
   }
 
-  // 8. Render
+  // Render Scene
   renderer.render(scene, camera);
 }
 
@@ -538,8 +511,7 @@ export function pickMachine(clientX, clientY) {
 
   const intersects = raycaster.intersectObjects(interactables, false);
   if (intersects.length > 0) {
-    const rootId = intersects[0].object.userData.rootMachineId;
-    return rootId;
+    return intersects[0].object.userData.rootMachineId;
   }
   return null;
 }
@@ -557,17 +529,16 @@ export function getMachineScreenPositions() {
     const worldPos = new THREE.Vector3();
     group.getWorldPosition(worldPos);
 
-    // Height offset for floating label above machine top
     let yOffset = 5.2;
     if (id === "PRESS-01") yOffset = 8.5;
+    else if (id === "PRESS-02") yOffset = 3.6;
+    else if (id === "FURN-01") yOffset = 4.8;
+    else if (id === "ROBOT-01") yOffset = 4.2;
+    else if (id === "LASER-01") yOffset = 4.6;
     else if (id === "CONV-01") yOffset = 3.2;
 
     worldPos.y += yOffset;
-
-    // Project to NDC (-1 to +1)
     const ndc = worldPos.clone().project(camera);
-
-    // Check if behind camera
     const isVisible = ndc.z < 1;
 
     const screenX = (ndc.x * widthHalf) + widthHalf + rect.left;
@@ -588,3 +559,8 @@ export function getMachineScreenPositions() {
 export function getMachines() {
   return machines;
 }
+
+export const updateMachineStates = updateFleetTelemetry;
+export const triggerRadarScan = triggerRadarSweep;
+export function focusOnMachine(machineId) { setCameraPreset(machineId); }
+export function resetCamera() { setCameraPreset('global'); }

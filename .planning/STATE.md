@@ -1,25 +1,19 @@
 # GSD Project State: Titan Aerospace Digital Twin Copilot
 
-**Active Milestone:** v3.0 - AAA 3D Machinery & Industrial Factory Floor Overhaul
-**Current Phase:** Phase 1 - Full Darkvex RTS Aerospace Complex 3D Overhaul
-**Status:** Phase Complete (Verified)
-**Last Updated:** 2026-10-09 13:12:00
-**Active Workstream:** main
+**Active Milestone:** v4.0 - Executive Cleanroom Mega-Factory (Light Theme & 8-Machine Fleet)
+**Current Phase:** Phase 1 - Mega-Factory Physics Scale & Executive Cleanroom UI
+**Status:** Complete (All 4 Waves Executed & Verified)
+**Last Updated:** 2026-10-09 15:35:00
+**Active Workstream:** feat/3d-strategy-game-ui
 
 ## Active Decisions & Constraints
-- **Visual Blueprint:** Full Darkvex RTS Aerospace Complex (`darkvex.ai`):
-  - High-Bay Warehouse Storage Racking (ASRS) along perimeter with pallets & barcodes.
-  - Dynamically traversing overhead yellow industrial gantry crane spanning the facility.
-  - Rectangular hazard-striped runway corridor matching AMR navigation circuit.
-  - DMG MORI style enclosed 5-axis CNC with sliding glass doors, chip auger, tool carousel, and interior cyan worklight.
-  - 1000-Ton hydraulic press with oil reservoir, manifold, photoelectric safety light curtains, and stamping shockwave ring.
-  - Modular dual-rail conveyor with E-stop pull cords, enclosed Laser QC Inspection Tunnel with digital HUD readout.
-  - Armored AMR rover with rotating 3D LiDAR cone, roving floor headlights, flashing amber beacon, and payload.
-  - Atmospheric industrial dust motes particle cloud and machine worklights.
-- **Performance & Compatibility:** 100% offline procedural Three.js WebGL geometry, zero external asset downloads, 60 FPS hardware acceleration.
+- **Fleet Scale:** 8 distinct aerospace workcells (`CNC-01`, `CNC-02`, `PRESS-01`, `PRESS-02`, `FURN-01`, `ROBOT-01`, `CONV-01`, `LASER-01`) across 4 zoned bays + 2 roving AMRs (`AGV-01`, `AGV-02`).
+- **Executive Cleanroom Light Theme:** Polished white epoxy floor, crisp daylight illumination, frost-white glassmorphic HUD with high-contrast slate typography (`#0f172a`), emerald/amber/red status indicators, and toggleable theme support (`☀️ Light / 🌙 Dark`).
+- **Zero AI Slop:** Real industrial machinery taxonomy, ISO 10816 vibration severity zones A-D, actual manufacturing cycle times, and physical SimPy discrete-event dynamics.
+- **100% Offline & Pure ML:** Zero API keys, zero node build tools, vendored Three.js.
 
 ## Current Position
-- Phase: 01-3d-models-darkvex-refactor
-- Total Tasks: 4
-- Completed Tasks: 4
-- Next Action: Ready to Ship / Review
+- Phase: 01-mega-factory-light-cleanroom
+- Total Waves: 4
+- Completed Waves: 4 (Wave 1: Physics & API; Wave 2: Executive Light Theme UI; Wave 3: 3D Models & 4 Bays; Wave 4: Verification, 9 Screenshots, Documentation)
+- Next Action: Ship to branch and present walkthrough to user
