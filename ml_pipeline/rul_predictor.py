@@ -1,90 +1,163 @@
 """
 Remaining Useful Life (RUL) Prediction
 =======================================
-Regresses "cycles remaining until failure" from current telemetry, using
-gradient boosting (XGBoost if available, sklearn's HistGradientBoosting as a
-zero-extra-dependency fallback). Trained on labeled runs from the digital
-twin: since we control the simulation, we know the true failure point of
-every run and can compute ground-truth RUL for supervised training — this
-is the "generate your own labels from the twin" pattern that lets you skip
-needing a real historical failure dataset.
+Implements the 2021 PHM Competition Winning Strategy:
+- Dilated 1D Temporal Convolutional Network (TCN)
+- Variable-Length Historical Sequences
+- Degradation-Aware Sampling
+- Piecewise Linear Target Transformation (label_rul_piecewise)
+- Zero Feature Leakage (Observable sensors only: vibration, temperature, dynamics)
 
-If you want to swap in a public benchmark instead of twin-generated data,
-NASA C-MAPSS follows the same schema shape (per-unit sensor readings +
-cycle count + RUL label) and this predictor's interface won't need to change.
+Includes an automatic fallback to gradient boosting (XGBoost/HistGradientBoosting)
+for maximum deployment portability.
 """
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import torch
+
+from ml_pipeline.features import (
+    OBSERVABLE_ENGINEERED_COLUMNS,
+    add_engineered_features,
+    label_rul_piecewise,
+)
+
+try:
+    from ml_pipeline.tcn_model import TCNPredictor
+    _TCN_AVAILABLE = True
+except ImportError:
+    _TCN_AVAILABLE = False
 
 try:
     from xgboost import XGBRegressor
-    _BACKEND = "xgboost"
-except ImportError:
+    _test = XGBRegressor(n_estimators=1)
+    _XGB_BACKEND = "xgboost"
+except Exception:
     from sklearn.ensemble import HistGradientBoostingRegressor as XGBRegressor
-    _BACKEND = "sklearn_hgb"
+    _XGB_BACKEND = "sklearn_hgb"
 
-FEATURE_COLUMNS = ["vibration_rms", "temperature_c", "wear_level", "cycle_count"]
-
-
-def label_rul(history_df: pd.DataFrame) -> pd.DataFrame:
-    """Adds a `rul_cycles` column: cycles remaining until that machine's
-    wear_level first hits 1.0 in this run. Rows after failure are dropped."""
-    labeled = []
-    for machine_id, g in history_df.groupby("machine_id"):
-        g = g.sort_values("cycle_count").reset_index(drop=True)
-        failure_idx = g.index[g["wear_level"] >= 0.999]
-        if len(failure_idx) == 0:
-            # Never failed within the simulated window — skip, no ground truth.
-            continue
-        last_cycle = g.loc[failure_idx[0], "cycle_count"]
-        g = g.loc[: failure_idx[0]].copy()
-        g["rul_cycles"] = last_cycle - g["cycle_count"]
-        labeled.append(g)
-    if not labeled:
-        raise ValueError(
-            "No machine reached failure in this simulation window — "
-            "run the twin for longer (increase duration_s) before training RUL."
-        )
-    return pd.concat(labeled, ignore_index=True)
+FEATURE_COLUMNS = OBSERVABLE_ENGINEERED_COLUMNS
+label_rul = label_rul_piecewise
 
 
 class RULPredictor:
-    def __init__(self):
-        self.model = XGBRegressor(
-            n_estimators=200, max_depth=4, learning_rate=0.05
-        ) if _BACKEND == "xgboost" else XGBRegressor(max_depth=4, learning_rate=0.05)
-        self.backend = _BACKEND
+    def __init__(self, prefer_tcn: bool = True):
+        self.use_tcn = prefer_tcn and _TCN_AVAILABLE
+        self.tcn_model = TCNPredictor() if self.use_tcn else None
 
-    def fit(self, labeled_df: pd.DataFrame):
-        X = labeled_df[FEATURE_COLUMNS]
-        y = labeled_df["rul_cycles"]
-        self.model.fit(X, y)
+        self.xgb_model = (
+            XGBRegressor(n_estimators=200, max_depth=4, learning_rate=0.05)
+            if _XGB_BACKEND == "xgboost"
+            else XGBRegressor(max_depth=4, learning_rate=0.05)
+        )
+        self.backend = "tcn_2021" if self.use_tcn else _XGB_BACKEND
+        self.is_fitted = False
+
+    def fit(self, labeled_df: pd.DataFrame, epochs: int = 15):
+        # Prepare engineered observable features
+        df = (
+            labeled_df
+            if all(c in labeled_df.columns for c in FEATURE_COLUMNS)
+            else add_engineered_features(labeled_df)
+        )
+
+        # 1. Fit secondary gradient boosting model
+        X = df[FEATURE_COLUMNS]
+        y = df["rul_cycles"]
+        self.xgb_model.fit(X, y)
+
+        # 2. Fit 2021 winning Dilated TCN model if available
+        if self.use_tcn and self.tcn_model:
+            try:
+                self.tcn_model.fit(df, epochs=epochs)
+            except Exception as e:
+                print(f"[RULPredictor] TCN training encountered {e}; falling back to {_XGB_BACKEND}")
+                self.use_tcn = False
+
+        self.is_fitted = True
         return self
 
     def predict(self, df: pd.DataFrame) -> np.ndarray:
-        preds = self.model.predict(df[FEATURE_COLUMNS])
+        inp = (
+            df
+            if all(c in df.columns for c in FEATURE_COLUMNS)
+            else add_engineered_features(df)
+        )
+
+        if self.use_tcn and self.tcn_model and self.tcn_model.is_fitted:
+            # Format rows as sequence slices per machine
+            sequences = []
+            for _, g in inp.groupby("machine_id", sort=False):
+                g_sorted = g.sort_values("cycle_count")
+                feat = g_sorted[FEATURE_COLUMNS].values.astype(np.float32)
+                sequences.append(torch.tensor(feat, dtype=torch.float32))
+
+            if sequences:
+                return self.tcn_model.predict_sequences(sequences)
+
+        preds = self.xgb_model.predict(inp[FEATURE_COLUMNS])
         return np.clip(preds, 0, None)
 
-    def predict_latest(self, latest_states: list[dict]) -> list[dict]:
-        df = pd.DataFrame(latest_states)
-        df["predicted_rul_cycles"] = self.predict(df)
-        return df.to_dict(orient="records")
+    def predict_latest(
+        self,
+        latest_states: list[dict],
+        history_df: pd.DataFrame | None = None,
+        max_history_window: int = 20,
+    ) -> list[dict]:
+        """
+        Predicts RUL for the current fleet.
+        If `history_df` is provided, constructs recent temporal sequence windows
+        for each machine to feed the 2021 Dilated ConvNet.
+        """
+        df_latest = pd.DataFrame(latest_states)
+        if df_latest.empty:
+            return []
+
+        if self.use_tcn and self.tcn_model and self.tcn_model.is_fitted and history_df is not None and not history_df.empty:
+            # Build temporal sequence windows per machine
+            feat_hist = add_engineered_features(history_df)
+            sequences = []
+            for state in latest_states:
+                mid = state["machine_id"]
+                m_hist = feat_hist[feat_hist["machine_id"] == mid].sort_values("cycle_count")
+                # Take the most recent window up to max_history_window
+                window = m_hist.tail(max_history_window)
+                if len(window) > 0:
+                    seq_vals = window[FEATURE_COLUMNS].values.astype(np.float32)
+                    sequences.append(torch.tensor(seq_vals, dtype=torch.float32))
+                else:
+                    # Single state fallback
+                    s_df = add_engineered_features(pd.DataFrame([state]))
+                    seq_vals = s_df[FEATURE_COLUMNS].values.astype(np.float32)
+                    sequences.append(torch.tensor(seq_vals, dtype=torch.float32))
+
+            preds = self.tcn_model.predict_sequences(sequences)
+            df_latest["predicted_rul_cycles"] = [round(float(p), 1) for p in preds]
+        else:
+            # Snapshot fallback using gradient boosting
+            df_feat = add_engineered_features(df_latest)
+            preds = self.xgb_model.predict(df_feat[FEATURE_COLUMNS])
+            df_latest["predicted_rul_cycles"] = [round(float(max(0.0, p)), 1) for p in preds]
+
+        return df_latest.to_dict(orient="records")
 
 
 if __name__ == "__main__":
     from digital_twin.simulator import FactoryTwin
 
-    # Run long enough that machines actually fail (needed for RUL labels)
+    print("Running Factory Twin to generate run-to-failure sequences...")
     twin = FactoryTwin()
     twin.run(duration_s=20000)
     history = twin.history_dataframe()
 
     labeled = label_rul(history)
-    print(f"Backend: {_BACKEND} | Labeled rows: {len(labeled)}")
+    print(f"Labeled rows: {len(labeled)}")
 
-    predictor = RULPredictor().fit(labeled)
-    sample = labeled.sample(min(5, len(labeled)), random_state=1)
-    sample["predicted_rul"] = predictor.predict(sample)
-    print(sample[["machine_id", "cycle_count", "wear_level", "rul_cycles", "predicted_rul"]])
+    predictor = RULPredictor(prefer_tcn=True).fit(labeled, epochs=10)
+    print(f"Active Backend: {predictor.backend}")
+
+    latest = twin.get_latest_states()
+    scored = predictor.predict_latest([s.to_dict() for s in latest], history_df=history)
+    for s in scored:
+        print(f"Machine: {s['machine_id']} | Status: {s['status']} | Predicted RUL: {s['predicted_rul_cycles']} cycles")

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Titan Aerospace — 3D Digital Twin Operations Center</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+</head>
+<body>
+
+  <!-- 3D WebGL Canvas Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Screen-Space 3D Floating Holographic Badges -->
+  <div id="floating-badges-layer"></div>
+
+  <!-- Top Glassmorphic Strategy HUD -->
+  <header id="top-hud">
+    <div class="brand-section">
+      <div class="brand-logo">TA</div>
+      <div class="brand-title">
+        <h1>Titan Aerospace</h1>
+        <span><span class="pulse-dot"></span> PRECISION FAB &bull; 2021 TCN DIGITAL TWIN</span>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-item">
+        <span class="kpi-label">Fleet Health</span>
+        <span class="kpi-val" id="kpi-health">--%</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Fleet</span>
+        <span class="kpi-val" id="kpi-units">8/8</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Min Tool RUL</span>
+        <span class="kpi-val" id="kpi-min-rul">-- cyc</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Facility OEE</span>
+        <span class="kpi-val" id="kpi-oee">98.4%</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Parts Done</span>
+        <span class="kpi-val" id="kpi-throughput" style="color: var(--color-emerald)">0</span>
+      </div>
+    </div>
+
+    <div class="controls-group">
+      <button id="btn-theme" class="btn-hud btn-theme-toggle" title="Toggle Cleanroom Light / Night Mode">
+        ☀️ Light
+      </button>
+      <button id="btn-radar" class="btn-hud btn-scan" title="Sweep laser radar & run anomaly detection">
+        ⚡ Scan Factory
+      </button>
+      <button id="btn-step" class="btn-hud btn-step" title="Advance simulation cycle">
+        ▶ Step Twin
+      </button>
+      <button id="btn-reset-fleet" class="btn-hud" title="Reset factory fleet to clean shift start">
+        ⟲ Reset Shift
+      </button>
+      <button id="btn-reset-cam" class="btn-hud" title="Reset camera to isometric view">
+        ⟲ Reset View
+      </button>
+      <button id="btn-audio" class="btn-hud" title="Toggle audio sound effects">
+        🔊 Audio
+      </button>
+    </div>
+  </header>
+
+  <!-- Floating Tactical Camera Director Bar -->
+  <nav id="camera-director-bar" aria-label="Camera Presets">
+    <span class="director-title">DIRECTOR:</span>
+    <button class="btn-director active" data-preset="global" title="Isometric Factory Overview">🌐 Overview</button>
+    <button class="btn-director" data-preset="bay1" title="Bay 1: CNC Machining Centers (CNC-01 & CNC-02)">⚙️ Machining Bay</button>
+    <button class="btn-director" data-preset="bay2" title="Bay 2: Forging & Carburizing (PRESS-01, PRESS-02, FURN-01)">🔨 Forming & Heat</button>
+    <button class="btn-director" data-preset="bay3" title="Bay 3: Robotics & Metrology (ROBOT-01 & LASER-01)">🤖 Robotics & QC</button>
+    <button class="btn-director" data-preset="bay4" title="Bay 4: Avionics Assembly Line (CONV-01)">📦 Assembly Line</button>
+    <button class="btn-director" data-preset="agv1" title="Live Chase Cam following Patrol AGV-01">🚚 AGV-01</button>
+    <button class="btn-director" data-preset="agv2" title="Live Chase Cam following Transit AGV-02">📦 AGV-02</button>
+    <button class="btn-director" data-preset="entrance" title="Main Entrance: Cleanroom Airlock Portal">🚪 Entrance</button>
+  </nav>
+
+  <!-- Holographic Inspection Drawer (Slide-out SCADA) -->
+  <aside id="machine-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <h2 id="drawer-m-id">CNC-01</h2>
+        <p><span id="drawer-m-type">5-Axis Turbine Mill</span> &bull; <span id="drawer-m-status">HEALTHY</span></p>
+      </div>
+      <button id="btn-drawer-close" class="drawer-close-btn" title="Close Panel">&times;</button>
+    </div>
+
+    <!-- Drawer Navigation Tabs -->
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" data-tab="telemetry">📊 Telemetry</button>
+      <button class="drawer-tab" data-tab="tcn">🧠 TCN Prognostics</button>
+      <button class="drawer-tab" data-tab="sop">📋 Titan SOP</button>
+    </div>
+
+    <div class="drawer-content">
+      <!-- Tab 1: Telemetry & Dual-Channel Oscilloscope -->
+      <div id="pane-telemetry" class="drawer-tab-pane active">
+        <!-- Physical Wear Progression -->
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Physical Tool Wear</span>
+            <span id="drawer-wear-val" style="color: var(--color-cyan)">12%</span>
+          </div>
+          <div class="wear-track">
+            <div id="drawer-wear-fill" class="wear-fill" style="width: 12%"></div>
+          </div>
+        </div>
+
+        <!-- Oscilloscope Canvas -->
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Live Oscilloscope Spectrum</span>
+            <span style="font-size: 10px; color: var(--color-cyan)">60Hz &bull; CH1: VIB / CH2: THERMAL</span>
+          </div>
+          <canvas id="vibration-canvas"></canvas>
+          <div class="telemetry-grid" style="margin-top: 10px">
+            <div class="telemetry-cell">
+              <div class="t-label">Vibration RMS</div>
+              <div class="t-val" id="drawer-vib-val">0.18 mm/s</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Core Thermal</div>
+              <div class="t-val" id="drawer-temp-val">42.5 &deg;C</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Load Factor</div>
+              <div class="t-val" id="drawer-load-val">82%</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">ISO 10816 Class</div>
+              <div class="t-val" id="drawer-iso-val" style="color: var(--color-emerald)">Zone A (Good)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: 2021 TCN Prognostics Prediction Card -->
+      <div id="pane-tcn" class="drawer-tab-pane">
+        <div class="scada-card tcn-card">
+          <div class="scada-card-title">
+            <span>2021 TCN Remaining Useful Life</span>
+            <span style="color: var(--color-cyan)">MODEL: DILATED-1D-TCN</span>
+          </div>
+          <div class="tcn-hero-metric">
+            <span class="tcn-cycles-big" id="drawer-rul-cycles">142</span>
+            <span class="tcn-unit">Cycles</span>
+          </div>
+          <div id="drawer-rul-hours" style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono)">
+            &asymp; 63.9 operating hrs
+          </div>
+          <div class="tcn-breakdown-box">
+            <div class="tcn-spec-row">
+              <span>Receptive Field:</span>
+              <strong>d = 1, 2, 4, 8 (Residual Causal)</strong>
+            </div>
+            <div class="tcn-spec-row">
+              <span>Safety Margin:</span>
+              <strong style="color: var(--color-amber)">-15% Asymmetric Buffer Applied</strong>
+            </div>
+            <div class="tcn-spec-row">
+              <span>Feature Integrity:</span>
+              <strong style="color: var(--color-emerald)">Zero Leakage (Observable Only)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Plant SOP Grounded Recommendations -->
+      <div id="pane-sop" class="drawer-tab-pane">
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Titan Aerospace Standard Operating Procedure</span>
+            <span style="font-size: 10px; color: var(--color-amber)">OFFLINE NLP</span>
+          </div>
+          <div id="drawer-sop-content" class="sop-box">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer Action Footer -->
+    <div class="drawer-footer">
+      <button id="btn-repair" class="btn-repair">
+        🔧 Trigger Maintenance & Reset Wear
+      </button>
+    </div>
+  </aside>
+
+  <!-- End-to-End Process Pipeline & Flow Bar -->
+  <section id="pipeline-ribbon">
+    <div class="ribbon-header">
+      <div class="ribbon-tabs">
+        <button id="tab-pipe-prod" class="tab-btn active">🏭 Manufacturing Line Flow</button>
+        <button id="tab-pipe-ai" class="tab-btn">🧠 AI Inference Reasoning Trace</button>
+      </div>
+      <div class="ribbon-meta">
+        <span class="pipe-meta-item">PARTS: <strong id="pipe-parts-count">0</strong></span>
+        <span class="pipe-meta-item">LINE BALANCE: <strong id="pipe-line-bal">96.8%</strong></span>
+        <span class="pipe-meta-item">DOWNTIME SAVED: <strong id="pipe-savings">$0</strong></span>
+        <button id="btn-ribbon-toggle" class="btn-icon" title="Toggle Pipeline Bar">&#9660;</button>
+      </div>
+    </div>
+
+    <!-- Mode 1: Physical Manufacturing Stages -->
+    <div id="pipeline-view-prod" class="pipeline-stages-track">
+      <!-- Populated dynamically by hud.js from /pipeline/flow -->
+    </div>
+
+    <!-- Mode 2: AI Reasoning Chain -->
+    <div id="pipeline-view-ai" class="pipeline-ai-track" style="display: none;">
+      <!-- Populated dynamically by hud.js from /pipeline/flow -->
+    </div>
+  </section>
+
+  <!-- Three.js Offline Vendored Core & Controls -->
+  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/OrbitControls.js"></script>
+
+  <!-- Application Main Controller -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

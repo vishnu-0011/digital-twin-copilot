@@ -1,0 +1,21 @@
+# Requirements: Authentic Cyberpunk Dark Mode Restoration
+
+- [ ] **REQ-THEME-DEFAULT**: Preserve Executive Cleanroom Light Mode as the initial default theme across the web application and 3D scene.
+- [ ] **REQ-DARK-LIGHTING**: In `web/js/scene.js`, restore authentic dark lighting configuration when toggling to dark mode:
+  - Deep industrial ambient lighting (`0x182436, 1.4`)
+  - Cyan-sky hemisphere light (`0x38bdf8, 0x070a10, 0.7`)
+  - Directional key light (`0xffffff, 2.2`) with high dynamic range
+  - Fog and background at `0x090c12`
+- [ ] **REQ-DARK-PARTICLES**: Re-enable atmospheric industrial dust particles (`setupAtmosphericDustMotes` in `web/js/scene.js`) animated in dark mode with additive cyan blending.
+- [ ] **REQ-DARK-MATERIALS**: In `web/js/models.js`, ensure `setFactoryTheme(false)` restores:
+  - Dark obsidian reflective epoxy (`0x090d15`)
+  - Electric cyan floor grid (`0x00f3ff` / `0x1e293b`)
+  - Electric cyan transit corridors (`0x00f3ff`)
+  - Electric cyan laser scan sheets and AGV driving headlights (`0x00f3ff`)
+- [ ] **REQ-DARK-CSS**: In `web/css/style.css`, polish `body[data-theme="dark"]` styles:
+  - Sci-fi glassmorphism (`rgba(11, 17, 30, 0.88)` with `box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 243, 255, 0.08)`)
+  - Dark floating badges with cyan border and glow
+  - Dark bottom process ribbon with cyber nodes
+  - High-contrast neon oscilloscope and SCADA drawer
+- [ ] **REQ-VERIFY**: Re-capture `docs/screenshots/09_dark_mode_cyberpunk_view.png` to confirm visual authenticity.
+- [ ] **REQ-GIT-PUSH**: Pre-push verification and commit/push to `origin/feat/3d-strategy-game-ui`.

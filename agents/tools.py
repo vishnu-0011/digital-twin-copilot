@@ -36,11 +36,12 @@ def detect_anomalies(twin: FactoryTwin, detector: AnomalyDetector) -> list[dict]
 
 def predict_remaining_life(twin: FactoryTwin, predictor: RULPredictor) -> list[dict]:
     """Tool: predicts remaining-useful-life (in cycles) for every machine
-    currently running. Assumes `predictor` has already been fit."""
+    currently running using the temporal sequence buffer from the twin."""
     states = get_fleet_state(twin)
     if not states:
         return []
-    return predictor.predict_latest(states)
+    history_df = twin.history_dataframe() if hasattr(twin, "history_dataframe") else None
+    return predictor.predict_latest(states, history_df=history_df)
 
 
 def lookup_sop_guidance(kb: MaintenanceKnowledgeBase, symptom_description: str, machine_type: str) -> list[dict]:
