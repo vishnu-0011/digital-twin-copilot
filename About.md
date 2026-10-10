@@ -254,12 +254,12 @@ Now open your web browser and go to:
 
 ### 🕹️ What to Click During a Live Demo:
 1. **Explore the City Campus & Dollhouse Cutaway**:
-   - The platform loads by default in **Campus View (`🏢 Campus View`)**: An expansive town setting complete with 2-lane asphalt roads, continuously animated traffic (cars, delivery vans, cargo trucks), marked employee parking with parked cars & EV chargers, security guardhouse, street trees, streetlamps, and background city skyline towers.
+   - The platform loads by default in **Campus View (`🏢 Campus View`)**: A town setting complete with 2-lane asphalt roads, continuously animated traffic (cars, delivery vans, cargo trucks), marked employee parking with parked cars & EV chargers, security guardhouse, street trees, streetlamps, and an open, clean vista.
    - **Click the factory building** or click `🏭 Interior` on the Director bar: The camera smoothly glides down into the cleanroom, and the procedural roof slab and upper walls fade away in a dollhouse cutaway to reveal all 8 active workcells, conveyor line, and AMRs!
    - Click `🅿️ Parking`: Directly frames the company parking lot, EV charging pedestals, security guardhouse, and the covered glass-roof pedestrian canopy corridor connecting to the plant entrance.
 2. **Toggle Light/Dark Theme (`☀️ Light / 🌙 Dark`)**:  
    - Default is the **Executive Cleanroom Light Mode** (pristine white epoxy floor, bright daylight lighting—perfect for boardroom presentations).
-   - Click the button to switch to **Cyberpunk Dark Mode** (reflective black floor, neon electric cyan grid, illuminated car headlights, glowing skyline office windows, and atmospheric dust particles).
+   - Click the button to switch to **Cyberpunk Dark Mode** (reflective black floor, neon electric cyan grid, illuminated car headlights, streetlamps, and atmospheric dust particles).
 3. **Camera Director Bar**:  
    Click `⚙️ Machining Bay`, `🔨 Forming & Heat`, or `🚚 AGV-01` to show off the smooth cinematic camera transitions.
 4. **Inspect a Machine**:  

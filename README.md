@@ -37,7 +37,7 @@
 Below are live screenshots of the hardware-accelerated 3D operations center captured directly from the running WebGL simulation across multiple camera angles, environmental modes, and operational states:
 
 ### 1. 🏢 Titan Aerospace City Campus & Bustling Town Exterior
-*Full town campus overview featuring the exterior architectural factory building covered with realistic walls, ribbon windows, rooftop HVAC chillers, solar arrays, and illuminated rooftop company branding. Surrounding the facility is an active town environment: two-lane asphalt roads with continuous animated traffic (cars, delivery vans, cargo trucks), marked employee parking with EV charging pedestals, security guardhouse with barrier arm, covered pedestrian walkway canopy, sidewalks, street trees, streetlamps, and background city skyline towers.*
+*Full town campus overview featuring the exterior architectural factory building covered with realistic walls, ribbon windows, rooftop HVAC chillers, solar arrays, and illuminated rooftop company branding. Surrounding the facility is an active town environment: two-lane asphalt roads with continuous animated traffic (cars, delivery vans, cargo trucks), marked employee parking with EV charging pedestals, security guardhouse with barrier arm, covered pedestrian walkway canopy, sidewalks, street trees, streetlamps, and an open, uncluttered vista.*
 ![Titan Aerospace City Campus Overview](docs/screenshots/01_town_campus_overview.png)
 
 ---
@@ -97,7 +97,7 @@ Below are live screenshots of the hardware-accelerated 3D operations center capt
 ---
 
 ### 11. 🌙 Cyberpunk Strategy Theme (Instant Toggle)
-*Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches to the authentic dark cyberpunk strategy environment: deep obsidian reflective epoxy slab, electric neon cyan floor grid (`0x00f3ff`), atmospheric floating dust motes, cyan AGV driving headlights & LiDAR cones, illuminated vehicle night lighting, glowing skyline office windows, and high-contrast dark SCADA telemetry.*
+*Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches to the authentic dark cyberpunk strategy environment: deep obsidian reflective epoxy slab, electric neon cyan floor grid (`0x00f3ff`), atmospheric floating dust motes, cyan AGV driving headlights & LiDAR cones, illuminated vehicle headlights, streetlamps, and high-contrast dark SCADA telemetry.*
 ![Dark Mode Cyberpunk View](docs/screenshots/09_dark_mode_cyberpunk_view.png)
 
 ---

@@ -1873,29 +1873,7 @@ export function createTownEnvironment() {
   });
 
 
-  // --- F. BACKGROUND TOWN SKYLINE (Corporate Office Towers & Tech Centers) ---
-  const skylineTowers = [
-    // North Horizon
-    { x: -45, z: -55, w: 18, d: 16, h: 32 },
-    { x: -20, z: -58, w: 22, d: 18, h: 44 },
-    { x: 10, z: -56, w: 16, d: 14, h: 28 },
-    { x: 38, z: -55, w: 20, d: 18, h: 38 },
-    // West Horizon
-    { x: -70, z: -20, w: 16, d: 24, h: 36 },
-    { x: -72, z: 15, w: 18, d: 22, h: 42 },
-    // East Horizon
-    { x: 70, z: -15, w: 18, d: 22, h: 30 },
-    { x: 72, z: 20, w: 20, d: 26, h: 46 },
-    // South Distant
-    { x: -30, z: 58, w: 18, d: 16, h: 26 },
-    { x: 25, z: 60, w: 22, d: 18, h: 34 },
-  ];
 
-  skylineTowers.forEach(t => {
-    const tower = createSkylineBuilding(t.w, t.d, t.h);
-    tower.position.set(t.x, -0.3, t.z);
-    townGroup.add(tower);
-  });
 
 
   // --- G. ANIMATED TRAFFIC FLEET (6 vehicles circulating the perimeter loop) ---

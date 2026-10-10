@@ -15,7 +15,7 @@
 | 🏢 **1. Titan Aerospace City Campus Exterior** | 🌐 **2. Cleanroom Dollhouse Cutaway Interior** |
 | :---: | :---: |
 | ![01_town_campus_overview](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/01_town_campus_overview.png) | ![01_cleanroom_mega_factory_overview](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/01_cleanroom_mega_factory_overview.png) |
-| *Exterior covered building shell, rooftop HVAC & solar arrays, busy 2-lane roads with moving traffic, parking lot, and city skyline.* | *Interactive dollhouse cutaway with 64m × 48m cleanroom epoxy floor, 8 workcells across 4 bays, and 10-stage process pipeline.* |
+| *Exterior covered building shell, rooftop HVAC & solar arrays, busy 2-lane roads with moving traffic, parking lot, and open vista.* | *Interactive dollhouse cutaway with 64m × 48m cleanroom epoxy floor, 8 workcells across 4 bays, and 10-stage process pipeline.* |
 
 | ⚙️ **3. Bay 1: CNC Machining Centers** | 🔨 **4. Bay 2: Heavy Forming & Thermal** |
 | :---: | :---: |
@@ -40,7 +40,7 @@
 | 🌙 **11. Cyberpunk Strategy Night Theme** | 🚪 **12. Executive Cleanroom Entrance Portal** |
 | :---: | :---: |
 | ![09_dark_mode_cyberpunk_view](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/09_dark_mode_cyberpunk_view.png) | ![10_titan_aerospace_entrance_portal](https://raw.githubusercontent.com/vishnu-0011/digital-twin-copilot/feat/3d-strategy-game-ui/docs/screenshots/10_titan_aerospace_entrance_portal.png) |
-| *Dark strategy environment with illuminated headlights, glowing office windows, electric cyan grid (`0x00f3ff`), and dark SCADA HUD.* | *Illuminated dual-sided "▲ TITAN AEROSPACE" signage, automated glass airlock doors, RFID pedestals, and covered walkway connection.* |
+| *Dark strategy environment with illuminated headlights, streetlamps, electric cyan grid (`0x00f3ff`), and dark SCADA HUD.* | *Illuminated dual-sided "▲ TITAN AEROSPACE" signage, automated glass airlock doors, RFID pedestals, and covered walkway connection.* |
 
 ---
 
@@ -56,7 +56,7 @@
 * **Continuous Animated Vehicle Traffic**: 6 animated procedural vehicles (coupes, delivery vans, box cargo trucks) driving continuously along closed-loop waypoint paths around the facility.
 * **Dedicated Company Parking Lot**: Marked parking stalls, 8 parked employee/fleet vehicles, dual EV charging stations with charging cables, and a security guardhouse with motorized barrier gate.
 * **Covered Pedestrian Transit Corridor**: Modern steel-and-glass covered walkway canopy connecting the parking lot directly to the factory cleanroom entrance airlock.
-* **Urban Detailing**: 12 modern LED streetlamps, 12 stylized street trees, and 10 background commercial city skyline office towers with glowing windows.
+* **Urban Detailing**: 12 modern LED streetlamps, 12 stylized street trees, and an open, uncluttered vista highlighting the aerospace facility.
 
 #### 3. Facility Scale: 8 Distinct Aerospace Workcells across 4 Zoned Bays
 * **Bay 1 (Machining Bay)**: `CNC-01` 5-Axis Heavy Roughing Mill & `CNC-02` 5-Axis High-Speed Airfoil Finishing Center.
@@ -67,7 +67,7 @@
 
 #### 4. Dual Executive Cleanroom Light & Cyberpunk Dark Themes
 * **Light Cleanroom**: Crisp daylight, polished white epoxy slab (`#f3f4f6`), high-contrast dark typography, frosted glass HUD.
-* **Cyberpunk Dark**: Reflective obsidian floor, neon cyan grid (`0x00f3ff`), vehicle night lighting, illuminated skyline windows, and atmospheric dust motes.
+* **Cyberpunk Dark**: Reflective obsidian floor, neon cyan grid (`0x00f3ff`), vehicle headlights, streetlamps, and atmospheric dust motes.
 * **Adaptive SCADA & Oscilloscope**: Dynamic dual-channel oscilloscope trace and theme synchronization.
 
 #### 5. 100% Pure ML & Self-Contained Offline Architecture
