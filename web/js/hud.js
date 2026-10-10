@@ -61,10 +61,19 @@ function setupThemeToggle(onToggleTheme) {
 }
 
 /**
- * Updates or creates floating 3D labels tracking machines on screen
+ * Updates or creates floating 3D labels tracking machines or campus on screen
  */
 export function updateFloatingBadges(projectedPositions, onSelectMachine) {
   if (!badgeContainer) return;
+
+  const activeIds = new Set(projectedPositions.map(p => p.id));
+
+  // Hide any badges not present in the current projection frame
+  badgeElements.forEach((el, id) => {
+    if (!activeIds.has(id)) {
+      el.style.display = 'none';
+    }
+  });
 
   projectedPositions.forEach(item => {
     let el = badgeElements.get(item.id);
@@ -72,19 +81,37 @@ export function updateFloatingBadges(projectedPositions, onSelectMachine) {
     if (!el) {
       el = document.createElement('div');
       el.className = 'float-badge';
-      el.innerHTML = `
-        <div class="badge-card">
-          <span class="badge-status-dot"></span>
-          <span class="badge-id">${item.id}</span>
-          <span class="badge-rul">RUL --</span>
-        </div>
-        <div class="badge-pin"></div>
-      `;
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        playClick();
-        if (onSelectMachine) onSelectMachine(item.id);
-      });
+      if (item.isCampus) {
+        el.innerHTML = `
+          <div class="badge-card campus-badge-card" style="background: rgba(15, 23, 42, 0.88); border: 1.5px solid var(--color-cyan); padding: 8px 14px; border-radius: 8px; backdrop-filter: blur(8px); cursor: pointer; box-shadow: 0 4px 16px rgba(0, 243, 255, 0.25);">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; color: var(--color-cyan); font-size: 13px;">
+              <span class="badge-status-dot" style="background: var(--color-emerald)"></span>
+              <span>TITAN AEROSPACE CAMPUS</span>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">8 Workcells Active &bull; <span style="color: #38bdf8; font-weight: 600;">Click to Enter &rarr;</span></div>
+          </div>
+          <div class="badge-pin" style="height: 12px; border-left: 2px dashed var(--color-cyan);"></div>
+        `;
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playClick();
+          if (onSelectMachine) onSelectMachine("ENTER_FACTORY");
+        });
+      } else {
+        el.innerHTML = `
+          <div class="badge-card">
+            <span class="badge-status-dot"></span>
+            <span class="badge-id">${item.id}</span>
+            <span class="badge-rul">RUL --</span>
+          </div>
+          <div class="badge-pin"></div>
+        `;
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playClick();
+          if (onSelectMachine) onSelectMachine(item.id);
+        });
+      }
       badgeContainer.appendChild(el);
       badgeElements.set(item.id, el);
     }

@@ -1,21 +1,9 @@
-# Requirements: Authentic Cyberpunk Dark Mode Restoration
+# Requirements: Town Campus, Company Parking, Pedestrian Corridor & Dollhouse Exterior/Interior UI
 
-- [ ] **REQ-THEME-DEFAULT**: Preserve Executive Cleanroom Light Mode as the initial default theme across the web application and 3D scene.
-- [ ] **REQ-DARK-LIGHTING**: In `web/js/scene.js`, restore authentic dark lighting configuration when toggling to dark mode:
-  - Deep industrial ambient lighting (`0x182436, 1.4`)
-  - Cyan-sky hemisphere light (`0x38bdf8, 0x070a10, 0.7`)
-  - Directional key light (`0xffffff, 2.2`) with high dynamic range
-  - Fog and background at `0x090c12`
-- [ ] **REQ-DARK-PARTICLES**: Re-enable atmospheric industrial dust particles (`setupAtmosphericDustMotes` in `web/js/scene.js`) animated in dark mode with additive cyan blending.
-- [ ] **REQ-DARK-MATERIALS**: In `web/js/models.js`, ensure `setFactoryTheme(false)` restores:
-  - Dark obsidian reflective epoxy (`0x090d15`)
-  - Electric cyan floor grid (`0x00f3ff` / `0x1e293b`)
-  - Electric cyan transit corridors (`0x00f3ff`)
-  - Electric cyan laser scan sheets and AGV driving headlights (`0x00f3ff`)
-- [ ] **REQ-DARK-CSS**: In `web/css/style.css`, polish `body[data-theme="dark"]` styles:
-  - Sci-fi glassmorphism (`rgba(11, 17, 30, 0.88)` with `box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 243, 255, 0.08)`)
-  - Dark floating badges with cyan border and glow
-  - Dark bottom process ribbon with cyber nodes
-  - High-contrast neon oscilloscope and SCADA drawer
-- [ ] **REQ-VERIFY**: Re-capture `docs/screenshots/09_dark_mode_cyberpunk_view.png` to confirm visual authenticity.
-- [ ] **REQ-GIT-PUSH**: Pre-push verification and commit/push to `origin/feat/3d-strategy-game-ui`.
+- [ ] **REQ-01: Architectural Factory Exterior & Dollhouse Cutaway**: Create procedural factory building walls, ribbon windows, entrance canopy, roof trusses, rooftop HVAC units/solar panels, and smooth cutaway visibility/fade logic.
+- [ ] **REQ-02: Click-to-Enter & Interior Camera Transitions**: Enable clicking the factory building to fly the camera into the interior, fade the roof/upper walls, and reveal the factory floor. Provide an easy way to zoom back out to Campus View via the Director Bar.
+- [ ] **REQ-03: Surrounding Road Grid & Animated Traffic**: Build two-way asphalt roads with white dashed lane markings, curbs, crosswalks, and an animated vehicle fleet (cars, trucks, vans) driving smoothly along continuous closed-loop waypoints.
+- [ ] **REQ-04: Company Parking Lot & Pedestrian Corridor**: Construct a dedicated paved parking area with marked parking stalls, parked cars, EV charging pedestals, security guardhouse, and an illuminated pedestrian corridor linking parking to the entrance portal.
+- [ ] **REQ-05: Bustling Town Streetscapes & Skyline Buildings**: Add sidewalks, LED streetlights, landscaping (trees, lawn patches), and background commercial office buildings with lit windows to create a thriving urban campus environment.
+- [ ] **REQ-06: Context-Aware HUD & Director Bar Integration**: Adapt HUD badges so interior machine badges hide during Campus View in favor of a clean Campus badge, and add a `🏢 Campus` preset button to the floating Director bar.
+- [ ] **REQ-07: Dual-Theme Polish & Rigorous Verification**: Maintain visual harmony in both Executive Cleanroom (daylight) and Cyberpunk (night), verify 16/16 test passes, validate JS syntax, and capture multi-angle screenshots.

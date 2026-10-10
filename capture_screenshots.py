@@ -1,6 +1,6 @@
 """
 Capture High-Resolution Screenshots of Titan Aerospace Operations Center
-in Multiple Cinematic Angles, 4 Production Bays, and Both Themes (Cleanroom Light & Dark)
+in Multiple Cinematic Angles, Town Campus Exterior, Dollhouse Interior, 4 Production Bays, and Both Themes.
 """
 import os
 import time
@@ -21,51 +21,66 @@ def capture_all():
         page.goto("http://localhost:8000/")
         
         # Allow WebGL scene, textures, and API calls to warm up
-        page.wait_for_timeout(3500)
+        page.wait_for_timeout(4000)
         
-        # 1. Global Overview: Executive Cleanroom Mega-Factory (8 Machines, 4 Bays, 2 AMRs)
+        # 1. Campus Overview: Titan Aerospace Town Campus, Surrounding Busy Roads, Moving Traffic, Skyline
+        page.click("button[data-preset='campus']")
+        page.wait_for_timeout(2000)
+        page.screenshot(path=f"{screenshots_dir}/01_town_campus_overview.png")
+        print("Captured: 01_town_campus_overview.png")
+
+        # 2. Dollhouse Cutaway: Cleanroom Interior (8 Workcells, 4 Bays, 2 AMRs)
         page.click("button[data-preset='global']")
-        page.wait_for_timeout(1800)
+        page.wait_for_timeout(2000)
         page.screenshot(path=f"{screenshots_dir}/01_cleanroom_mega_factory_overview.png")
         print("Captured: 01_cleanroom_mega_factory_overview.png")
         
-        # 2. Bay 1 Focus: CNC Machining Centers (CNC-01 Roughing Mill & CNC-02 Finishing Center)
+        # 3. Bay 1 Focus: CNC Machining Centers (CNC-01 Roughing Mill & CNC-02 Finishing Center)
         page.click("button[data-preset='bay1']")
         page.wait_for_timeout(1800)
         page.screenshot(path=f"{screenshots_dir}/02_bay1_cnc_machining_centers.png")
         print("Captured: 02_bay1_cnc_machining_centers.png")
         
-        # 3. Bay 2 Focus: Heavy Forming & Thermal (PRESS-01 1000T, PRESS-02 Extrusion, FURN-01 Carburizing)
+        # 4. Bay 2 Focus: Heavy Forming & Thermal (PRESS-01 1000T, PRESS-02 Extrusion, FURN-01 Carburizing)
         page.click("button[data-preset='bay2']")
         page.wait_for_timeout(1800)
         page.screenshot(path=f"{screenshots_dir}/03_bay2_forming_vacuum_furnace.png")
         print("Captured: 03_bay2_forming_vacuum_furnace.png")
         
-        # 4. Bay 3 Focus: Robotics & Metrology (ROBOT-01 6-DOF Arm & LASER-01 Dual Laser Arch)
+        # 5. Bay 3 Focus: Robotics & Metrology (ROBOT-01 6-DOF Arm & LASER-01 Dual Laser Arch)
         page.click("button[data-preset='bay3']")
         page.wait_for_timeout(1800)
         page.screenshot(path=f"{screenshots_dir}/04_bay3_robotics_laser_metrology.png")
         print("Captured: 04_bay3_robotics_laser_metrology.png")
         
-        # 5. Bay 4 Focus: Avionics Assembly Line (CONV-01)
+        # 6. Bay 4 Focus: Avionics Assembly Line (CONV-01)
         page.click("button[data-preset='bay4']")
         page.wait_for_timeout(1800)
         page.screenshot(path=f"{screenshots_dir}/05_bay4_avionics_assembly_line.png")
         print("Captured: 05_bay4_avionics_assembly_line.png")
         
-        # 6. Logistics Patrol: AGV-01 AMR Chase Cam
+        # 7. Logistics Patrol: AGV-01 AMR Chase Cam
         page.click("button[data-preset='agv1']")
         page.wait_for_timeout(2500)
         page.screenshot(path=f"{screenshots_dir}/06_agv_autonomous_logistics.png")
         print("Captured: 06_agv_autonomous_logistics.png")
         
-        # 7. SCADA Inspection Drawer with Live Dual-Channel Oscilloscope & TCN Prognostics
+        # 8. Parking Lot & Covered Pedestrian Corridor View
+        page.click("button[data-preset='parking']")
+        page.wait_for_timeout(2000)
+        page.screenshot(path=f"{screenshots_dir}/08_company_parking_corridor.png")
+        print("Captured: 08_company_parking_corridor.png")
+
+        # 9. Main Entrance Portal & Covered Walkway
+        page.click("button[data-preset='entrance']")
+        page.wait_for_timeout(2000)
+        page.screenshot(path=f"{screenshots_dir}/10_titan_aerospace_entrance_portal.png")
+        print("Captured: 10_titan_aerospace_entrance_portal.png")
+
+        # 10. SCADA Inspection Drawer with Live Oscilloscope & TCN Prognostics
         page.click("button[data-preset='global']")
-        page.wait_for_timeout(1000)
-        # Select CNC-01
-        badges = page.locator(".float-badge")
-        if badges.count() > 0:
-            badges.first.click()
+        page.wait_for_timeout(1200)
+        page.evaluate("window.selectMachine && window.selectMachine('CNC-01')")
         page.wait_for_timeout(1800)
         page.screenshot(path=f"{screenshots_dir}/07_cleanroom_scada_diagnostics.png")
         print("Captured: 07_cleanroom_scada_diagnostics.png")
@@ -74,28 +89,22 @@ def capture_all():
         page.click("#btn-drawer-close")
         page.wait_for_timeout(800)
         
-        # 8. 10-Stage Process Pipeline Ribbon
+        # 11. 10-Stage Process Pipeline Ribbon
         page.evaluate("document.getElementById('tab-pipe-prod') && document.getElementById('tab-pipe-prod').click()")
         page.wait_for_timeout(1200)
         page.screenshot(path=f"{screenshots_dir}/08_end_to_end_10stage_pipeline.png")
         print("Captured: 08_end_to_end_10stage_pipeline.png")
 
-        # 9. Main Entrance Portal: Cleanroom Access & 'TITAN AEROSPACE' Signage
-        page.click("button[data-preset='entrance']")
-        page.wait_for_timeout(2000)
-        page.screenshot(path=f"{screenshots_dir}/10_titan_aerospace_entrance_portal.png")
-        print("Captured: 10_titan_aerospace_entrance_portal.png")
-
-        # 10. Toggle Theme to Dark Mode
-        page.click("button[data-preset='global']")
-        page.wait_for_timeout(1000)
+        # 12. Toggle Theme to Dark Mode (Cyberpunk Strategy)
+        page.click("button[data-preset='campus']")
+        page.wait_for_timeout(1200)
         page.evaluate("document.getElementById('btn-theme') && document.getElementById('btn-theme').click()")
-        page.wait_for_timeout(1800)
+        page.wait_for_timeout(2000)
         page.screenshot(path=f"{screenshots_dir}/09_dark_mode_cyberpunk_view.png")
         print("Captured: 09_dark_mode_cyberpunk_view.png")
         
         browser.close()
-        print("All 10 screenshots captured successfully!")
+        print("All screenshots captured successfully!")
 
 if __name__ == "__main__":
     capture_all()

@@ -32,66 +32,78 @@
 
 ---
 
-## 📸 Visual Showcase: Executive Cleanroom Mega-Factory
+## 📸 Visual Showcase: Titan Aerospace Campus & Cleanroom Mega-Factory
 
-Below are live screenshots of the hardware-accelerated 3D operations center captured directly from the running WebGL simulation across multiple camera angles and operational states:
+Below are live screenshots of the hardware-accelerated 3D operations center captured directly from the running WebGL simulation across multiple camera angles, environmental modes, and operational states:
 
-### 1. 🌐 Global Factory Overview (Executive Cleanroom Mega-Factory)
-*Full plant overview featuring an expanded 64m × 48m polished white epoxy cleanroom floor, unobstructed open-perimeter vista (all pillars and overhead clutter removed), architectural entrance portal with glowing "TITAN AEROSPACE" company signage, 8 specialized workcells across 4 zoned bays, floating screen-space telemetry badges, and live 10-stage process pipeline.*
-![Global Cleanroom Factory Overview](docs/screenshots/01_cleanroom_mega_factory_overview.png)
+### 1. 🏢 Titan Aerospace City Campus & Bustling Town Exterior
+*Full town campus overview featuring the exterior architectural factory building covered with realistic walls, ribbon windows, rooftop HVAC chillers, solar arrays, and illuminated rooftop company branding. Surrounding the facility is an active town environment: two-lane asphalt roads with continuous animated traffic (cars, delivery vans, cargo trucks), marked employee parking with EV charging pedestals, security guardhouse with barrier arm, covered pedestrian walkway canopy, sidewalks, street trees, streetlamps, and background city skyline towers.*
+![Titan Aerospace City Campus Overview](docs/screenshots/01_town_campus_overview.png)
 
 ---
 
-### 2. ⚙️ Bay 1: CNC Machining Centers (`CNC-01` & `CNC-02`)
+### 2. 🌐 Dollhouse Cutaway: Cleanroom Interior (`8 Workcells Active`)
+*Clicking the building exterior or selecting `🏭 Interior` smoothly glides the camera inside while the procedural roof slab and upper walls disappear in a dollhouse cutaway. Reveals an expanded 64m × 48m polished white epoxy cleanroom floor, unobstructed open vista, 8 specialized workcells across 4 zoned bays, floating screen-space telemetry badges, and live 10-stage process pipeline.*
+![Cleanroom Mega-Factory Interior](docs/screenshots/01_cleanroom_mega_factory_overview.png)
+
+---
+
+### 3. ⚙️ Bay 1: CNC Machining Centers (`CNC-01` & `CNC-02`)
 *Machining Bay dedicated to turbine blades and aero airfoils. Left: `CNC-01` 5-Axis Heavy Roughing Mill (DMG MORI style enclosure, sliding glass doors, 6-tool carousel magazine, chip auger chute & bin). Right: `CNC-02` 5-Axis High-Speed Airfoil Finishing Center (granite portal bridge, tilting trunnion table, roof mist extraction filtration unit, Siemens 840D console).*
 ![Bay 1 CNC Machining Centers](docs/screenshots/02_bay1_cnc_machining_centers.png)
 
 ---
 
-### 3. 🔨 Bay 2: Heavy Forming & Thermal Treatment (`PRESS-01`, `PRESS-02`, `FURN-01`)
+### 4. 🔨 Bay 2: Heavy Forming & Thermal Treatment (`PRESS-01`, `PRESS-02`, `FURN-01`)
 *Heavy forming and heat treatment wing. Features `PRESS-01` (1000-Ton vertical hydraulic bulkhead forging press with tie-rod columns, nitrogen accumulators, fluid reservoir, ruby safety light curtains, and hot titanium billet), `PRESS-02` (500-Ton horizontal hydraulic extrusion press with runoff roller table carrying titanium spar extrusions), and `FURN-01` (Vacuum Carburizing Furnace with heavy clamping vacuum door, glowing radiant orange quartz heat port, pumping skid, and 980°C controller).*
 ![Bay 2 Forming & Heat Treatment](docs/screenshots/03_bay2_forming_vacuum_furnace.png)
 
 ---
 
-### 4. 🤖 Bay 3: Robotics & Quality Control (`ROBOT-01` & `LASER-01`)
+### 5. 🤖 Bay 3: Robotics & Quality Control (`ROBOT-01` & `LASER-01`)
 *Automated deburring and sub-micron metrology wing. Left: `ROBOT-01` 6-DOF industrial articulated robotic arm inside a yellow perimeter safety fence with clear polycarbonate panels performing root-radius deburring on turbine blades. Right: `LASER-01` Dual Laser Triangulation QC Arch on a black granite surface plate with sweeping cyan planar laser sheet and micrometer readout tower.*
 ![Bay 3 Robotics & Metrology](docs/screenshots/04_bay3_robotics_laser_metrology.png)
 
 ---
 
-### 5. 📦 Bay 4: Avionics Assembly Line (`CONV-01`)
+### 6. 📦 Bay 4: Avionics Assembly Line (`CONV-01`)
 *Automated avionics and blade integration conveyor with emergency red E-stop pull cords. Features an enclosed Laser QC Inspection Tunnel arch with an active vertical cyan laser triangulation scanning plane, overhead digital tolerance HUD (`TOLERANCE ±0.002mm • LASER TRIANGULATION ACTIVE`), and moving aerospace pallet fixtures.*
 ![Bay 4 Avionics Assembly Line](docs/screenshots/05_bay4_avionics_assembly_line.png)
 
 ---
 
-### 6. 🚚 Autonomous Logistics Fleet (`AGV-01` & `AGV-02` AMRs)
+### 7. 🚚 Autonomous Logistics Fleet (`AGV-01` & `AGV-02` AMRs)
 *Live follow-cam tracking the autonomous mobile robot (AMR) navigating factory transit corridors. Features industrial mecanum wheels, rotating 3D LiDAR puck with forward-projecting scan cone, forward driving spotlights casting dynamic illumination onto the floor, flashing amber safety strobe beacon, and secured payload pallet.*
 ![AGV Autonomous Logistics](docs/screenshots/06_agv_autonomous_logistics.png)
 
 ---
 
-### 7. 📊 Holographic SCADA Inspection Drawer
+### 8. 🅿️ Company Parking Area & Covered Pedestrian Corridor
+*Dedicated employee and visitor parking lot featuring marked stalls, parked employee vehicles, dual EV charging stations, security guardhouse with motorized barrier gate, and an architecturally covered steel/glass walkway canopy that directly connects the parking area to the factory cleanroom airlock entrance.*
+![Company Parking Area & Walkway Corridor](docs/screenshots/08_company_parking_corridor.png)
+
+---
+
+### 9. 📊 Holographic SCADA Inspection Drawer
 *Slide-out SCADA diagnostic drawer opened by clicking any machine or floating badge. Features real-time physical wear progression, dual-channel 60 FPS oscilloscope spectrum (Ch1: Vibration RMS, Ch2: Core Thermal gradient), 2021 TCN Prognostics hero metric with 15% asymmetric safety margin breakdown, ISO 10816 vibration classification (Zone A to Zone D), Titan Aerospace standard operating procedures (SOP), and one-click closed-loop maintenance execution.*
 ![SCADA Drawer Diagnostics](docs/screenshots/07_cleanroom_scada_diagnostics.png)
 
 ---
 
-### 8. 🏭 10-Stage End-to-End Process Pipeline Ribbon
+### 10. 🏭 10-Stage End-to-End Process Pipeline Ribbon
 *Bottom process pipeline docked along the screen edge displaying all 10 physical manufacturing stages: Raw Ingot Ingestion &rarr; Heavy Roughing Milling &rarr; High-Speed Airfoil Finishing &rarr; 1000T Bulkhead Forging &rarr; 500T Hydraulic Extrusion &rarr; Vacuum Carburizing Heat Treat &rarr; 6-DOF Robotic Deburring &rarr; Laser Triangulation QC Gate &rarr; Avionics Assembly Line &rarr; Autonomous AMR Cleanroom Transit. Clicking any stage instantly focuses the camera and opens the machine diagnostics.*
 ![10-Stage Process Pipeline](docs/screenshots/08_end_to_end_10stage_pipeline.png)
 
 ---
 
-### 9. 🌙 Cyberpunk Strategy Theme (Instant Toggle)
-*Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches to the authentic dark cyberpunk strategy environment: deep obsidian reflective epoxy slab, electric neon cyan floor grid (`0x00f3ff`), atmospheric floating dust motes, cyan AGV driving headlights & LiDAR cones, glowing "TITAN AEROSPACE" entrance portal, and high-contrast dark SCADA telemetry.*
+### 11. 🌙 Cyberpunk Strategy Theme (Instant Toggle)
+*Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches to the authentic dark cyberpunk strategy environment: deep obsidian reflective epoxy slab, electric neon cyan floor grid (`0x00f3ff`), atmospheric floating dust motes, cyan AGV driving headlights & LiDAR cones, illuminated vehicle night lighting, glowing skyline office windows, and high-contrast dark SCADA telemetry.*
 ![Dark Mode Cyberpunk View](docs/screenshots/09_dark_mode_cyberpunk_view.png)
 
 ---
 
-### 10. 🚪 Executive Cleanroom Entrance Portal & "TITAN AEROSPACE" Branding
-*South perimeter cleanroom airlock entrance featuring illuminated dual-sided company signage (**"▲ TITAN AEROSPACE"**), automated sliding glass airlock doors with stainless steel handles, emerald green positive-pressure status beacon, security RFID card pedestals, and contamination control tacky floor runner.*
+### 12. 🚪 Executive Cleanroom Entrance Portal & "TITAN AEROSPACE" Branding
+*South perimeter cleanroom airlock entrance featuring illuminated dual-sided company signage (**"▲ TITAN AEROSPACE"**), automated sliding glass airlock doors with stainless steel handles, emerald green positive-pressure status beacon, security RFID card pedestals, contamination control tacky floor runner, and covered pedestrian canopy connection.*
 ![Titan Aerospace Entrance Portal](docs/screenshots/10_titan_aerospace_entrance_portal.png)
 
 ---

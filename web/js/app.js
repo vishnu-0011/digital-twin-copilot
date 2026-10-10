@@ -14,6 +14,7 @@ import {
   resetCamera,
   setCameraPreset,
   setSceneTheme,
+  setInteriorMode,
   pickMachine,
   getMachineScreenPositions
 } from './scene.js';
@@ -54,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 2. Initialize HUD, Badges & Pipeline UI
   initHUD(selectMachine, (theme) => setSceneTheme(theme));
+  window.selectMachine = selectMachine;
 
   // 3. Setup UI Event Listeners (Controls & Camera Director)
   setupControls(container);
@@ -96,10 +98,12 @@ function setupControls(canvasContainer) {
       const preset = btn.getAttribute('data-preset');
       setCameraPreset(preset);
 
-      if (preset === 'global') {
-        addLogMessage("Camera reset to tactical isometric overview.", "VIEW");
-      } else if (preset === 'agv') {
-        addLogMessage("Engaged dynamic AGV Chase Cam tracking logistics rover.", "CHASE");
+      if (preset === 'campus') {
+        addLogMessage("Camera set to Titan Aerospace City Campus & Town Traffic overview.", "CAMPUS");
+      } else if (preset === 'global') {
+        addLogMessage("Camera entered tactical factory cleanroom interior.", "INTERIOR");
+      } else if (preset === 'agv1' || preset === 'agv2') {
+        addLogMessage(`Engaged dynamic ${preset.toUpperCase()} Chase Cam tracking logistics rover.`, "CHASE");
       } else {
         addLogMessage(`Camera director focused on ${preset.toUpperCase()} workcell.`, "FOCUS");
       }
@@ -254,6 +258,16 @@ function setupControls(canvasContainer) {
  * Focuses camera and opens inspection drawer for the given machine ID
  */
 export function selectMachine(machineId) {
+  if (machineId === "ENTER_FACTORY") {
+    setInteriorMode(true);
+    addLogMessage("Entering Titan Aerospace Factory Cleanroom Interior.", "ENTER");
+    const directorButtons = document.querySelectorAll('.btn-director');
+    directorButtons.forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-preset') === 'global');
+    });
+    return;
+  }
+
   focusOnMachine(machineId);
 
   // Sync director buttons

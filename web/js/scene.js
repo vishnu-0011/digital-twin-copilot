@@ -18,6 +18,9 @@ import {
   createLaserQCArch,
   createConveyorLine,
   createAGVRobot,
+  createFactoryBuildingShell,
+  createTownEnvironment,
+  updateTrafficVehicles,
   setFactoryTheme
 } from './models.js';
 
@@ -27,6 +30,9 @@ let ambientLight, dirLight, fillLight, hemiLight;
 let dustParticles = null;
 const dustCount = 200;
 let factoryFloor;
+let factoryBuilding = null;
+let townEnvironment = null;
+let isInteriorMode = false;
 const machines = new Map(); // id -> THREE.Group
 
 // AGV Logistics Fleet
@@ -62,8 +68,12 @@ let radarProgress = 0;
 // Camera tween state
 let targetCamPos = null;
 let targetLookAt = null;
-const defaultCamPos = new THREE.Vector3(38, 32, 38);
+const defaultCamPos = new THREE.Vector3(38, 30, 38);
 const defaultLookAt = new THREE.Vector3(0, 2, 0);
+
+// Campus / Town Overview Camera
+const campusCamPos = new THREE.Vector3(76, 52, 76);
+const campusLookAt = new THREE.Vector3(0, 2, 8);
 
 // Machine live telemetry state cache across all 8 machines
 const telemetryState = {
@@ -85,11 +95,11 @@ export function initScene(container) {
   // 1. Scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xf1f5f9); // Cleanroom daylight default
-  scene.fog = new THREE.FogExp2(0xf1f5f9, 0.008);
+  scene.fog = new THREE.FogExp2(0xf1f5f9, 0.005);
 
-  // 2. Camera (Isometric Perspective with low FOV for RTS strategy feel)
+  // 2. Camera: starts in Campus / Town overview so user sees the building and bustling town
   camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 1000);
-  camera.position.copy(defaultCamPos);
+  camera.position.copy(campusCamPos);
 
   // 3. Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
@@ -105,10 +115,10 @@ export function initScene(container) {
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
-  controls.target.copy(defaultLookAt);
+  controls.target.copy(campusLookAt);
   controls.maxPolarAngle = Math.PI / 2.05;
   controls.minDistance = 12;
-  controls.maxDistance = 90;
+  controls.maxDistance = 180;
   controls.addEventListener('start', () => {
     agv1FollowMode = false;
     agv2FollowMode = false;
@@ -119,6 +129,14 @@ export function initScene(container) {
 
   // 6. Build Factory Assets (Floor & 8 Workcells)
   factoryFloor = createFactoryFloor(scene);
+
+  // Build Surrounding Town & Campus (Roads, Vehicles, Parking, Pedestrian Corridor, Skyline)
+  townEnvironment = createTownEnvironment();
+  scene.add(townEnvironment.townGroup);
+
+  // Build Factory Architectural Building Shell (Walls, Entrance Canopy, Dollhouse Roof)
+  factoryBuilding = createFactoryBuildingShell();
+  scene.add(factoryBuilding.buildingGroup);
 
   // Bay 1: Machining Bay
   const cnc1 = createCNCMill({ x: -16, y: 0, z: -10 });
@@ -189,21 +207,21 @@ function setupLighting() {
   scene.add(hemiLight);
 
   dirLight = new THREE.DirectionalLight(0xffffff, 1.35);
-  dirLight.position.set(24, 38, 24);
+  dirLight.position.set(30, 48, 30);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize.width = 2048;
   dirLight.shadow.mapSize.height = 2048;
   dirLight.shadow.camera.near = 0.5;
-  dirLight.shadow.camera.far = 120;
-  dirLight.shadow.camera.left = -34;
-  dirLight.shadow.camera.right = 34;
-  dirLight.shadow.camera.top = 28;
-  dirLight.shadow.camera.bottom = -28;
+  dirLight.shadow.camera.far = 240;
+  dirLight.shadow.camera.left = -75;
+  dirLight.shadow.camera.right = 75;
+  dirLight.shadow.camera.top = 70;
+  dirLight.shadow.camera.bottom = -70;
   dirLight.shadow.bias = -0.0004;
   scene.add(dirLight);
 
   fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.6);
-  fillLight.position.set(-24, 20, -20);
+  fillLight.position.set(-36, 24, -30);
   scene.add(fillLight);
 }
 
@@ -297,43 +315,88 @@ export function triggerRadarSweep() {
   radarProgress = 0;
 }
 
+export function setInteriorMode(enable) {
+  isInteriorMode = enable;
+  if (factoryBuilding) {
+    if (factoryBuilding.roofGroup) factoryBuilding.roofGroup.visible = !enable;
+    if (factoryBuilding.upperWallsGroup) factoryBuilding.upperWallsGroup.visible = !enable;
+  }
+  if (enable) {
+    targetCamPos = defaultCamPos.clone();
+    targetLookAt = defaultLookAt.clone();
+  } else {
+    targetCamPos = campusCamPos.clone();
+    targetLookAt = campusLookAt.clone();
+  }
+}
+
+export function getInteriorMode() {
+  return isInteriorMode;
+}
+
 export function setCameraPreset(presetName) {
   agv1FollowMode = false;
   agv2FollowMode = false;
 
   switch (presetName) {
+    case 'campus':
+      setInteriorMode(false);
+      break;
     case 'global':
+    case 'interior':
+      setInteriorMode(true);
       targetCamPos = defaultCamPos.clone();
       targetLookAt = defaultLookAt.clone();
       break;
     case 'bay1': // Machining Bay (CNC-01 & CNC-02)
+      setInteriorMode(true);
       targetCamPos = new THREE.Vector3(-11, 16, 2);
       targetLookAt = new THREE.Vector3(-11, 2, -10);
       break;
     case 'bay2': // Forming & Heat (PRESS-01, PRESS-02, FURN-01)
+      setInteriorMode(true);
       targetCamPos = new THREE.Vector3(13, 18, 5);
       targetLookAt = new THREE.Vector3(13, 3, -8);
       break;
     case 'bay3': // Robotics & QC (ROBOT-01, LASER-01)
+      setInteriorMode(true);
       targetCamPos = new THREE.Vector3(-11, 16, 20);
       targetLookAt = new THREE.Vector3(-11, 2, 8);
       break;
     case 'bay4': // Assembly Line (CONV-01)
+      setInteriorMode(true);
       targetCamPos = new THREE.Vector3(13, 16, 20);
       targetLookAt = new THREE.Vector3(13, 2, 8);
       break;
     case 'agv1':
+      setInteriorMode(true);
       agv1FollowMode = true;
       break;
     case 'agv2':
+      setInteriorMode(true);
       agv2FollowMode = true;
       break;
-    case 'entrance': // Main Entrance (TITAN AEROSPACE Portal)
-      targetCamPos = new THREE.Vector3(0, 7.5, 36.0);
-      targetLookAt = new THREE.Vector3(0, 3.6, 23.0);
+    case 'parking': // Company Parking Lot & Guardhouse
+      if (factoryBuilding) {
+        if (factoryBuilding.roofGroup) factoryBuilding.roofGroup.visible = true;
+        if (factoryBuilding.upperWallsGroup) factoryBuilding.upperWallsGroup.visible = true;
+      }
+      isInteriorMode = false;
+      targetCamPos = new THREE.Vector3(-34, 15, 48);
+      targetLookAt = new THREE.Vector3(-24, 2, 32);
+      break;
+    case 'entrance': // Main Entrance & Covered Walkway Corridor
+      if (factoryBuilding) {
+        if (factoryBuilding.roofGroup) factoryBuilding.roofGroup.visible = true;
+        if (factoryBuilding.upperWallsGroup) factoryBuilding.upperWallsGroup.visible = true;
+      }
+      isInteriorMode = false;
+      targetCamPos = new THREE.Vector3(-14, 11, 42.0);
+      targetLookAt = new THREE.Vector3(-4, 3.6, 25.0);
       break;
     default:
       // Focus on specific machine ID
+      setInteriorMode(true);
       if (machines.has(presetName)) {
         const m = machines.get(presetName);
         targetCamPos = new THREE.Vector3(m.position.x + 8, m.position.y + 7, m.position.z + 8);
@@ -535,6 +598,18 @@ function animate(time) {
     dustParticles.geometry.attributes.position.needsUpdate = true;
   }
 
+  // 14. Town Traffic Animation
+  if (townEnvironment && townEnvironment.trafficVehicles) {
+    updateTrafficVehicles(townEnvironment.trafficVehicles, 0.016);
+  }
+
+  // 15. Rooftop HVAC Chiller Fan Blades Animation
+  if (factoryBuilding && factoryBuilding.rooftopFans) {
+    factoryBuilding.rooftopFans.forEach(f => {
+      f.rotation.y += 0.25;
+    });
+  }
+
   // Render Scene
   renderer.render(scene, camera);
 }
@@ -559,6 +634,17 @@ export function pickMachine(clientX, clientY) {
   mouseVec.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
   raycaster.setFromCamera(mouseVec, camera);
+
+  // If in Campus view: clicking on the building exterior or roof triggers "ENTER_FACTORY"
+  if (!isInteriorMode) {
+    if (factoryBuilding && factoryBuilding.exteriorInteractables) {
+      const hits = raycaster.intersectObjects(factoryBuilding.exteriorInteractables, false);
+      if (hits.length > 0) {
+        setInteriorMode(true);
+        return "ENTER_FACTORY";
+      }
+    }
+  }
 
   const interactables = [];
   machines.forEach(group => {
@@ -585,6 +671,26 @@ export function getMachineScreenPositions() {
   const rect = containerEl.getBoundingClientRect();
   const widthHalf = rect.width / 2;
   const heightHalf = rect.height / 2;
+
+  // In Campus view: Project a single prominent Campus Badge over the building roof!
+  if (!isInteriorMode) {
+    const campusWorldPos = new THREE.Vector3(0, 13.5, 12.0);
+    const ndc = campusWorldPos.project(camera);
+    if (ndc.z < 1) {
+      const screenX = (ndc.x * widthHalf) + widthHalf + rect.left;
+      const screenY = -(ndc.y * heightHalf) + heightHalf + rect.top;
+      result.push({
+        id: "CAMPUS-PORTAL",
+        x: screenX,
+        y: screenY,
+        visible: true,
+        isCampus: true,
+        name: "TITAN AEROSPACE CAMPUS",
+        desc: "8 Workcells Active • Click to Enter"
+      });
+    }
+    return result;
+  }
 
   machines.forEach((group, id) => {
     const worldPos = new THREE.Vector3();

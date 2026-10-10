@@ -253,20 +253,24 @@ Now open your web browser and go to:
 ---
 
 ### 🕹️ What to Click During a Live Demo:
-1. **Toggle Light/Dark Theme (`☀️ Light / 🌙 Dark`)**:  
+1. **Explore the City Campus & Dollhouse Cutaway**:
+   - The platform loads by default in **Campus View (`🏢 Campus View`)**: An expansive town setting complete with 2-lane asphalt roads, continuously animated traffic (cars, delivery vans, cargo trucks), marked employee parking with parked cars & EV chargers, security guardhouse, street trees, streetlamps, and background city skyline towers.
+   - **Click the factory building** or click `🏭 Interior` on the Director bar: The camera smoothly glides down into the cleanroom, and the procedural roof slab and upper walls fade away in a dollhouse cutaway to reveal all 8 active workcells, conveyor line, and AMRs!
+   - Click `🅿️ Parking`: Directly frames the company parking lot, EV charging pedestals, security guardhouse, and the covered glass-roof pedestrian canopy corridor connecting to the plant entrance.
+2. **Toggle Light/Dark Theme (`☀️ Light / 🌙 Dark`)**:  
    - Default is the **Executive Cleanroom Light Mode** (pristine white epoxy floor, bright daylight lighting—perfect for boardroom presentations).
-   - Click the button to switch to **Cyberpunk Dark Mode** (reflective black floor, neon electric cyan grid, atmospheric dust particles).
-2. **Camera Director Bar**:  
+   - Click the button to switch to **Cyberpunk Dark Mode** (reflective black floor, neon electric cyan grid, illuminated car headlights, glowing skyline office windows, and atmospheric dust particles).
+3. **Camera Director Bar**:  
    Click `⚙️ Machining Bay`, `🔨 Forming & Heat`, or `🚚 AGV-01` to show off the smooth cinematic camera transitions.
-3. **Inspect a Machine**:  
+4. **Inspect a Machine**:  
    Click on `CNC-01` in the 3D scene. Watch the **Holographic SCADA Drawer** slide open from the right, showing:
    - Live **dual-channel oscilloscope** waveforms (vibration & temperature).
    - Predicted Remaining Useful Life with the 15% safety margin.
    - ISO 10816 vibration classification (Zone A through D).
    - Aerospace SOP maintenance checklist.
-4. **Trigger Closed-Loop Maintenance**:  
+5. **Trigger Closed-Loop Maintenance**:  
    Inside the SCADA drawer, click **"🔧 Trigger Maintenance & Reset Wear"**. Watch the machine's wear immediately drop to 0% and its floating badge turn emerald green!
-5. **Explore the 10-Stage Process Ribbon**:  
+6. **Explore the 10-Stage Process Ribbon**:  
    Click the tabs along the bottom ribbon to toggle between **Manufacturing Line Flow** (parts transit across 10 physical stages) and **AI Reasoning Trace** (the 6-step ML diagnostic pipeline).
 
 ---

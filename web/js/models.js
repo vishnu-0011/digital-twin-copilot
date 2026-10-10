@@ -112,6 +112,48 @@ export const MAT = {
     opacity: 0.45,
     side: THREE.DoubleSide,
   }),
+
+  // Town & Urban Infrastructure
+  asphalt: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85, metalness: 0.1 }),
+  roadMarking: new THREE.MeshBasicMaterial({ color: 0xf8fafc }),
+  sidewalk: new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.75, metalness: 0.1 }),
+  grassLawn: new THREE.MeshStandardMaterial({ color: 0x2e6f40, roughness: 0.9, metalness: 0.05 }),
+  treeTrunk: new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 }),
+  treeFoliage: new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.8 }),
+  streetlampPole: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.35, metalness: 0.8 }),
+  streetlampGlow: new THREE.MeshBasicMaterial({ color: 0xfef08a }),
+  parkingStripe: new THREE.MeshBasicMaterial({ color: 0xf8fafc }),
+  guardhouseWall: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.6 }),
+  barrierArm: new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 }),
+
+  // Building Exterior & Roof (Dollhouse Cutaway)
+  buildingWall: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.35, metalness: 0.25 }),
+  buildingWallDark: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.6 }),
+  buildingRibbonGlass: new THREE.MeshPhysicalMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.45,
+    transmission: 0.8,
+    roughness: 0.08,
+    metalness: 0.2,
+  }),
+  buildingRoof: new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.65, metalness: 0.25 }),
+  buildingTrim: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.8 }),
+  rooftopHvac: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.4, metalness: 0.6 }),
+  solarPanel: new THREE.MeshStandardMaterial({ color: 0x0a1128, roughness: 0.15, metalness: 0.9 }),
+
+  // City Skyline Towers
+  skylineTower: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.4 }),
+  skylineGlass: new THREE.MeshBasicMaterial({ color: 0xfef9c3 }),
+
+  // Vehicles
+  carRed: new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.25, metalness: 0.7 }),
+  carBlue: new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.25, metalness: 0.7 }),
+  carWhite: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2, metalness: 0.6 }),
+  carSilver: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.2, metalness: 0.85 }),
+  carBlack: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.8 }),
+  carHeadlight: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  carTaillight: new THREE.MeshBasicMaterial({ color: 0xef4444 }),
 };
 
 let gridHelperLight = null;
@@ -136,6 +178,16 @@ export function setFactoryTheme(isLight) {
     MAT.conveyorBelt.color.setHex(0x334155);
     MAT.trackCyan.color.setHex(0x0284c7);
     MAT.laserCyan.color.setHex(0x0284c7);
+
+    // Urban & Town Daylight
+    MAT.asphalt.color.setHex(0x334155);
+    MAT.sidewalk.color.setHex(0xd1d5db);
+    MAT.grassLawn.color.setHex(0x2e6f40);
+    MAT.buildingWall.color.setHex(0xe2e8f0);
+    MAT.buildingRoof.color.setHex(0x64748b);
+    MAT.skylineTower.color.setHex(0x475569);
+    MAT.skylineGlass.color.setHex(0xfef9c3);
+    MAT.streetlampGlow.color.setHex(0xfef08a);
   } else {
     // AUTHENTIC CYBERPUNK STRATEGY PALETTE
     MAT.floorEpoxy.color.setHex(0x090d15);
@@ -147,6 +199,16 @@ export function setFactoryTheme(isLight) {
     MAT.conveyorBelt.color.setHex(0x080c14);
     MAT.trackCyan.color.setHex(0x00f3ff);
     MAT.laserCyan.color.setHex(0x00f3ff);
+
+    // Urban & Town Cyberpunk Night
+    MAT.asphalt.color.setHex(0x0a0e17);
+    MAT.sidewalk.color.setHex(0x161f2e);
+    MAT.grassLawn.color.setHex(0x064e3b);
+    MAT.buildingWall.color.setHex(0x0f172a);
+    MAT.buildingRoof.color.setHex(0x090d15);
+    MAT.skylineTower.color.setHex(0x0b101b);
+    MAT.skylineGlass.color.setHex(0x00f3ff);
+    MAT.streetlampGlow.color.setHex(0x00f3ff);
   }
 }
 
@@ -1341,4 +1403,756 @@ export function createAGVRobot(id = "AGV-01", cargoType = "pallet") {
 
   group.position.set(0, 0, 0);
   return group;
+}
+
+/**
+ * 11. FACTORY BUILDING SHELL (Architectural Walls & Dollhouse Cutaway Roof)
+ * Dimensions: 64m (X) x 48m (Z) x 10m (Y)
+ * Supports smooth dollhouse cutaway transitions into interior mode.
+ */
+export function createFactoryBuildingShell() {
+  const buildingGroup = new THREE.Group();
+  const roofGroup = new THREE.Group();
+  const upperWallsGroup = new THREE.Group();
+  const exteriorInteractables = [];
+  const rooftopFans = [];
+
+  // --- A. BASE PERIMETER WALLS (Low 1.2m concrete sill that stays visible inside) ---
+  const baseMat = MAT.machineDark;
+
+  // North Base (Z = -24)
+  const nBase = new THREE.Mesh(new THREE.BoxGeometry(64.4, 1.2, 0.6), baseMat);
+  nBase.position.set(0, 0.6, -24);
+  buildingGroup.add(nBase);
+
+  // East Base (X = 32)
+  const eBase = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 48.4), baseMat);
+  eBase.position.set(32, 0.6, 0);
+  buildingGroup.add(eBase);
+
+  // West Base (X = -32)
+  const wBase = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 48.4), baseMat);
+  wBase.position.set(-32, 0.6, 0);
+  buildingGroup.add(wBase);
+
+  // South Base (Z = 24) - Left & Right of Entrance (central 12m open for entrance airlock)
+  const sBaseLeft = new THREE.Mesh(new THREE.BoxGeometry(26, 1.2, 0.6), baseMat);
+  sBaseLeft.position.set(-19, 0.6, 24);
+  buildingGroup.add(sBaseLeft);
+
+  const sBaseRight = new THREE.Mesh(new THREE.BoxGeometry(26, 1.2, 0.6), baseMat);
+  sBaseRight.position.set(19, 0.6, 24);
+  buildingGroup.add(sBaseRight);
+
+
+  // --- B. UPPER CUTAWAY WALLS (1.2m to 9.8m high; fades/hides in interior dollhouse mode) ---
+
+  // North Upper Wall (Industrial Cladding + Clerestory Ribbon Windows)
+  const nUpperWall = new THREE.Mesh(new THREE.BoxGeometry(64.4, 6.2, 0.6), MAT.buildingWall);
+  nUpperWall.position.set(0, 4.3, -24);
+  nUpperWall.userData.isFactoryExterior = true;
+  upperWallsGroup.add(nUpperWall);
+  exteriorInteractables.push(nUpperWall);
+
+  // North Ribbon Windows (Clerestory)
+  const nWindow = new THREE.Mesh(new THREE.BoxGeometry(60, 2.2, 0.7), MAT.buildingRibbonGlass);
+  nWindow.position.set(0, 8.5, -24);
+  nWindow.userData.isFactoryExterior = true;
+  upperWallsGroup.add(nWindow);
+  exteriorInteractables.push(nWindow);
+
+  // East Upper Wall (Louvers & Cladding)
+  const eUpperWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 6.2, 48.4), MAT.buildingWall);
+  eUpperWall.position.set(32, 4.3, 0);
+  eUpperWall.userData.isFactoryExterior = true;
+  upperWallsGroup.add(eUpperWall);
+  exteriorInteractables.push(eUpperWall);
+
+  const eWindow = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.2, 44), MAT.buildingRibbonGlass);
+  eWindow.position.set(32, 8.5, 0);
+  eWindow.userData.isFactoryExterior = true;
+  upperWallsGroup.add(eWindow);
+  exteriorInteractables.push(eWindow);
+
+  // West Upper Wall
+  const wUpperWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 6.2, 48.4), MAT.buildingWall);
+  wUpperWall.position.set(-32, 4.3, 0);
+  wUpperWall.userData.isFactoryExterior = true;
+  upperWallsGroup.add(wUpperWall);
+  exteriorInteractables.push(wUpperWall);
+
+  const wWindow = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.2, 44), MAT.buildingRibbonGlass);
+  wWindow.position.set(-32, 8.5, 0);
+  wWindow.userData.isFactoryExterior = true;
+  upperWallsGroup.add(wWindow);
+  exteriorInteractables.push(wWindow);
+
+  // South Upper Wall: Modern Architectural Glass Curtain Wall
+  const sUpperLeft = new THREE.Mesh(new THREE.BoxGeometry(26, 8.5, 0.5), MAT.buildingRibbonGlass);
+  sUpperLeft.position.set(-19, 5.45, 24);
+  sUpperLeft.userData.isFactoryExterior = true;
+  upperWallsGroup.add(sUpperLeft);
+  exteriorInteractables.push(sUpperLeft);
+
+  const sUpperRight = new THREE.Mesh(new THREE.BoxGeometry(26, 8.5, 0.5), MAT.buildingRibbonGlass);
+  sUpperRight.position.set(19, 5.45, 24);
+  sUpperRight.userData.isFactoryExterior = true;
+  upperWallsGroup.add(sUpperRight);
+  exteriorInteractables.push(sUpperRight);
+
+  // Entrance Header Beam across Z = 24
+  const sHeader = new THREE.Mesh(new THREE.BoxGeometry(64.8, 1.4, 1.2), MAT.buildingTrim);
+  sHeader.position.set(0, 9.2, 24);
+  sHeader.userData.isFactoryExterior = true;
+  upperWallsGroup.add(sHeader);
+  exteriorInteractables.push(sHeader);
+
+  // Entrance Architectural Canopy extending out
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(16, 0.35, 5), MAT.buildingTrim);
+  canopy.position.set(0, 4.8, 26.5);
+  canopy.userData.isFactoryExterior = true;
+  upperWallsGroup.add(canopy);
+  exteriorInteractables.push(canopy);
+
+  // Canopy Glass Under-Panel
+  const canopyGlass = new THREE.Mesh(new THREE.BoxGeometry(15, 0.1, 4.5), MAT.portalGlass);
+  canopyGlass.position.set(0, 4.6, 26.5);
+  upperWallsGroup.add(canopyGlass);
+
+  // Front Facade Glowing Company Signage above Entrance
+  const facadeSignGeo = new THREE.BoxGeometry(14, 1.0, 0.2);
+  const facadeSignMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+  const facadeSign = new THREE.Mesh(facadeSignGeo, facadeSignMat);
+  facadeSign.position.set(0, 6.2, 24.3);
+  upperWallsGroup.add(facadeSign);
+
+  buildingGroup.add(upperWallsGroup);
+
+
+  // --- C. ROOF STRUCTURE & ROOFTOP INDUSTRIAL EQUIPMENT (Hides in dollhouse mode) ---
+
+  // Main Roof Slab (64.8m x 48.8m x 0.5m)
+  const roofSlabGeo = new THREE.BoxGeometry(64.8, 0.5, 48.8);
+  const roofSlab = new THREE.Mesh(roofSlabGeo, MAT.buildingRoof);
+  roofSlab.position.set(0, 9.9, 0);
+  roofSlab.userData.isFactoryExterior = true;
+  roofGroup.add(roofSlab);
+  exteriorInteractables.push(roofSlab);
+
+  // Parapet Edges (4 rims around perimeter)
+  const parapetNorth = new THREE.Mesh(new THREE.BoxGeometry(65.4, 0.9, 0.6), MAT.buildingTrim);
+  parapetNorth.position.set(0, 10.4, -24.4);
+  parapetNorth.userData.isFactoryExterior = true;
+  roofGroup.add(parapetNorth);
+  exteriorInteractables.push(parapetNorth);
+
+  const parapetSouth = new THREE.Mesh(new THREE.BoxGeometry(65.4, 0.9, 0.6), MAT.buildingTrim);
+  parapetSouth.position.set(0, 10.4, 24.4);
+  parapetSouth.userData.isFactoryExterior = true;
+  roofGroup.add(parapetSouth);
+  exteriorInteractables.push(parapetSouth);
+
+  const parapetEast = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 49.4), MAT.buildingTrim);
+  parapetEast.position.set(32.4, 10.4, 0);
+  parapetEast.userData.isFactoryExterior = true;
+  roofGroup.add(parapetEast);
+  exteriorInteractables.push(parapetEast);
+
+  const parapetWest = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 49.4), MAT.buildingTrim);
+  parapetWest.position.set(-32.4, 10.4, 0);
+  parapetWest.userData.isFactoryExterior = true;
+  roofGroup.add(parapetWest);
+  exteriorInteractables.push(parapetWest);
+
+  // 4 Architectural Glass Skylight Lanterns (illuminating the 4 bays below)
+  const skylightPads = [
+    { x: -14, z: -11, w: 16, d: 9 },
+    { x: 14, z: -11, w: 16, d: 9 },
+    { x: -14, z: 11, w: 16, d: 9 },
+    { x: 14, z: 11, w: 16, d: 9 },
+  ];
+
+  skylightPads.forEach(s => {
+    // Skylight curb
+    const curb = new THREE.Mesh(new THREE.BoxGeometry(s.w + 0.4, 0.5, s.d + 0.4), MAT.buildingTrim);
+    curb.position.set(s.x, 10.3, s.z);
+    curb.userData.isFactoryExterior = true;
+    roofGroup.add(curb);
+    exteriorInteractables.push(curb);
+
+    // Skylight Glass Prism
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(s.w, 0.35, s.d), MAT.buildingRibbonGlass);
+    glass.position.set(s.x, 10.6, s.z);
+    glass.userData.isFactoryExterior = true;
+    roofGroup.add(glass);
+    exteriorInteractables.push(glass);
+  });
+
+  // 3 Industrial HVAC Rooftop Chiller Skids with spinning fan blades
+  const hvacPositions = [
+    { x: 0, z: -16 },
+    { x: 0, z: 0 },
+    { x: 0, z: 16 }
+  ];
+
+  hvacPositions.forEach(pos => {
+    const hvac = new THREE.Group();
+    hvac.position.set(pos.x, 10.15, pos.z);
+
+    // Chiller enclosure
+    const box = new THREE.Mesh(new THREE.BoxGeometry(5.0, 1.6, 2.8), MAT.rooftopHvac);
+    box.position.y = 0.8;
+    hvac.add(box);
+
+    // Dual extraction fans on top
+    [-1.3, 1.3].forEach(fx => {
+      const fanHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.3, 16), MAT.buildingTrim);
+      fanHousing.position.set(fx, 1.7, 0);
+      hvac.add(fanHousing);
+
+      // Fan blades
+      const bladeGeo = new THREE.BoxGeometry(1.4, 0.05, 0.22);
+      const fanBlade = new THREE.Mesh(bladeGeo, MAT.steelChrome);
+      fanBlade.position.set(fx, 1.8, 0);
+      hvac.add(fanBlade);
+      rooftopFans.push(fanBlade);
+    });
+
+    roofGroup.add(hvac);
+  });
+
+  // 2 Photovoltaic Solar Panel Arrays
+  [-22, 22].forEach(ax => {
+    const arrayGroup = new THREE.Group();
+    arrayGroup.position.set(ax, 10.15, 0);
+    for (let r = 0; r < 4; r++) {
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.1, 1.8), MAT.solarPanel);
+      panel.position.set(0, 0.3 + r * 0.08, -6 + r * 3.8);
+      panel.rotation.x = -0.15; // angled toward sun
+      arrayGroup.add(panel);
+    }
+    roofGroup.add(arrayGroup);
+  });
+
+  // Large Elevated Rooftop Signboard: "TITAN AEROSPACE"
+  const roofSignBoard = new THREE.Mesh(new THREE.BoxGeometry(22, 1.8, 0.4), MAT.portalArch);
+  roofSignBoard.position.set(0, 11.8, 22.5);
+  roofGroup.add(roofSignBoard);
+
+  const roofSignGlow = new THREE.Mesh(new THREE.BoxGeometry(20, 0.9, 0.45), MAT.portalGlowCyan);
+  roofSignGlow.position.set(0, 11.8, 22.55);
+  roofGroup.add(roofSignGlow);
+
+  buildingGroup.add(roofGroup);
+
+  return { buildingGroup, roofGroup, upperWallsGroup, exteriorInteractables, rooftopFans };
+}
+
+/**
+ * 12. TOWN ENVIRONMENT & URBAN CAMPUS (Roads, Traffic, Parking, Corridor, Streetlamps & Skyline)
+ * Spans 170m x 150m surrounding the central facility.
+ */
+export function createTownEnvironment() {
+  const townGroup = new THREE.Group();
+  const trafficVehicles = [];
+  const animatedFans = [];
+
+  // --- A. URBAN GROUND TERRAIN ---
+  const terrainGeo = new THREE.BoxGeometry(175, 0.4, 155);
+  const terrainMesh = new THREE.Mesh(terrainGeo, MAT.grassLawn);
+  terrainMesh.position.y = -0.6;
+  terrainMesh.receiveShadow = true;
+  townGroup.add(terrainMesh);
+
+  // --- B. SURROUNDING ROAD NETWORK (Two-lane 8m wide asphalt ring) ---
+  // South Road (Z = 36)
+  const roadSouth = new THREE.Mesh(new THREE.BoxGeometry(140, 0.12, 10), MAT.asphalt);
+  roadSouth.position.set(0, -0.34, 36);
+  roadSouth.receiveShadow = true;
+  townGroup.add(roadSouth);
+
+  // North Road (Z = -36)
+  const roadNorth = new THREE.Mesh(new THREE.BoxGeometry(140, 0.12, 10), MAT.asphalt);
+  roadNorth.position.set(0, -0.34, -36);
+  roadNorth.receiveShadow = true;
+  townGroup.add(roadNorth);
+
+  // West Road (X = -52)
+  const roadWest = new THREE.Mesh(new THREE.BoxGeometry(10, 0.12, 82), MAT.asphalt);
+  roadWest.position.set(-52, -0.34, 0);
+  roadWest.receiveShadow = true;
+  townGroup.add(roadWest);
+
+  // East Road (X = 52)
+  const roadEast = new THREE.Mesh(new THREE.BoxGeometry(10, 0.12, 82), MAT.asphalt);
+  roadEast.position.set(52, -0.34, 0);
+  roadEast.receiveShadow = true;
+  townGroup.add(roadEast);
+
+  // Road Markings: Dashed Centerlines
+  for (let x = -60; x <= 60; x += 6) {
+    const dashS = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.02, 0.3), MAT.roadMarking);
+    dashS.position.set(x, -0.27, 36);
+    townGroup.add(dashS);
+
+    const dashN = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.02, 0.3), MAT.roadMarking);
+    dashN.position.set(x, -0.27, -36);
+    townGroup.add(dashN);
+  }
+
+  for (let z = -32; z <= 32; z += 6) {
+    const dashW = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 3.5), MAT.roadMarking);
+    dashW.position.set(-52, -0.27, z);
+    townGroup.add(dashW);
+
+    const dashE = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 3.5), MAT.roadMarking);
+    dashE.position.set(52, -0.27, z);
+    townGroup.add(dashE);
+  }
+
+  // Crosswalk Zebra Stripes at South Entrance
+  for (let cz = 32; cz <= 40; cz += 1.2) {
+    const zebra = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.02, 0.6), MAT.roadMarking);
+    zebra.position.set(0, -0.27, cz);
+    townGroup.add(zebra);
+  }
+
+
+  // --- C. COMPANY PARKING LOT (South-West: X = -38 to -12, Z = 25 to 44) ---
+  const parkingLot = new THREE.Mesh(new THREE.BoxGeometry(28, 0.14, 18), MAT.asphalt);
+  parkingLot.position.set(-26, -0.33, 34);
+  parkingLot.receiveShadow = true;
+  townGroup.add(parkingLot);
+
+  // Parking Island Curbs
+  const curbGeo = new THREE.BoxGeometry(29, 0.22, 0.8);
+  const curbNorth = new THREE.Mesh(curbGeo, MAT.sidewalk);
+  curbNorth.position.set(-26, -0.25, 24.6);
+  townGroup.add(curbNorth);
+
+  // Painted Parking Stall Stripes
+  for (let i = 0; i < 7; i++) {
+    const px = -38 + i * 3.8;
+    // Row 1
+    const pStripe1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 5.0), MAT.parkingStripe);
+    pStripe1.position.set(px, -0.25, 29);
+    townGroup.add(pStripe1);
+
+    // Row 2
+    const pStripe2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 5.0), MAT.parkingStripe);
+    pStripe2.position.set(px, -0.25, 39);
+    townGroup.add(pStripe2);
+  }
+
+  // Parked Employee & Executive Vehicles in Stalls
+  const carColors = [MAT.carRed, MAT.carBlue, MAT.carWhite, MAT.carSilver, MAT.carBlack];
+  const parkedCarsConfig = [
+    { x: -36.1, z: 29, rot: 0, mat: MAT.carBlue },
+    { x: -32.3, z: 29, rot: 0, mat: MAT.carWhite },
+    { x: -28.5, z: 29, rot: 0, mat: MAT.carSilver },
+    { x: -20.9, z: 29, rot: 0, mat: MAT.carRed },
+    { x: -36.1, z: 39, rot: Math.PI, mat: MAT.carBlack },
+    { x: -32.3, z: 39, rot: Math.PI, mat: MAT.carSilver },
+    { x: -24.7, z: 39, rot: Math.PI, mat: MAT.carBlue },
+    { x: -17.1, z: 39, rot: Math.PI, mat: MAT.carWhite },
+  ];
+
+  parkedCarsConfig.forEach(cfg => {
+    const car = createDetailedVehicleMesh(cfg.mat, false);
+    car.position.set(cfg.x, -0.22, cfg.z);
+    car.rotation.y = cfg.rot;
+    townGroup.add(car);
+  });
+
+  // EV Charging Pedestals with glowing green LED strips
+  [-17.1, -13.3].forEach(evX => {
+    const charger = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.3, 0.5), MAT.machineDark);
+    charger.position.set(evX, 0.4, 26.5);
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.8, 0.52), MAT.ledGreen);
+    led.position.set(evX, 0.4, 26.5);
+    townGroup.add(charger);
+    townGroup.add(led);
+  });
+
+  // Security Guardhouse Booth & Boom Barrier Gate at Parking Entrance
+  const guardhouse = new THREE.Group();
+  guardhouse.position.set(-11.5, -0.25, 36);
+
+  const ghBuilding = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.6, 2.4), MAT.guardhouseWall);
+  ghBuilding.position.y = 1.3;
+  guardhouse.add(ghBuilding);
+
+  const ghRoof = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.3, 3.0), MAT.buildingTrim);
+  ghRoof.position.y = 2.65;
+  guardhouse.add(ghRoof);
+
+  const ghGlass = new THREE.Mesh(new THREE.BoxGeometry(2.9, 1.0, 2.5), MAT.buildingRibbonGlass);
+  ghGlass.position.y = 1.5;
+  guardhouse.add(ghGlass);
+
+  // Red/White Boom Barrier Arm
+  const barrierPost = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.1, 16), MAT.buildingTrim);
+  barrierPost.position.set(-1.8, 0.55, 1.6);
+  guardhouse.add(barrierPost);
+
+  const barrierArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 3.2), MAT.barrierArm);
+  barrierArm.position.set(-1.8, 0.95, 3.1);
+  guardhouse.add(barrierArm);
+
+  townGroup.add(guardhouse);
+
+
+  // --- D. COVERED PEDESTRIAN TRANSIT CORRIDOR ---
+  // Connects parking lot (X = -12, Z = 28) across to factory entrance (X = -2, Z = 24.5)
+  const corridorGroup = new THREE.Group();
+
+  // Paved walkway path
+  const walkGeo = new THREE.BoxGeometry(14, 0.14, 3.0);
+  const walkway = new THREE.Mesh(walkGeo, MAT.sidewalk);
+  walkway.position.set(-7, -0.28, 26);
+  walkway.rotation.y = 0.25;
+  corridorGroup.add(walkway);
+
+  // Overhead Glass & Steel Canopy
+  const canopyGeo = new THREE.BoxGeometry(14, 0.2, 3.4);
+  const canopyRoof = new THREE.Mesh(canopyGeo, MAT.buildingTrim);
+  canopyRoof.position.set(-7, 3.2, 26);
+  canopyRoof.rotation.y = 0.25;
+  corridorGroup.add(canopyRoof);
+
+  const canopyGlassMesh = new THREE.Mesh(new THREE.BoxGeometry(13.6, 0.08, 3.2), MAT.portalGlass);
+  canopyGlassMesh.position.set(-7, 3.1, 26);
+  canopyGlassMesh.rotation.y = 0.25;
+  corridorGroup.add(canopyGlassMesh);
+
+  // Support Columns along corridor
+  for (let c = -13; c <= -1; c += 3.5) {
+    const colLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3.4, 12), MAT.structuralSteel);
+    colLeft.position.set(c, 1.4, 24.7);
+    corridorGroup.add(colLeft);
+
+    const colRight = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3.4, 12), MAT.structuralSteel);
+    colRight.position.set(c, 1.4, 27.3);
+    corridorGroup.add(colRight);
+  }
+
+  // Floor LED guide lights
+  for (let c = -12; c <= -2; c += 2.0) {
+    const led = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.16, 8), MAT.portalGlowCyan);
+    led.position.set(c, -0.15, 26);
+    corridorGroup.add(led);
+  }
+
+  townGroup.add(corridorGroup);
+
+
+  // --- E. STREETLAMPS & URBAN LANDSCAPING (Trees, shrubs & sidewalks) ---
+  const streetlampPositions = [
+    { x: -44, z: 31 }, { x: -20, z: 31 }, { x: 20, z: 31 }, { x: 44, z: 31 },
+    { x: -44, z: -31 }, { x: -20, z: -31 }, { x: 20, z: -31 }, { x: 44, z: -31 },
+    { x: -47, z: -15 }, { x: -47, z: 15 }, { x: 47, z: -15 }, { x: 47, z: 15 },
+  ];
+
+  streetlampPositions.forEach(sl => {
+    const lamp = createModernStreetlamp();
+    lamp.position.set(sl.x, -0.3, sl.z);
+    townGroup.add(lamp);
+  });
+
+  // Street Trees & Planters
+  const treePositions = [
+    { x: -45, z: 25 }, { x: -35, z: 22 }, { x: 25, z: 26 }, { x: 38, z: 26 },
+    { x: -45, z: -25 }, { x: -35, z: -25 }, { x: 25, z: -25 }, { x: 38, z: -25 },
+    { x: -47, z: 0 }, { x: 47, z: 0 }, { x: -14, z: 22 }, { x: 14, z: 22 },
+  ];
+
+  treePositions.forEach(tp => {
+    const tree = createStreetTree();
+    tree.position.set(tp.x, -0.3, tp.z);
+    townGroup.add(tree);
+  });
+
+
+  // --- F. BACKGROUND TOWN SKYLINE (Corporate Office Towers & Tech Centers) ---
+  const skylineTowers = [
+    // North Horizon
+    { x: -45, z: -55, w: 18, d: 16, h: 32 },
+    { x: -20, z: -58, w: 22, d: 18, h: 44 },
+    { x: 10, z: -56, w: 16, d: 14, h: 28 },
+    { x: 38, z: -55, w: 20, d: 18, h: 38 },
+    // West Horizon
+    { x: -70, z: -20, w: 16, d: 24, h: 36 },
+    { x: -72, z: 15, w: 18, d: 22, h: 42 },
+    // East Horizon
+    { x: 70, z: -15, w: 18, d: 22, h: 30 },
+    { x: 72, z: 20, w: 20, d: 26, h: 46 },
+    // South Distant
+    { x: -30, z: 58, w: 18, d: 16, h: 26 },
+    { x: 25, z: 60, w: 22, d: 18, h: 34 },
+  ];
+
+  skylineTowers.forEach(t => {
+    const tower = createSkylineBuilding(t.w, t.d, t.h);
+    tower.position.set(t.x, -0.3, t.z);
+    townGroup.add(tower);
+  });
+
+
+  // --- G. ANIMATED TRAFFIC FLEET (6 vehicles circulating the perimeter loop) ---
+  // Waypoints around the 4-sided perimeter ring road:
+  // South (Z=36): (-46, 36) -> (46, 36)
+  // East (X=46):  (46, 36) -> (46, -36)
+  // North (Z=-36): (46, -36) -> (-46, -36)
+  // West (X=-46): (-46, -36) -> (-46, 36)
+  const perimeterWaypoints = [
+    new THREE.Vector3(46, -0.22, 36),
+    new THREE.Vector3(46, -0.22, -36),
+    new THREE.Vector3(-46, -0.22, -36),
+    new THREE.Vector3(-46, -0.22, 36),
+  ];
+
+  const vehicleConfigs = [
+    { type: 'car', mat: MAT.carRed, speed: 0.14, startProg: 0.05 },
+    { type: 'car', mat: MAT.carWhite, speed: 0.12, startProg: 0.22 },
+    { type: 'van', mat: MAT.carWhite, speed: 0.10, startProg: 0.42 },
+    { type: 'car', mat: MAT.carBlue, speed: 0.13, startProg: 0.58 },
+    { type: 'truck', mat: MAT.carSilver, speed: 0.09, startProg: 0.75 },
+    { type: 'car', mat: MAT.carSilver, speed: 0.15, startProg: 0.90 },
+  ];
+
+  vehicleConfigs.forEach((vc, idx) => {
+    const mesh = createDetailedVehicleMesh(vc.mat, true, vc.type);
+    townGroup.add(mesh);
+    trafficVehicles.push({
+      mesh,
+      speed: vc.speed,
+      progress: vc.startProg,
+      waypoints: perimeterWaypoints,
+      type: vc.type
+    });
+  });
+
+  return { townGroup, trafficVehicles, animatedFans };
+}
+
+/**
+ * Creates a procedural vehicle mesh (car, delivery van, or cargo truck)
+ */
+function createDetailedVehicleMesh(colorMat, hasLights = true, type = 'car') {
+  const vGroup = new THREE.Group();
+
+  let bodyLength = 3.6;
+  let bodyWidth = 1.6;
+  let bodyHeight = 0.8;
+  let cabinLength = 2.0;
+  let cabinHeight = 0.65;
+
+  if (type === 'van') {
+    bodyLength = 4.4;
+    bodyWidth = 1.7;
+    bodyHeight = 1.2;
+    cabinLength = 3.2;
+    cabinHeight = 0.7;
+  } else if (type === 'truck') {
+    bodyLength = 5.2;
+    bodyWidth = 1.85;
+    bodyHeight = 1.4;
+    cabinLength = 1.6;
+    cabinHeight = 1.0;
+  }
+
+  // Lower Chassis
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(bodyLength, bodyHeight, bodyWidth), colorMat);
+  chassis.position.y = bodyHeight / 2 + 0.2;
+  vGroup.add(chassis);
+
+  // Cabin / Greenhouse
+  const cabinMat = (type === 'truck') ? MAT.carWhite : (type === 'van' ? colorMat : MAT.buildingTrim);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLength, cabinHeight, bodyWidth * 0.9), cabinMat);
+  cabin.position.set((type === 'truck' ? 1.4 : -0.2), bodyHeight + cabinHeight / 2 + 0.2, 0);
+  vGroup.add(cabin);
+
+  // Tinted Windshields
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(cabinLength * 0.95, cabinHeight * 0.85, bodyWidth * 0.95), MAT.portalGlass);
+  glass.position.copy(cabin.position);
+  vGroup.add(glass);
+
+  // If cargo truck, add large cargo box in the back
+  if (type === 'truck') {
+    const cargoBox = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.8, bodyWidth), MAT.machineLight);
+    cargoBox.position.set(-0.9, 1.3, 0);
+    vGroup.add(cargoBox);
+  }
+
+  // 4 Rotating Wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 16);
+  wheelGeo.rotateX(Math.PI / 2);
+  vGroup.wheels = [];
+
+  const wOffsets = [
+    [-bodyLength * 0.35, bodyWidth * 0.52],
+    [bodyLength * 0.35, bodyWidth * 0.52],
+    [-bodyLength * 0.35, -bodyWidth * 0.52],
+    [bodyLength * 0.35, -bodyWidth * 0.52],
+  ];
+
+  wOffsets.forEach(([wx, wz]) => {
+    const w = new THREE.Mesh(wheelGeo, MAT.machineDark);
+    w.position.set(wx, 0.28, wz);
+    vGroup.add(w);
+    vGroup.wheels.push(w);
+  });
+
+  // Headlights & Taillights
+  if (hasLights) {
+    // Front headlights (pointing +X forward)
+    [-0.55, 0.55].forEach(hz => {
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.28), MAT.carHeadlight);
+      hl.position.set(bodyLength / 2 + 0.02, 0.45, hz);
+      vGroup.add(hl);
+    });
+
+    // Rear taillights (pointing -X backward)
+    [-0.55, 0.55].forEach(tz => {
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.28), MAT.carTaillight);
+      tl.position.set(-bodyLength / 2 - 0.02, 0.45, tz);
+      vGroup.add(tl);
+    });
+  }
+
+  return vGroup;
+}
+
+/**
+ * Creates modern urban streetlamp
+ */
+function createModernStreetlamp() {
+  const lamp = new THREE.Group();
+
+  // Pole
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.5, 12), MAT.streetlampPole);
+  pole.position.y = 2.25;
+  lamp.add(pole);
+
+  // Angled arm
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), MAT.streetlampPole);
+  arm.position.set(0.5, 4.5, 0);
+  arm.rotation.z = -0.15;
+  lamp.add(arm);
+
+  // Light fixture head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.24), MAT.streetlampGlow);
+  head.position.set(1.0, 4.4, 0);
+  lamp.add(head);
+
+  return lamp;
+}
+
+/**
+ * Creates procedural street tree with trunk and organic canopy
+ */
+function createStreetTree() {
+  const tree = new THREE.Group();
+
+  // Trunk
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 2.4, 8), MAT.treeTrunk);
+  trunk.position.y = 1.2;
+  tree.add(trunk);
+
+  // Foliage Canopy (geometric octahedron / sphere layers)
+  const canopy1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4, 1), MAT.treeFoliage);
+  canopy1.position.y = 2.8;
+  tree.add(canopy1);
+
+  const canopy2 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0, 1), MAT.treeFoliage);
+  canopy2.position.set(0.2, 3.8, -0.1);
+  tree.add(canopy2);
+
+  return tree;
+}
+
+/**
+ * Creates modern corporate skyline tower
+ */
+function createSkylineBuilding(w, d, h) {
+  const building = new THREE.Group();
+
+  // Main tower body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), MAT.skylineTower);
+  body.position.y = h / 2;
+  building.add(body);
+
+  // Roof crown / architectural plant room
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 3.5, d * 0.7), MAT.buildingTrim);
+  crown.position.y = h + 1.75;
+  building.add(crown);
+
+  // Glowing window grids on front and side facades
+  const numFloors = Math.floor(h / 3.5);
+  for (let f = 1; f < numFloors; f++) {
+    const wy = f * 3.5;
+    // Window strip
+    const winStrip = new THREE.Mesh(new THREE.BoxGeometry(w * 0.85, 1.2, d + 0.15), MAT.skylineGlass);
+    winStrip.position.y = wy;
+    building.add(winStrip);
+  }
+
+  return building;
+}
+
+/**
+ * Updates traffic vehicle positions along closed-loop road waypoints
+ */
+export function updateTrafficVehicles(trafficFleet, delta = 0.016) {
+  if (!trafficFleet || !Array.isArray(trafficFleet)) return;
+
+  // Waypoints define a rectangular loop:
+  // Leg 0: (46, 36) -> (46, -36)   [Moving North along East road, dir: -Z]
+  // Leg 1: (46, -36) -> (-46, -36) [Moving West along North road, dir: -X]
+  // Leg 2: (-46, -36) -> (-46, 36) [Moving South along West road, dir: +Z]
+  // Leg 3: (-46, 36) -> (46, 36)   [Moving East along South road, dir: +X]
+  const perimeter = (72 * 2) + (92 * 2); // 328m total loop length
+
+  trafficFleet.forEach(v => {
+    v.progress = (v.progress + (v.speed * 1.5 * delta) / (perimeter * 0.1)) % 1.0;
+
+    const totalDist = v.progress * perimeter;
+    let x = 0, z = 0, angle = 0;
+
+    if (totalDist < 72) {
+      // East road moving North (-Z)
+      const t = totalDist / 72;
+      x = 48.0;
+      z = 36.0 - t * 72.0;
+      angle = -Math.PI / 2;
+    } else if (totalDist < 72 + 92) {
+      // North road moving West (-X)
+      const t = (totalDist - 72) / 92;
+      x = 46.0 - t * 92.0;
+      z = -36.0;
+      angle = Math.PI;
+    } else if (totalDist < 72 + 92 + 72) {
+      // West road moving South (+Z)
+      const t = (totalDist - (72 + 92)) / 72;
+      x = -48.0;
+      z = -36.0 + t * 72.0;
+      angle = Math.PI / 2;
+    } else {
+      // South road moving East (+X)
+      const t = (totalDist - (72 + 92 + 72)) / 92;
+      x = -46.0 + t * 92.0;
+      z = 36.0;
+      angle = 0;
+    }
+
+    v.mesh.position.set(x, -0.22, z);
+    v.mesh.rotation.y = angle;
+
+    // Rotate vehicle wheels
+    if (v.mesh.wheels) {
+      v.mesh.wheels.forEach(w => {
+        w.rotation.x += v.speed * 1.5;
+      });
+    }
+  });
 }

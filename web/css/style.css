@@ -336,6 +336,19 @@ body[data-theme="dark"] .btn-step {
   background: linear-gradient(to bottom, var(--color-cyan), transparent);
 }
 
+.campus-badge-card {
+  animation: campusPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes campusPulse {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(0, 243, 255, 0.25);
+  }
+  50% {
+    box-shadow: 0 6px 26px rgba(0, 243, 255, 0.6);
+  }
+}
+
 /* Badge Status Variants */
 .float-badge[data-status="WARNING"] .badge-card {
   border-color: var(--border-amber);
