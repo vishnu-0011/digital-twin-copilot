@@ -217,15 +217,21 @@ You can get this entire platform up and running in **under 2 minutes**:
 
 ### Step 1: Clone and Set Up Virtual Environment
 ```bash
-# Clone the repository
-git clone git@github-personal:vishnu-0011/digital-twin-copilot.git
+# 1. Clone the repository and switch to the active feature branch
+git clone https://github.com/vishnu-0011/digital-twin-copilot.git
 cd digital-twin-copilot
+git checkout feat/3d-strategy-game-ui
 
-# Create and activate Python 3.10+ virtual environment
+# 2. Create and activate virtual environment
+# On macOS / Linux:
 python3 -m venv venv
 source venv/bin/activate
 
-# Install dependencies (PyTorch, Scikit-Learn, SimPy, FastAPI, ChromaDB)
+# On Windows (Command Prompt or PowerShell):
+# python -m venv venv
+# .\venv\Scripts\activate
+
+# 3. Install dependencies (PyTorch, Scikit-Learn, SimPy, FastAPI, ChromaDB)
 pip install -r requirements.txt
 ```
 
@@ -277,6 +283,24 @@ If you are asked to explain this project to a professor, interviewer, or client,
    *"Instead of cognitive alarm fatigue, operators get an interactive 3D command center built in Three.js with real-time oscilloscopes, floating telemetry badges, and a 10-stage end-to-end production ribbon."*
 4. **The Engineering Rigor:**  
    *"Crucially, our system operates completely offline without external cloud API dependencies, respects strict zero-feature-leakage physics, incorporates a 15% asymmetric industrial safety margin, and automates standard operating procedure retrieval using local vector search."*
+
+---
+
+### ❓ Teammate Troubleshooting Cheat-Sheet
+
+#### ⚠️ `ImportError: Start directory is not importable: 'tests'`
+- **Why this happens:** When you clone the repository, Git defaults to the `main` branch. The test suite, 3D WebGL UI, and `About.md` live on the active PR branch `feat/3d-strategy-game-ui`.
+- **How to fix:** In your terminal, run:
+  ```bash
+  git fetch origin
+  git checkout feat/3d-strategy-game-ui
+  ```
+  Once checked out, the `tests/` directory will appear immediately on disk.
+
+#### ⚠️ Virtual Environment Activation
+- **macOS / Linux:** `source venv/bin/activate`
+- **Windows (Command Prompt):** `.\venv\Scripts\activate.bat`
+- **Windows (PowerShell):** `.\venv\Scripts\Activate.ps1` *(If PowerShell blocks scripts, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`)*
 
 ---
 

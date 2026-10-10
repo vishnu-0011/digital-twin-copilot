@@ -263,13 +263,19 @@ digital-twin-copilot/
 Requires **Python 3.10+**. Zero external API keys, zero node/npm build dependencies:
 
 ```bash
-# Clone the repository
-git clone git@github-personal:vishnu-0011/digital-twin-copilot.git
+# Clone the repository and switch to the active feature branch
+git clone https://github.com/vishnu-0011/digital-twin-copilot.git
 cd digital-twin-copilot
+git checkout feat/3d-strategy-game-ui
 
 # Create and activate virtual environment
+# macOS / Linux:
 python3 -m venv venv
 source venv/bin/activate
+
+# Windows (Command Prompt / PowerShell):
+# python -m venv venv
+# .\venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
