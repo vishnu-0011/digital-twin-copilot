@@ -315,18 +315,29 @@ export function triggerRadarSweep() {
   radarProgress = 0;
 }
 
-export function setInteriorMode(enable) {
+let modeChangeHandler = null;
+
+export function registerModeChangeHandler(fn) {
+  modeChangeHandler = fn;
+}
+
+export function setInteriorMode(enable, shouldTween = true) {
   isInteriorMode = enable;
   if (factoryBuilding) {
     if (factoryBuilding.roofGroup) factoryBuilding.roofGroup.visible = !enable;
     if (factoryBuilding.upperWallsGroup) factoryBuilding.upperWallsGroup.visible = !enable;
   }
-  if (enable) {
-    targetCamPos = defaultCamPos.clone();
-    targetLookAt = defaultLookAt.clone();
-  } else {
-    targetCamPos = campusCamPos.clone();
-    targetLookAt = campusLookAt.clone();
+  if (shouldTween) {
+    if (enable) {
+      targetCamPos = defaultCamPos.clone();
+      targetLookAt = defaultLookAt.clone();
+    } else {
+      targetCamPos = campusCamPos.clone();
+      targetLookAt = campusLookAt.clone();
+    }
+  }
+  if (modeChangeHandler) {
+    modeChangeHandler(isInteriorMode);
   }
 }
 
@@ -497,6 +508,14 @@ function animate(time) {
     }
   }
   controls.update();
+
+  // Automatic transition to Campus View when zooming out of the company
+  if (isInteriorMode && !targetCamPos && !agv1FollowMode && !agv2FollowMode) {
+    const camDist = camera.position.distanceTo(controls.target);
+    if (camDist >= 68.0) {
+      setInteriorMode(false, false);
+    }
+  }
 
   // 2. CNC-01 Animation
   const cnc1 = machines.get("CNC-01");
@@ -730,4 +749,4 @@ export function getMachines() {
 export const updateMachineStates = updateFleetTelemetry;
 export const triggerRadarScan = triggerRadarSweep;
 export function focusOnMachine(machineId) { setCameraPreset(machineId); }
-export function resetCamera() { setCameraPreset('global'); }
+export function resetCamera() { setCameraPreset(isInteriorMode ? 'global' : 'campus'); }

@@ -15,6 +15,8 @@ import {
   setCameraPreset,
   setSceneTheme,
   setInteriorMode,
+  getInteriorMode,
+  registerModeChangeHandler,
   pickMachine,
   getMachineScreenPositions
 } from './scene.js';
@@ -56,6 +58,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. Initialize HUD, Badges & Pipeline UI
   initHUD(selectMachine, (theme) => setSceneTheme(theme));
   window.selectMachine = selectMachine;
+  window.getInteriorMode = getInteriorMode;
+
+  // Listen for automatic zoom-out to Campus View from scene
+  registerModeChangeHandler((isInterior) => {
+    if (!isInterior) {
+      const directorButtons = document.querySelectorAll('.btn-director');
+      directorButtons.forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-preset') === 'campus');
+      });
+      addLogMessage("Camera zoomed out of company — switched to Campus View.", "CAMPUS");
+    }
+  });
 
   // 3. Setup UI Event Listeners (Controls & Camera Director)
   setupControls(container);
