@@ -4,7 +4,8 @@
 > An autonomous agentic predictive-maintenance operations center for precision aerospace manufacturing —  
 > **100% Pure Local Machine Learning &bull; 100% Offline &bull; ZERO API Keys &bull; Zero Node/NPM Build Overhead**.
 
-[![Tests](https://img.shields.io/badge/tests-21%20passed-10b981?style=for-the-badge&logo=pytest)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/tests)
+[![Tests](https://img.shields.io/badge/tests-23%20passed-10b981?style=for-the-badge&logo=pytest)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/tests)
+[![Guided Demo](https://img.shields.io/badge/Demo-1--Click%20Presentation%20Tour-8b5cf6?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/tour.js)
 [![Telemetry](https://img.shields.io/badge/Telemetry-Real--Time%20WebSocket%20(/ws/telemetry)-00f3ff?style=for-the-badge&logo=fastapi)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/api/main.py)
 [![Fleet](https://img.shields.io/badge/Fleet-8%20Aerospace%20Workcells%20%2B%202%20AMRs-0284c7?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/digital_twin/simulator.py)
 [![ML Backend](https://img.shields.io/badge/Prognostics-2021%20PHM%20Winner%20TCN-00f3ff?style=for-the-badge&logo=pytorch)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/ml_pipeline/tcn_model.py)
@@ -299,7 +300,7 @@ pip install -r requirements.txt
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
-*(All 21 unit, integration, and WebSocket tests run with 100% pass rate).*
+*(All 23 unit, integration, and WebSocket tests run with 100% pass rate).*
 
 ### 3. Launch the 3D Operations Center
 
@@ -314,6 +315,7 @@ Open your browser to:
 
 ## 🎮 How to Interact with the Operations Center
 
+- **1-Click Guided Presentation Tour (`🎬 Guided Demo`)**: Orchestrates an automated 45-second cinematic walkthrough complete with viva narration subtitles, camera glides, simulated bearing fault injection, radar scan, SCADA drawer tabs, and closed-loop maintenance recovery.
 - **Real-Time Telemetry Stream (`WS: LIVE`)**: Powered by high-speed bi-directional WebSockets (`/ws/telemetry`) streaming live machine parameters, with instant sub-millisecond command dispatch and seamless fallback to HTTP polling.
 - **Theme Switcher (`☀️ Light / 🌙 Dark`)**: Toggle between the Executive Cleanroom Light Theme (default, ideal for executive presentations and HOD reviews) and the Cyberpunk Night Theme.
 - **Camera Director Presets**: Click `🌐 Overview`, `⚙️ Machining Bay`, `🔨 Forming & Heat`, `🤖 Robotics & QC`, `📦 Assembly Line`, `🚚 AGV-01`, or `📦 AGV-02` on the floating director bar to smoothly fly the camera across the plant.

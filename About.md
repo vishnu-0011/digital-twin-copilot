@@ -204,10 +204,11 @@ Here is a map of the repository so you know exactly which file does what:
 | [`agents/diagnosis_agent.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/agents/diagnosis_agent.py) | Local NLP matcher mapping symptoms to plant SOPs & ISO 10816 standards | AI / Agentic Flow |
 | [`api/main.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/api/main.py) | FastAPI backend serving `/ws/telemetry` streaming, `/fleet`, `/pipeline/flow`, and static files | Backend / API |
 | [`web/js/app.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/app.js) | Main frontend orchestrator; manages WebSocket stream with HTTP fallback and 60Hz loop | Frontend |
+| [`web/js/tour.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/tour.js) | 1-Click Guided Presentation Tour engine orchestrating 7-beat automated demo | Frontend / Demo |
 | [`web/js/scene.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/scene.js) | Three.js WebGL lighting, cleanroom floors, camera orbits, and particles | 3D / Graphics |
 | [`web/js/models.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/models.js) | 3D procedural meshes: CNC mills, 1000T press, vacuum furnace, AMRs | 3D / Graphics |
 | [`web/js/hud.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/hud.js) | UI overlays: Top KPIs, floating 3D labels, oscilloscope, and 10-stage ribbon | Frontend / UI |
-| [`tests/`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/tests) | 21 automated unit, integration & WebSocket tests | QA / Testing |
+| [`tests/`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/tests) | 23 automated unit, integration & WebSocket tests | QA / Testing |
 
 ---
 
