@@ -49,6 +49,9 @@
     </div>
 
     <div class="controls-group">
+      <button id="btn-tour" class="btn-hud btn-tour" title="1-Click Guided Presentation Tour">
+        🎬 Guided Demo
+      </button>
       <button id="btn-theme" class="btn-hud btn-theme-toggle" title="Toggle Cleanroom Light / Night Mode">
         ☀️ Light
       </button>
@@ -69,6 +72,24 @@
       </button>
     </div>
   </header>
+
+  <!-- Cinematic Presentation Tour Prompter Banner -->
+  <div id="tour-banner" class="tour-banner-container hidden" role="region" aria-label="Guided Presentation Tour">
+    <div class="tour-banner-glass">
+      <div class="tour-banner-top">
+        <div class="tour-badge"><span class="tour-pulse"></span> LIVE PRESENTATION TOUR</div>
+        <div class="tour-stepper" id="tour-stepper"></div>
+        <button id="btn-tour-close" class="btn-tour-stop" title="Stop Guided Tour">&times; STOP</button>
+      </div>
+      <div class="tour-banner-content">
+        <h3 id="tour-title">1/7: Titan Aerospace City Campus</h3>
+        <p id="tour-desc">Autonomous precision manufacturing facility: Surrounding animated town traffic, employee parking, EV charging & covered entrance corridor.</p>
+      </div>
+      <div class="tour-progress-track">
+        <div id="tour-progress-fill" class="tour-progress-fill"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Floating Tactical Camera Director Bar -->
   <nav id="camera-director-bar" aria-label="Camera Presets">

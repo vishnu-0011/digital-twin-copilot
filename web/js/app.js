@@ -41,11 +41,46 @@ import {
   isMuted
 } from './audio.js';
 
+import { initTourUI } from './tour.js';
+
+export { addLogMessage };
+
 let fleetCache = [];
 let pollIntervalId = null;
 let telemetryWs = null;
 let isWsConnected = false;
 let wsReconnectTimer = null;
+
+export async function dispatchAction(action, payload = {}) {
+  if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
+    telemetryWs.send(JSON.stringify({ action, ...payload }));
+  } else {
+    if (action === 'inject_fault') {
+      await fetch('/fault/inject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else if (action === 'step') {
+      await fetch('/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else if (action === 'reset') {
+      await fetch('/fleet/reset', { method: 'POST' });
+    } else if (action === 'repair') {
+      await fetch('/maintenance/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else if (action === 'scan') {
+      await fetch('/monitor/check', { method: 'POST' });
+    }
+    await fetchAllData();
+  }
+}
 
 function updateWsBadge(status) {
   const badge = document.getElementById('ws-badge');
@@ -222,6 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFloatingBadges(getMachineScreenPositions(), selectMachine);
   }
   syncBadges();
+
+  // 6. Initialize Guided Presentation Tour UI
+  initTourUI();
 
   addLogMessage("Titan Aerospace Precision Fab operations center online. 2021 TCN engine active.", "READY");
 });
