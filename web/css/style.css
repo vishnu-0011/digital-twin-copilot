@@ -176,6 +176,40 @@ html, body {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
+/* Real-Time WebSocket Telemetry Indicator */
+.ws-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 8.5px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  vertical-align: middle;
+}
+
+.ws-badge.ws-live {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.25);
+}
+
+.ws-badge.ws-connecting {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-amber);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.ws-badge.ws-fallback {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-rose);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
 /* Central KPI Strip */
 .kpi-strip {
   display: flex;

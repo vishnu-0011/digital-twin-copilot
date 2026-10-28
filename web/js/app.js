@@ -43,6 +43,144 @@ import {
 
 let fleetCache = [];
 let pollIntervalId = null;
+let telemetryWs = null;
+let isWsConnected = false;
+let wsReconnectTimer = null;
+
+function updateWsBadge(status) {
+  const badge = document.getElementById('ws-badge');
+  if (!badge) return;
+  badge.className = 'ws-badge';
+  if (status === 'live') {
+    badge.classList.add('ws-live');
+    badge.textContent = 'WS: LIVE';
+    badge.title = 'Real-Time WebSocket Telemetry Stream (Active)';
+  } else if (status === 'connecting') {
+    badge.classList.add('ws-connecting');
+    badge.textContent = 'WS: CONNECTING';
+    badge.title = 'Connecting to WebSocket Telemetry Stream...';
+  } else {
+    badge.classList.add('ws-fallback');
+    badge.textContent = 'WS: HTTP FALLBACK';
+    badge.title = 'WebSocket Disconnected — Operating via HTTP Polling';
+  }
+}
+
+function applyTelemetryData(machinesList, pipelineData) {
+  if (machinesList && Array.isArray(machinesList)) {
+    fleetCache = machinesList;
+    updateMachineStates(machinesList);
+    updateTopKPIs(machinesList);
+
+    const currentSelected = getSelectedMachineId();
+    if (currentSelected) {
+      const selectedObj = machinesList.find(m => m.machine_id === currentSelected);
+      if (selectedObj) {
+        populateDrawer(selectedObj);
+      }
+    }
+  }
+
+  if (pipelineData) {
+    renderPipelineFlow(pipelineData);
+  }
+}
+
+function processScanOutcome(res) {
+  if (res && res.status === 'SUCCESS' && res.anomalies_detected > 0) {
+    playAlarm();
+    addLogMessage(`⚠️ Anomaly detected: ${res.anomalies_detected} unit(s) requiring attention!`, "ALERT");
+  } else {
+    addLogMessage("Radar sweep complete: All units within normal vibration parameters.", "NOMINAL");
+  }
+}
+
+function initWebSocketClient() {
+  if (wsReconnectTimer) {
+    clearTimeout(wsReconnectTimer);
+    wsReconnectTimer = null;
+  }
+
+  updateWsBadge('connecting');
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/telemetry`;
+
+  try {
+    telemetryWs = new WebSocket(wsUrl);
+  } catch (err) {
+    console.warn("WebSocket creation failed, engaging HTTP fallback:", err);
+    engageHttpFallback();
+    return;
+  }
+
+  telemetryWs.onopen = () => {
+    isWsConnected = true;
+    updateWsBadge('live');
+    addLogMessage("WebSocket telemetry connection established. Real-time stream live.", "WS");
+
+    // Once WebSocket is live, throttle HTTP polling to passive 15s health heartbeat
+    if (pollIntervalId) {
+      clearInterval(pollIntervalId);
+      pollIntervalId = setInterval(passiveHeartbeat, 15000);
+    }
+  };
+
+  telemetryWs.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'telemetry') {
+        applyTelemetryData(data.machines, data.pipeline);
+      } else if (data.type === 'scan_result') {
+        processScanOutcome(data.result);
+      } else if (data.type === 'action_result') {
+        if (data.action === 'step') {
+          addLogMessage(`Simulation step complete (+${data.advanced_s}s via WebSocket).`, "TWIN");
+        } else if (data.action === 'repair' && data.status === 'ok') {
+          playRepairSuccess();
+          addLogMessage(`✓ Maintenance successful on ${data.machine_id}. Tool wear reset.`, "SUCCESS");
+        } else if (data.action === 'reset' && data.status === 'ok') {
+          playRepairSuccess();
+          addLogMessage("Shift reset complete via WebSocket. All workcells nominal.", "SUCCESS");
+        }
+      }
+    } catch (err) {
+      console.error("Error parsing WebSocket packet:", err);
+    }
+  };
+
+  telemetryWs.onclose = () => {
+    if (isWsConnected) {
+      addLogMessage("WebSocket connection lost. Falling back to HTTP polling.", "WS_WARN");
+    }
+    isWsConnected = false;
+    updateWsBadge('fallback');
+    engageHttpFallback();
+
+    // Reconnect attempt in 3s
+    wsReconnectTimer = setTimeout(() => {
+      initWebSocketClient();
+    }, 3000);
+  };
+
+  telemetryWs.onerror = (err) => {
+    console.warn("WebSocket stream error:", err);
+    isWsConnected = false;
+    updateWsBadge('fallback');
+  };
+}
+
+function engageHttpFallback() {
+  if (!pollIntervalId) {
+    fetchAllData();
+    pollIntervalId = setInterval(fetchAllData, 1800);
+  }
+}
+
+function passiveHeartbeat() {
+  if (!isWsConnected) {
+    engageHttpFallback();
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('canvas-container');
@@ -74,9 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. Setup UI Event Listeners (Controls & Camera Director)
   setupControls(container);
 
-  // 4. Start Telemetry & Pipeline Polling
+  // 4. Start Real-Time WebSocket Telemetry Stream (with automatic HTTP fallback)
   fetchAllData();
-  pollIntervalId = setInterval(fetchAllData, 1800);
+  initWebSocketClient();
 
   // 5. Keep floating badges synchronized on each animation tick
   function syncBadges() {
@@ -133,20 +271,18 @@ function setupControls(canvasContainer) {
       triggerRadarScan();
       addLogMessage("Initiating factory laser radar sweep & anomaly detection...", "SCAN");
 
-      try {
-        const resp = await fetch('/monitor/check', { method: 'POST' });
-        const res = await resp.json();
-
-        if (res.status === 'SUCCESS' && res.anomalies_detected > 0) {
-          playAlarm();
-          addLogMessage(`⚠️ Anomaly detected: ${res.anomalies_detected} unit(s) requiring attention!`, "ALERT");
-        } else {
-          addLogMessage("Radar sweep complete: All units within normal vibration parameters.", "NOMINAL");
+      if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
+        telemetryWs.send(JSON.stringify({ action: "scan" }));
+      } else {
+        try {
+          const resp = await fetch('/monitor/check', { method: 'POST' });
+          const res = await resp.json();
+          processScanOutcome(res);
+          await fetchAllData();
+        } catch (err) {
+          console.error("Monitor check failed:", err);
+          addLogMessage("Radar telemetry check completed.", "SCAN");
         }
-        await fetchAllData();
-      } catch (err) {
-        console.error("Monitor check failed:", err);
-        addLogMessage("Radar telemetry check completed.", "SCAN");
       }
     });
   }
@@ -159,18 +295,23 @@ function setupControls(canvasContainer) {
       stepBtn.disabled = true;
       addLogMessage("Stepping physical twin +1800s forward...", "TWIN");
 
-      try {
-        await fetch('/simulate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ duration_s: 1800 })
-        });
-        await fetchAllData();
-        addLogMessage("Simulation step complete (+1800s). Telemetry updated.", "TWIN");
-      } catch (err) {
-        console.error("Simulation step failed:", err);
-      } finally {
+      if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
+        telemetryWs.send(JSON.stringify({ action: "step", duration_s: 1800 }));
         stepBtn.disabled = false;
+      } else {
+        try {
+          await fetch('/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ duration_s: 1800 })
+          });
+          await fetchAllData();
+          addLogMessage("Simulation step complete (+1800s). Telemetry updated.", "TWIN");
+        } catch (err) {
+          console.error("Simulation step failed:", err);
+        } finally {
+          stepBtn.disabled = false;
+        }
       }
     });
   }
@@ -183,15 +324,20 @@ function setupControls(canvasContainer) {
       resetFleetBtn.disabled = true;
       addLogMessage("Resetting shift: Restoring all workcells to nominal status...", "SHIFT");
 
-      try {
-        await fetch('/fleet/reset', { method: 'POST' });
-        playRepairSuccess();
-        await fetchAllData();
-        addLogMessage("Shift reset complete. All workcells operating at nominal wear.", "SUCCESS");
-      } catch (err) {
-        console.error("Fleet reset failed:", err);
-      } finally {
+      if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
+        telemetryWs.send(JSON.stringify({ action: "reset" }));
         resetFleetBtn.disabled = false;
+      } else {
+        try {
+          await fetch('/fleet/reset', { method: 'POST' });
+          playRepairSuccess();
+          await fetchAllData();
+          addLogMessage("Shift reset complete. All workcells operating at nominal wear.", "SUCCESS");
+        } catch (err) {
+          console.error("Fleet reset failed:", err);
+        } finally {
+          resetFleetBtn.disabled = false;
+        }
       }
     });
   }
@@ -241,28 +387,34 @@ function setupControls(canvasContainer) {
       repairBtn.textContent = "⏳ Executing Maintenance...";
       addLogMessage(`Triggering maintenance procedure on ${mId}...`, "MAINT");
 
-      try {
-        const resp = await fetch('/maintenance/trigger', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ machine_id: mId })
-        });
-        const res = await resp.json();
-
-        if (res.status === 'SUCCESS') {
-          playRepairSuccess();
-          addLogMessage(`✓ Maintenance successful on ${mId}. Tool wear reset to 0.0.`, "SUCCESS");
-        } else {
-          addLogMessage(`Maintenance action note: ${res.message}`, "MAINT");
-        }
-
-        await fetchAllData();
-      } catch (err) {
-        console.error("Maintenance failed:", err);
-        addLogMessage(`Maintenance request error on ${mId}`, "ERROR");
-      } finally {
+      if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
+        telemetryWs.send(JSON.stringify({ action: "repair", machine_id: mId }));
         repairBtn.disabled = false;
         repairBtn.textContent = "🔧 Trigger Maintenance & Reset Wear";
+      } else {
+        try {
+          const resp = await fetch('/maintenance/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ machine_id: mId })
+          });
+          const res = await resp.json();
+
+          if (res.status === 'SUCCESS') {
+            playRepairSuccess();
+            addLogMessage(`✓ Maintenance successful on ${mId}. Tool wear reset to 0.0.`, "SUCCESS");
+          } else {
+            addLogMessage(`Maintenance action note: ${res.message}`, "MAINT");
+          }
+
+          await fetchAllData();
+        } catch (err) {
+          console.error("Maintenance failed:", err);
+          addLogMessage(`Maintenance request error on ${mId}`, "ERROR");
+        } finally {
+          repairBtn.disabled = false;
+          repairBtn.textContent = "🔧 Trigger Maintenance & Reset Wear";
+        }
       }
     });
   }
@@ -321,22 +473,7 @@ async function fetchFleetData() {
 
     const data = await res.json();
     const machinesList = Array.isArray(data) ? data : (data.machines || []);
-    fleetCache = machinesList;
-
-    // Update 3D scene representations (auras, halos, speed)
-    updateMachineStates(machinesList);
-
-    // Update Top KPIs
-    updateTopKPIs(machinesList);
-
-    // Update active drawer if open
-    const currentSelected = getSelectedMachineId();
-    if (currentSelected) {
-      const selectedObj = machinesList.find(m => m.machine_id === currentSelected);
-      if (selectedObj) {
-        populateDrawer(selectedObj);
-      }
-    }
+    applyTelemetryData(machinesList, null);
   } catch (err) {
     console.warn("Could not fetch /fleet:", err.message);
   }
