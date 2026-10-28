@@ -1,9 +1,9 @@
-# Requirements: Town Campus, Company Parking, Pedestrian Corridor & Dollhouse Exterior/Interior UI
+# Requirements: Real-Time WebSockets (`/ws/telemetry`)
 
-- [ ] **REQ-01: Architectural Factory Exterior & Dollhouse Cutaway**: Create procedural factory building walls, ribbon windows, entrance canopy, roof trusses, rooftop HVAC units/solar panels, and smooth cutaway visibility/fade logic.
-- [ ] **REQ-02: Click-to-Enter & Interior Camera Transitions**: Enable clicking the factory building to fly the camera into the interior, fade the roof/upper walls, and reveal the factory floor. Provide an easy way to zoom back out to Campus View via the Director Bar.
-- [ ] **REQ-03: Surrounding Road Grid & Animated Traffic**: Build two-way asphalt roads with white dashed lane markings, curbs, crosswalks, and an animated vehicle fleet (cars, trucks, vans) driving smoothly along continuous closed-loop waypoints.
-- [ ] **REQ-04: Company Parking Lot & Pedestrian Corridor**: Construct a dedicated paved parking area with marked parking stalls, parked cars, EV charging pedestals, security guardhouse, and an illuminated pedestrian corridor linking parking to the entrance portal.
-- [ ] **REQ-05: Bustling Town Streetscapes & Skyline Buildings**: Add sidewalks, LED streetlights, landscaping (trees, lawn patches), and background commercial office buildings with lit windows to create a thriving urban campus environment.
-- [ ] **REQ-06: Context-Aware HUD & Director Bar Integration**: Adapt HUD badges so interior machine badges hide during Campus View in favor of a clean Campus badge, and add a `🏢 Campus` preset button to the floating Director bar.
-- [ ] **REQ-07: Dual-Theme Polish & Rigorous Verification**: Maintain visual harmony in both Executive Cleanroom (daylight) and Cyberpunk (night), verify 16/16 test passes, validate JS syntax, and capture multi-angle screenshots.
+- [ ] **REQ-01: FastAPI WebSocket Telemetry Endpoint**: Expose `@app.websocket("/ws/telemetry")` supporting connection lifecycle, broadcasting real-time fleet machine states and 10-stage pipeline flow summaries.
+- [ ] **REQ-02: Asynchronous Telemetry Broadcaster**: Implement a background broadcaster loop in FastAPI lifespan that pushes updates to all active WebSocket clients with graceful disconnect pruning.
+- [ ] **REQ-03: Bi-Directional Action Protocol**: Support incoming JSON actions over WebSocket (`ping`, `step`, `repair`, `reset`, `scan`), mutating the digital twin state and immediately broadcasting the resulting telemetry.
+- [ ] **REQ-04: Client-Side WebSocket Integration & Reconnection**: Implement WebSocket management in `web/js/app.js` with automatic reconnection, passing telemetry to 3D scene engine and SCADA drawer.
+- [ ] **REQ-05: Resilient HTTP Fallback**: Ensure smooth fallback to HTTP polling if WebSocket is unavailable or disconnected without errors in the UI.
+- [ ] **REQ-06: HUD Connection Badge**: Provide visual indicator in the top HUD reflecting WebSocket status (`WS: LIVE` in emerald green vs `WS: HTTP FALLBACK` in amber).
+- [ ] **REQ-07: Automated Test Coverage**: Create `tests/test_websocket.py` to test WebSocket connection, broadcasting, and bi-directional commands via FastAPI `TestClient.websocket_connect`. All test suite passes with 100% success rate.

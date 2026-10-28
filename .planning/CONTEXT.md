@@ -1,35 +1,31 @@
-# Phase Context: Town Campus, Company Parking, Pedestrian Corridor & Dollhouse Exterior/Interior UI
+# Phase Context: Real-Time WebSockets (`/ws/telemetry`)
 
 ## Problem & User Intent
-The user requested a major visual and architectural enhancement:
-1. **Building Exterior & Interior Transition:** The factory building should be enclosed with architectural walls and a roof from the outside. When clicking inside the building, the camera should glide inside and reveal the busy factory interior (dollhouse cutaway style).
-2. **Outside Environment & Town:** The facility should sit inside a bustling, realistic town with:
-   - Surrounding two-way road network with continuous animated vehicle traffic (cars, delivery trucks, vans).
-   - Dedicated company parking lot with marked stalls, parked cars, EV charging bays, and a security guardhouse.
-   - A dedicated pedestrian walkway/corridor connecting the parking lot directly to the factory entrance portal.
-   - Street furniture, sidewalks, trees/landscaping, modern streetlights, and background commercial skyline buildings.
-3. **Reference Style:** darkvex.ai / SimCity / Anno high-density tactical isometric strategy aesthetic (per user reference: `https://www.instagram.com/reel/DeG2mQszTrc/`).
+The user requested implementing the 5th suggestion: **Real-Time WebSockets (`/ws/telemetry`)** using the autonomous Ralph Loop without grilling (leveraging existing codebase context). 
+
+Currently, the 3D SCADA operations center polls `/fleet` and `/pipeline/flow` over HTTP polling every 1.8 seconds. While functional, HTTP polling introduces latency, unnecessary HTTP request overhead, and does not match the real-time event-driven nature of modern industrial IoT (IIoT) SCADA platforms.
+
+## Mental Model & Core Abstractions
+- **Event-Driven Telemetry Broadcaster (`ConnectionManager`):** Manages connected browser sessions, broadcasts unified telemetry frames (`machines` + `pipeline`) at high frequency (~2Hz loop or immediately upon physics state mutation).
+- **Bi-Directional Command Channel:** Instead of separate HTTP POST endpoints for actions (`/simulate`, `/maintenance/trigger`, `/fleet/reset`, `/monitor/check`), the WebSocket accepts structured action payloads (`step`, `repair`, `reset`, `scan`, `ping`) and responds with immediate action confirmations.
+- **Fail-Safe Client Architecture:** The client treats WebSockets as the primary high-speed conduit and HTTP polling as a resilient fallback. If the WebSocket disconnects, HTTP polling engages seamlessly with zero disruption to 3D rendering or user interactions.
 
 ## Locked Architectural Decisions
-1. **Interactive Dollhouse Transition:**
-   - Building group contains modular exterior walls, windows, and roof structure with rooftop HVAC chillers, solar panels, and "TITAN AEROSPACE" exterior building facade.
-   - In Exterior/Campus view, roof & upper walls are opaque/visible.
-   - Clicking the building (or clicking "Enter Factory" or machine presets) triggers a smooth camera fly-in, fades the roof and upper walls to 0 opacity / invisible, revealing the 8 workcells, AMRs, conveyor, and telemetry badges.
-   - A `🏢 Campus` button in the floating Camera Director bar allows smoothly flying back out to the city view and restoring the exterior roof/walls.
-2. **Town Campus Infrastructure:**
-   - Roads: Dark asphalt grid wrapping around the facility with painted lane divider dashes, crosswalks, and curbs.
-   - Animated Traffic: Continuous loop system of vehicles moving along the road network with rotating wheels, headlights, and taillights.
-   - Parking Area: Located adjacent to the south/west perimeter with angled/perpendicular parking spaces, multiple car models, EV charging pedestals, and barrier gate guardhouse.
-   - Pedestrian Corridor: Paved walkway with overhead canopy/lighting connecting the parking lot to the entrance portal airlock.
-   - Town Skyline: Mid-rise and high-rise commercial buildings in the perimeter distance with lit windows and architectural crowns to establish urban scale.
-3. **Context-Aware HUD:**
-   - In Campus View, interior workcell floating badges are hidden to prevent clutter; a single floating Campus Badge ("🏢 TITAN AEROSPACE MEGA-FAB - 8 WORKCELLS NOMINAL - CLICK TO ENTER") invites the user to enter.
-   - Inside the factory, individual 3D machine badges and the SCADA drawer work exactly as before.
-4. **Zero-Build & Performance:**
-   - Procedural Three.js geometries and instanced/reusable meshes—no heavy external GLTF assets, preserving 60 FPS WebGL rendering and instant load times.
-   - Both Light Mode (crisp executive daytime cleanroom) and Dark Mode (cyberpunk night with glowing headlights, neon signs, and streetlamps).
+1. **Endpoint Seam:** `api/main.py` defines `@app.websocket("/ws/telemetry")` with async lifespan task handling continuous broadcasts.
+2. **Backward Compatibility:** All existing HTTP REST endpoints (`/fleet`, `/simulate`, `/pipeline/flow`, `/maintenance/trigger`, `/fleet/reset`) remain 100% functional and intact.
+3. **Payload Structure:**
+   ```json
+   {
+     "type": "telemetry",
+     "timestamp": 1729000000.0,
+     "machines": [ ... ],
+     "pipeline": { ... }
+   }
+   ```
+4. **Client-Side Resilience:** `web/js/app.js` initializes `WebSocket`, manages reconnection timer (3s), throttles HTTP polling to passive heartbeat while WS is alive, and resumes active polling upon disconnect.
+5. **HUD Status Display:** `web/index.html` and `web/css/style.css` display an animated connection status pill (`WS: LIVE` / `WS: HTTP FALLBACK`).
 
 ## Verification & Backpressure Seams
-- **Tests:** `./venv/bin/python -m unittest discover -s tests -p "test_*.py"` (16/16 pass)
-- **Syntax:** `node --check web/js/*.js`
-- **Visual Capture:** Multi-angle Playwright screenshots of both exterior town view and interior dollhouse view.
+- Unit & Integration Tests: `python -m unittest discover tests`
+- New Dedicated Test: `tests/test_websocket.py` covering WebSocket connect, telemetry reception, bi-directional commands (`step`, `repair`, `reset`, `scan`), and disconnect resilience.
+- Code Review Gate: Dual-axis Standards & Spec check.
