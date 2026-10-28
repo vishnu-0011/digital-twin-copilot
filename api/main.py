@@ -406,6 +406,44 @@ def reset_fleet():
     }
 
 
+class FaultInjectRequest(BaseModel):
+    machine_id: str = "CNC-01"
+    wear_level: float = 0.85
+    status: str = "critical"
+
+
+@app.post("/fault/inject")
+async def inject_fault(req: FaultInjectRequest):
+    """Injects an artificial bearing or mechanical degradation fault for live demos."""
+    twin: FactoryTwin = app_state["twin"]
+    m_twin = twin.machines.get(req.machine_id)
+    if not m_twin:
+        return {"status": "ERROR", "message": f"Machine {req.machine_id} not found"}
+
+    m_twin.wear_level = req.wear_level
+    status_map = {
+        "healthy": MachineStatus.HEALTHY,
+        "warning": MachineStatus.WARNING,
+        "critical": MachineStatus.CRITICAL,
+        "failed": MachineStatus.FAILED,
+    }
+    m_twin.status = status_map.get(req.status.lower(), MachineStatus.CRITICAL)
+    m_twin._emit_state()
+
+    latest = [s.to_dict() for s in twin.get_latest_states()]
+    m_state = next((s for s in latest if s["machine_id"] == req.machine_id), {})
+
+    # Broadcast update via WebSocket
+    await ws_manager.broadcast(build_telemetry_snapshot())
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Fault injected into {req.machine_id}: wear={req.wear_level}, status={req.status}",
+        "machine": m_state,
+        "fleet": latest,
+    }
+
+
 @app.get("/pipeline/flow")
 def pipeline_flow():
     """Returns end-to-end Titan Aerospace manufacturing stages, WIP stats,
@@ -493,6 +531,39 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
                     "status": "ok",
                     "result": result,
                 })
+
+            elif action == "inject_fault":
+                mid = data.get("machine_id", "CNC-01")
+                wear = float(data.get("wear_level", 0.85))
+                stat = data.get("status", "critical").lower()
+                twin: FactoryTwin = app_state["twin"]
+                m_twin = twin.machines.get(mid)
+                if m_twin:
+                    m_twin.wear_level = wear
+                    status_map = {
+                        "healthy": MachineStatus.HEALTHY,
+                        "warning": MachineStatus.WARNING,
+                        "critical": MachineStatus.CRITICAL,
+                        "failed": MachineStatus.FAILED,
+                    }
+                    m_twin.status = status_map.get(stat, MachineStatus.CRITICAL)
+                    m_twin._emit_state()
+                    snapshot = build_telemetry_snapshot()
+                    await ws_manager.broadcast(snapshot)
+                    await websocket.send_json({
+                        "type": "action_result",
+                        "action": "inject_fault",
+                        "machine_id": mid,
+                        "wear_level": wear,
+                        "status": "ok",
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "action_result",
+                        "action": "inject_fault",
+                        "status": "error",
+                        "error": f"Unknown machine {mid}",
+                    })
 
             else:
                 await websocket.send_json({

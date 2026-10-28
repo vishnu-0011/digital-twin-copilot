@@ -103,6 +103,21 @@ class TestWebSocketTelemetry(unittest.TestCase):
             self.assertEqual(scan_res.get("status"), "ok")
             self.assertIn("result", scan_res)
 
+    def test_websocket_inject_fault_action(self):
+        """Verify WebSocket inject_fault action sets machine wear and broadcasts."""
+        with self.client.websocket_connect("/ws/telemetry") as websocket:
+            _ = websocket.receive_json()
+
+            websocket.send_json({"action": "inject_fault", "machine_id": "CNC-01", "wear_level": 0.88, "status": "critical"})
+            msg1 = websocket.receive_json()
+            msg2 = websocket.receive_json()
+            msgs = [msg1, msg2]
+            action_res = next((m for m in msgs if m.get("type") == "action_result"), None)
+            self.assertIsNotNone(action_res)
+            self.assertEqual(action_res.get("action"), "inject_fault")
+            self.assertEqual(action_res.get("machine_id"), "CNC-01")
+            self.assertEqual(action_res.get("wear_level"), 0.88)
+
 
 if __name__ == "__main__":
     unittest.main()

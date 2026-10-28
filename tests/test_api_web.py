@@ -59,6 +59,16 @@ class TestApiWeb(unittest.TestCase):
             self.assertEqual(m["status"], "healthy")
             self.assertLessEqual(m["wear_level"], 0.1)
 
+    def test_fault_inject_endpoint(self):
+        resp = self.client.post("/fault/inject", json={"machine_id": "CNC-01", "wear_level": 0.85, "status": "critical"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        cnc1 = next((m for m in data["fleet"] if m["machine_id"] == "CNC-01"), None)
+        self.assertIsNotNone(cnc1)
+        self.assertEqual(cnc1["wear_level"], 0.85)
+        self.assertEqual(cnc1["status"], "critical")
+
 
 if __name__ == "__main__":
     unittest.main()
