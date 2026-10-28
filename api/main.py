@@ -16,9 +16,13 @@ Endpoints:
 """
 from __future__ import annotations
 
+import asyncio
+import os
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from digital_twin.simulator import FactoryTwin
@@ -33,57 +37,34 @@ from agents.tools import run_what_if_simulation
 app_state: dict = {}
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # 1. Warm up offline ML models with synthetic run-to-failure historical data
-    training_twin = FactoryTwin(seed=42)
-    training_twin.run(duration_s=20000)
-    history = training_twin.history_dataframe()
+# -- WebSocket Connection Manager & Telemetry Broadcaster -------------------
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
 
-    detector = AnomalyDetector().fit(history)
-    predictor = RULPredictor().fit(label_rul(history))
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
 
-    kb = MaintenanceKnowledgeBase()
-    kb.ingest_directory()
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
-    # 2. Live production plant starts fresh in an active nominal shift (~20 min run-in)
-    live_twin = FactoryTwin(seed=101)
-    live_twin.run(duration_s=1200)
-
-    app_state["twin"] = live_twin
-    app_state["detector"] = detector
-    app_state["predictor"] = predictor
-    app_state["kb"] = kb
-    app_state["graph"] = build_copilot_graph(live_twin, detector, predictor, kb)
-
-    yield
-    app_state.clear()
+    async def broadcast(self, message: dict):
+        dead_connections = []
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_json(message)
+            except Exception:
+                dead_connections.append(connection)
+        for dead in dead_connections:
+            self.disconnect(dead)
 
 
-app = FastAPI(title="Smart Manufacturing Digital Twin Copilot", lifespan=lifespan)
+ws_manager = ConnectionManager()
 
 
-class SimulateRequest(BaseModel):
-    duration_s: float = 1800
-
-
-class WhatIfRequest(BaseModel):
-    duration_s: float = 3600
-    seed: int = 7
-
-
-@app.get("/health")
-def health():
-    predictor = app_state.get("predictor")
-    return {
-        "status": "ok",
-        "mode": "100% Pure ML (Zero API Keys)",
-        "rul_backend": predictor.backend if predictor else "tcn_2021",
-    }
-
-
-@app.get("/fleet")
-def fleet_state():
+def build_fleet_payload():
     twin: FactoryTwin = app_state["twin"]
     predictor = app_state.get("predictor")
     latest_states = [s.to_dict() for s in twin.get_latest_states()]
@@ -91,70 +72,13 @@ def fleet_state():
         try:
             history_df = twin.history_dataframe() if hasattr(twin, "history_dataframe") else None
             scored = predictor.predict_latest(latest_states, history_df=history_df)
-            return {"machines": scored}
+            return scored
         except Exception:
             pass
-    return {"machines": latest_states}
+    return latest_states
 
 
-@app.post("/simulate")
-def simulate(req: SimulateRequest):
-    twin: FactoryTwin = app_state["twin"]
-    twin.run(duration_s=req.duration_s)
-    return {"advanced_s": req.duration_s, "fleet": [s.to_dict() for s in twin.get_latest_states()]}
-
-
-@app.post("/monitor/check")
-def monitor_check():
-    """Runs one full Monitor -> Diagnosis -> Scheduler -> Report cycle
-    through the live agent graph and returns the structured result."""
-    graph = app_state["graph"]
-    result = graph.invoke({"trigger": "scheduled_check"})
-    return result
-
-
-class MaintenanceTriggerRequest(BaseModel):
-    machine_id: str
-    reason: str = "Manual operator intervention from 3D console"
-
-
-@app.post("/maintenance/trigger")
-def trigger_maintenance(req: MaintenanceTriggerRequest):
-    twin: FactoryTwin = app_state["twin"]
-    m_twin = twin.machines.get(req.machine_id)
-    if m_twin:
-        m_twin.wear_level = 0.0
-        m_twin.status = MachineStatus.HEALTHY
-        m_twin._emit_state()
-        scheduled = True
-    else:
-        scheduled = False
-    return {
-        "machine_id": req.machine_id,
-        "scheduled": scheduled,
-        "fleet": [s.to_dict() for s in twin.get_latest_states()],
-    }
-
-
-@app.post("/fleet/reset")
-def reset_fleet():
-    """Resets all machines in the live factory twin back to nominal fresh-shift status."""
-    twin: FactoryTwin = app_state["twin"]
-    for m in twin.machines.values():
-        m.wear_level = 0.05
-        m.status = MachineStatus.HEALTHY
-        m._emit_state()
-    return {
-        "status": "SUCCESS",
-        "message": "All workcells reset to nominal operating condition.",
-        "fleet": [s.to_dict() for s in twin.get_latest_states()],
-    }
-
-
-@app.get("/pipeline/flow")
-def pipeline_flow():
-    """Returns end-to-end Titan Aerospace manufacturing stages, WIP stats,
-    and live AI reasoning pipeline steps."""
+def build_pipeline_flow_data():
     twin: FactoryTwin = app_state["twin"]
     states = {s.machine_id: s.to_dict() for s in twin.get_latest_states()}
 
@@ -338,6 +262,247 @@ def pipeline_flow():
             },
         ],
     }
+
+
+def build_telemetry_snapshot():
+    return {
+        "type": "telemetry",
+        "timestamp": time.time(),
+        "machines": build_fleet_payload(),
+        "pipeline": build_pipeline_flow_data(),
+    }
+
+
+async def telemetry_broadcaster_task(interval: float = 0.5):
+    """Background task continuously broadcasting 2Hz telemetry snapshots to connected WebSockets."""
+    try:
+        while True:
+            await asyncio.sleep(interval)
+            if ws_manager.active_connections and "twin" in app_state:
+                try:
+                    payload = build_telemetry_snapshot()
+                    await ws_manager.broadcast(payload)
+                except Exception:
+                    pass
+    except asyncio.CancelledError:
+        pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 1. Warm up offline ML models with synthetic run-to-failure historical data
+    training_twin = FactoryTwin(seed=42)
+    training_twin.run(duration_s=20000)
+    history = training_twin.history_dataframe()
+
+    detector = AnomalyDetector().fit(history)
+    predictor = RULPredictor().fit(label_rul(history))
+
+    kb = MaintenanceKnowledgeBase()
+    kb.ingest_directory()
+
+    # 2. Live production plant starts fresh in an active nominal shift (~20 min run-in)
+    live_twin = FactoryTwin(seed=101)
+    live_twin.run(duration_s=1200)
+
+    app_state["twin"] = live_twin
+    app_state["detector"] = detector
+    app_state["predictor"] = predictor
+    app_state["kb"] = kb
+    app_state["graph"] = build_copilot_graph(live_twin, detector, predictor, kb)
+
+    # 3. Start background real-time telemetry broadcaster
+    broadcast_task = asyncio.create_task(telemetry_broadcaster_task(interval=0.5))
+
+    yield
+
+    broadcast_task.cancel()
+    try:
+        await broadcast_task
+    except asyncio.CancelledError:
+        pass
+    app_state.clear()
+
+
+
+app = FastAPI(title="Smart Manufacturing Digital Twin Copilot", lifespan=lifespan)
+
+
+class SimulateRequest(BaseModel):
+    duration_s: float = 1800
+
+
+class WhatIfRequest(BaseModel):
+    duration_s: float = 3600
+    seed: int = 7
+
+
+@app.get("/health")
+def health():
+    predictor = app_state.get("predictor")
+    return {
+        "status": "ok",
+        "mode": "100% Pure ML (Zero API Keys)",
+        "rul_backend": predictor.backend if predictor else "tcn_2021",
+    }
+
+
+@app.get("/fleet")
+def fleet_state():
+    return {"machines": build_fleet_payload()}
+
+
+@app.post("/simulate")
+def simulate(req: SimulateRequest):
+    twin: FactoryTwin = app_state["twin"]
+    twin.run(duration_s=req.duration_s)
+    return {"advanced_s": req.duration_s, "fleet": [s.to_dict() for s in twin.get_latest_states()]}
+
+
+@app.post("/monitor/check")
+def monitor_check():
+    """Runs one full Monitor -> Diagnosis -> Scheduler -> Report cycle
+    through the live agent graph and returns the structured result."""
+    graph = app_state["graph"]
+    result = graph.invoke({"trigger": "scheduled_check"})
+    return result
+
+
+class MaintenanceTriggerRequest(BaseModel):
+    machine_id: str
+    reason: str = "Manual operator intervention from 3D console"
+
+
+@app.post("/maintenance/trigger")
+def trigger_maintenance(req: MaintenanceTriggerRequest):
+    twin: FactoryTwin = app_state["twin"]
+    m_twin = twin.machines.get(req.machine_id)
+    if m_twin:
+        m_twin.wear_level = 0.0
+        m_twin.status = MachineStatus.HEALTHY
+        m_twin._emit_state()
+        scheduled = True
+    else:
+        scheduled = False
+    return {
+        "machine_id": req.machine_id,
+        "scheduled": scheduled,
+        "fleet": [s.to_dict() for s in twin.get_latest_states()],
+    }
+
+
+@app.post("/fleet/reset")
+def reset_fleet():
+    """Resets all machines in the live factory twin back to nominal fresh-shift status."""
+    twin: FactoryTwin = app_state["twin"]
+    for m in twin.machines.values():
+        m.wear_level = 0.05
+        m.status = MachineStatus.HEALTHY
+        m._emit_state()
+    return {
+        "status": "SUCCESS",
+        "message": "All workcells reset to nominal operating condition.",
+        "fleet": [s.to_dict() for s in twin.get_latest_states()],
+    }
+
+
+@app.get("/pipeline/flow")
+def pipeline_flow():
+    """Returns end-to-end Titan Aerospace manufacturing stages, WIP stats,
+    and live AI reasoning pipeline steps."""
+    return build_pipeline_flow_data()
+
+
+# -- Real-Time WebSocket Telemetry Endpoint ----------------------------------
+@app.websocket("/ws/telemetry")
+async def websocket_telemetry_endpoint(websocket: WebSocket):
+    """Real-time bi-directional WebSocket telemetry stream for 3D SCADA operations center.
+    Pushes continuous machine health and pipeline flow snapshots, and accepts
+    instant operator actions (ping, step, repair, reset, scan)."""
+    await ws_manager.connect(websocket)
+    try:
+        # Push immediate snapshot upon initial connection
+        if "twin" in app_state:
+            await websocket.send_json(build_telemetry_snapshot())
+
+        while True:
+            data = await websocket.receive_json()
+            action = data.get("action")
+
+            if action == "ping":
+                await websocket.send_json({"type": "pong", "timestamp": time.time()})
+
+            elif action == "step":
+                duration_s = float(data.get("duration_s", 1800))
+                twin: FactoryTwin = app_state["twin"]
+                twin.run(duration_s=duration_s)
+                snapshot = build_telemetry_snapshot()
+                await ws_manager.broadcast(snapshot)
+                await websocket.send_json({
+                    "type": "action_result",
+                    "action": "step",
+                    "status": "ok",
+                    "advanced_s": duration_s,
+                })
+
+            elif action == "repair":
+                mid = data.get("machine_id")
+                twin: FactoryTwin = app_state["twin"]
+                m_twin = twin.machines.get(mid)
+                if m_twin:
+                    m_twin.wear_level = 0.0
+                    m_twin.status = MachineStatus.HEALTHY
+                    m_twin._emit_state()
+                    snapshot = build_telemetry_snapshot()
+                    await ws_manager.broadcast(snapshot)
+                    await websocket.send_json({
+                        "type": "action_result",
+                        "action": "repair",
+                        "machine_id": mid,
+                        "status": "ok",
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "action_result",
+                        "action": "repair",
+                        "status": "error",
+                        "error": f"Unknown machine {mid}",
+                    })
+
+            elif action == "reset":
+                twin: FactoryTwin = app_state["twin"]
+                for m in twin.machines.values():
+                    m.wear_level = 0.05
+                    m.status = MachineStatus.HEALTHY
+                    m._emit_state()
+                snapshot = build_telemetry_snapshot()
+                await ws_manager.broadcast(snapshot)
+                await websocket.send_json({
+                    "type": "action_result",
+                    "action": "reset",
+                    "status": "ok",
+                })
+
+            elif action == "scan":
+                graph = app_state["graph"]
+                result = graph.invoke({"trigger": "scheduled_check"})
+                snapshot = build_telemetry_snapshot()
+                await ws_manager.broadcast(snapshot)
+                await websocket.send_json({
+                    "type": "scan_result",
+                    "status": "ok",
+                    "result": result,
+                })
+
+            else:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Unknown action: {action}",
+                })
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
 
 
 # -- Serve 3D Strategy Game UI at root (placed after API routes) -------------
