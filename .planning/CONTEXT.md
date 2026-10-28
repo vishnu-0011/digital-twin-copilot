@@ -1,31 +1,22 @@
-# Phase Context: Real-Time WebSockets (`/ws/telemetry`)
+# Phase Context: 1-Click Guided Presentation Tour & Anomaly Injection Engine
 
 ## Problem & User Intent
-The user requested implementing the 5th suggestion: **Real-Time WebSockets (`/ws/telemetry`)** using the autonomous Ralph Loop without grilling (leveraging existing codebase context). 
-
-Currently, the 3D SCADA operations center polls `/fleet` and `/pipeline/flow` over HTTP polling every 1.8 seconds. While functional, HTTP polling introduces latency, unnecessary HTTP request overhead, and does not match the real-time event-driven nature of modern industrial IoT (IIoT) SCADA platforms.
+The user asked to implement the 1st suggestion: **1-Click Guided Presentation Tour / Story Mode ("Walkthrough Mode")**.
+During a viva or live project evaluation, manually clicking through camera angles, navigating menus, injecting anomalies, and explaining ML concepts simultaneously can feel rushed or awkward. A 1-click guided demo allows anyone (including teammates who did not write the code) to run an automated, high-impact demonstration showcasing the entire digital twin and AI copilot pipeline from start to finish with zero presentation fumbles.
 
 ## Mental Model & Core Abstractions
-- **Event-Driven Telemetry Broadcaster (`ConnectionManager`):** Manages connected browser sessions, broadcasts unified telemetry frames (`machines` + `pipeline`) at high frequency (~2Hz loop or immediately upon physics state mutation).
-- **Bi-Directional Command Channel:** Instead of separate HTTP POST endpoints for actions (`/simulate`, `/maintenance/trigger`, `/fleet/reset`, `/monitor/check`), the WebSocket accepts structured action payloads (`step`, `repair`, `reset`, `scan`, `ping`) and responds with immediate action confirmations.
-- **Fail-Safe Client Architecture:** The client treats WebSockets as the primary high-speed conduit and HTTP polling as a resilient fallback. If the WebSocket disconnects, HTTP polling engages seamlessly with zero disruption to 3D rendering or user interactions.
+- **Tour Director Engine (`web/js/tour.js`):** A state machine orchestrating timed beats, camera transitions, fault injection, radar scan, drawer inspection, tab cycling, and closed-loop repair.
+- **Cinematic Subtitle Overlay (`#tour-banner`):** A floating glassmorphic presentation prompter providing clear, professional narration subtitles for the audience or professor at every stage of the tour.
+- **Fault Injection Seam (`POST /fault/inject` & WebSocket `inject_fault`):** Allows deterministic fault simulation (spindle bearing degradation, thermal elevation) on any workcell, broadcasting state instantly to all subscribers.
+- **Interruptible Lifecycle:** The presenter can click `⏹ Stop Tour` or interact manually at any time to halt the tour without breaking the 3D scene or simulation state.
 
 ## Locked Architectural Decisions
-1. **Endpoint Seam:** `api/main.py` defines `@app.websocket("/ws/telemetry")` with async lifespan task handling continuous broadcasts.
-2. **Backward Compatibility:** All existing HTTP REST endpoints (`/fleet`, `/simulate`, `/pipeline/flow`, `/maintenance/trigger`, `/fleet/reset`) remain 100% functional and intact.
-3. **Payload Structure:**
-   ```json
-   {
-     "type": "telemetry",
-     "timestamp": 1729000000.0,
-     "machines": [ ... ],
-     "pipeline": { ... }
-   }
-   ```
-4. **Client-Side Resilience:** `web/js/app.js` initializes `WebSocket`, manages reconnection timer (3s), throttles HTTP polling to passive heartbeat while WS is alive, and resumes active polling upon disconnect.
-5. **HUD Status Display:** `web/index.html` and `web/css/style.css` display an animated connection status pill (`WS: LIVE` / `WS: HTTP FALLBACK`).
+1. **Endpoint & Protocol:** Expose `POST /fault/inject` taking `machine_id`, `wear_level`, `status`, and WebSocket action `inject_fault`.
+2. **Audio & Visual Synchronization:** Tour steps trigger appropriate sound effects (`playClick`, `playScan`, `playAlarm`, `playRepairSuccess`) and visual states (camera glide, radar sweep plane, vibration aura, drawer tabs).
+3. **Pacing:** Each beat is paced at ~6-7 seconds to allow evaluators to read the subtitle and absorb the visual change (~40-45s total tour time).
+4. **Git Identity:** Strictly repo-local personal identity (`Yashwant00CR7` / `10a19yashwant@gmail.com`) via `github-personal`.
 
 ## Verification & Backpressure Seams
-- Unit & Integration Tests: `python -m unittest discover tests`
-- New Dedicated Test: `tests/test_websocket.py` covering WebSocket connect, telemetry reception, bi-directional commands (`step`, `repair`, `reset`, `scan`), and disconnect resilience.
-- Code Review Gate: Dual-axis Standards & Spec check.
+- Unit tests: `tests/test_api_web.py` & `tests/test_websocket.py` asserting `/fault/inject` and `inject_fault`.
+- Full test discovery: `python -m unittest discover tests`.
+- Frontend syntax check: `node --check web/js/*.js`.
