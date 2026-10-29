@@ -145,12 +145,25 @@ export const MAT = {
   skylineTower: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.4 }),
   skylineGlass: new THREE.MeshBasicMaterial({ color: 0xfef9c3 }),
 
-  // Vehicles
-  carRed: new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.25, metalness: 0.7 }),
-  carBlue: new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.25, metalness: 0.7 }),
-  carWhite: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2, metalness: 0.6 }),
-  carSilver: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.2, metalness: 0.85 }),
-  carBlack: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.8 }),
+  // High-Gloss Automotive Metallic Lacquer Finishes (Physical Clearcoat Materials)
+  carRed: new THREE.MeshPhysicalMaterial({ color: 0xdc2626, metalness: 0.85, roughness: 0.16, clearcoat: 1.0, clearcoatRoughness: 0.04 }),
+  carBlue: new THREE.MeshPhysicalMaterial({ color: 0x1d4ed8, metalness: 0.88, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.04 }),
+  carWhite: new THREE.MeshPhysicalMaterial({ color: 0xf8fafc, metalness: 0.35, roughness: 0.12, clearcoat: 1.0, clearcoatRoughness: 0.03 }),
+  carSilver: new THREE.MeshPhysicalMaterial({ color: 0xcbd5e1, metalness: 0.92, roughness: 0.12, clearcoat: 1.0, clearcoatRoughness: 0.04 }),
+  carBlack: new THREE.MeshPhysicalMaterial({ color: 0x090d16, metalness: 0.75, roughness: 0.18, clearcoat: 1.0, clearcoatRoughness: 0.05 }),
+  carYellow: new THREE.MeshPhysicalMaterial({ color: 0xf59e0b, metalness: 0.78, roughness: 0.15, clearcoat: 1.0, clearcoatRoughness: 0.04 }),
+  carEmerald: new THREE.MeshPhysicalMaterial({ color: 0x047857, metalness: 0.85, roughness: 0.15, clearcoat: 1.0, clearcoatRoughness: 0.04 }),
+  carNavy: new THREE.MeshPhysicalMaterial({ color: 0x1e3a8a, metalness: 0.88, roughness: 0.12, clearcoat: 1.0, clearcoatRoughness: 0.04 }),
+  carOrange: new THREE.MeshPhysicalMaterial({ color: 0xea580c, metalness: 0.85, roughness: 0.15, clearcoat: 1.0, clearcoatRoughness: 0.04 }),
+  carWindow: new THREE.MeshPhysicalMaterial({
+    color: 0x0f172a,
+    roughness: 0.04,
+    metalness: 0.85,
+    transmission: 0.4,
+    transparent: true,
+    opacity: 0.75,
+    clearcoat: 1.0
+  }),
   carHeadlight: new THREE.MeshBasicMaterial({ color: 0xffffff }),
   carTaillight: new THREE.MeshBasicMaterial({ color: 0xef4444 }),
 
@@ -4466,17 +4479,35 @@ export function createAGVRobot(id = "AGV-01", cargoType = "pallet") {
 
   group.wheels = [];
   [[-0.65, 0.88], [0.65, 0.88], [-0.65, -0.88], [0.65, -0.88]].forEach(([x, z]) => {
-    const tire = new THREE.Mesh(tireGeo, MAT.tireRubber);
-    tire.position.set(x, 0.28, z);
-    group.add(tire);
-    group.wheels.push(tire);
+    // Unified rotating wheel assembly mounted on Z-axle
+    const wheelAssembly = new THREE.Group();
+    wheelAssembly.position.set(x, 0.28, z);
 
-    // Aluminum alloy wheel hub
+    // Tread Rubber Tire
+    const tire = new THREE.Mesh(tireGeo, MAT.tireRubber);
+    wheelAssembly.add(tire);
+
+    // Machined Aluminum Alloy Wheel Hub
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.24, 16), MAT.wheelRim);
     hub.rotation.x = Math.PI / 2;
-    hub.position.set(x, 0.28, z);
-    group.add(hub);
+    wheelAssembly.add(hub);
+
+    // Chrome Center Axle Stud
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.25, 12), MAT.steelChrome);
+    cap.rotation.x = Math.PI / 2;
+    wheelAssembly.add(cap);
+
+    group.add(wheelAssembly);
+    group.wheels.push(wheelAssembly);
   });
+
+  // Physical zero-slip wheel rotation coupled to travel distance (radius = 0.28m)
+  group.rollWheels = function(dist) {
+    const deltaRoll = dist / 0.28;
+    this.wheels.forEach(w => {
+      w.rotation.z -= deltaRoll;
+    });
+  };
 
   // Authentic Cargo Payload
   const cargoGroup = new THREE.Group();
@@ -4929,17 +4960,16 @@ export function createTownEnvironment() {
     townGroup.add(pStripe2);
   }
 
-  // Parked Employee & Executive Vehicles in Stalls
-  const carColors = [MAT.carRed, MAT.carBlue, MAT.carWhite, MAT.carSilver, MAT.carBlack];
+  // Parked Employee & Executive Vehicles in Stalls (High-Gloss Clearcoat Finishes)
   const parkedCarsConfig = [
-    { x: -36.1, z: 29, rot: 0, mat: MAT.carBlue },
+    { x: -36.1, z: 29, rot: 0, mat: MAT.carNavy },
     { x: -32.3, z: 29, rot: 0, mat: MAT.carWhite },
     { x: -28.5, z: 29, rot: 0, mat: MAT.carSilver },
     { x: -20.9, z: 29, rot: 0, mat: MAT.carRed },
     { x: -36.1, z: 39, rot: Math.PI, mat: MAT.carBlack },
-    { x: -32.3, z: 39, rot: Math.PI, mat: MAT.carSilver },
-    { x: -24.7, z: 39, rot: Math.PI, mat: MAT.carBlue },
-    { x: -17.1, z: 39, rot: Math.PI, mat: MAT.carWhite },
+    { x: -32.3, z: 39, rot: Math.PI, mat: MAT.carEmerald },
+    { x: -24.7, z: 39, rot: Math.PI, mat: MAT.carOrange },
+    { x: -17.1, z: 39, rot: Math.PI, mat: MAT.carYellow },
   ];
 
   parkedCarsConfig.forEach(cfg => {
@@ -5085,12 +5115,12 @@ export function createTownEnvironment() {
   ];
 
   const vehicleConfigs = [
-    { type: 'car', mat: MAT.carRed, speed: 0.14, startProg: 0.05 },
-    { type: 'car', mat: MAT.carWhite, speed: 0.12, startProg: 0.22 },
-    { type: 'van', mat: MAT.carWhite, speed: 0.10, startProg: 0.42 },
-    { type: 'car', mat: MAT.carBlue, speed: 0.13, startProg: 0.58 },
-    { type: 'truck', mat: MAT.carSilver, speed: 0.09, startProg: 0.75 },
-    { type: 'car', mat: MAT.carSilver, speed: 0.15, startProg: 0.90 },
+    { type: 'car', mat: MAT.carRed, speed: 0.14, startProg: 0.04 },
+    { type: 'car', mat: MAT.carEmerald, speed: 0.12, startProg: 0.20 },
+    { type: 'van', mat: MAT.carWhite, speed: 0.10, startProg: 0.38 },
+    { type: 'car', mat: MAT.carNavy, speed: 0.13, startProg: 0.55 },
+    { type: 'truck', mat: MAT.carSilver, speed: 0.09, startProg: 0.72 },
+    { type: 'car', mat: MAT.carYellow, speed: 0.15, startProg: 0.88 },
   ];
 
   vehicleConfigs.forEach((vc, idx) => {
@@ -5100,6 +5130,7 @@ export function createTownEnvironment() {
       mesh,
       speed: vc.speed,
       progress: vc.startProg,
+      distance: vc.startProg * 357.699,
       waypoints: perimeterWaypoints,
       type: vc.type
     });
@@ -5109,54 +5140,116 @@ export function createTownEnvironment() {
 }
 
 /**
- * Creates a procedural vehicle mesh (car, delivery van, or cargo truck) with realistic mechanical detailing
+ * Creates a procedural vehicle mesh (car, delivery van, or cargo truck) with realistic mechanical detailing,
+ * physical clearcoat paint, zero-coplanar glass geometry, and active steering front wheel assemblies.
  */
 function createDetailedVehicleMesh(colorMat, hasLights = true, type = 'car') {
   const vGroup = new THREE.Group();
 
-  let bodyLength = 3.8;
-  let bodyWidth = 1.65;
-  let bodyHeight = 0.75;
-  let cabinLength = 2.1;
+  let bodyLength = 3.9;
+  let bodyWidth = 1.7;
+  let bodyHeight = 0.72;
+  let cabinLength = 2.2;
   let cabinHeight = 0.65;
+  let cabinX = -0.15;
 
   if (type === 'van') {
-    bodyLength = 4.6;
-    bodyWidth = 1.75;
+    bodyLength = 4.7;
+    bodyWidth = 1.8;
     bodyHeight = 1.25;
-    cabinLength = 3.4;
+    cabinLength = 3.5;
     cabinHeight = 0.75;
+    cabinX = 0.2;
   } else if (type === 'truck') {
-    bodyLength = 5.6;
-    bodyWidth = 1.95;
+    bodyLength = 5.8;
+    bodyWidth = 2.0;
     bodyHeight = 1.45;
-    cabinLength = 1.7;
-    cabinHeight = 1.1;
+    cabinLength = 1.75;
+    cabinHeight = 1.15;
+    cabinX = 1.55;
   }
 
-  // 1. Lower Chassis Frame & Underbody
-  const underbody = new THREE.Mesh(new THREE.BoxGeometry(bodyLength * 0.95, 0.18, bodyWidth * 0.85), MAT.machineDark);
+  // 1. Lower Chassis Frame & Underbody (aerodynamic floor)
+  const underbody = new THREE.Mesh(new THREE.BoxGeometry(bodyLength * 0.94, 0.16, bodyWidth * 0.86), MAT.machineDark);
   underbody.position.y = 0.22;
   vGroup.add(underbody);
 
-  // 2. Sculpted Outer Body Shell
+  // 2. Sculpted Outer Body Shell (High-Gloss Automotive Clearcoat)
   const chassis = new THREE.Mesh(new THREE.BoxGeometry(bodyLength, bodyHeight, bodyWidth), colorMat);
   chassis.position.y = bodyHeight / 2 + 0.22;
   chassis.castShadow = true;
+  chassis.receiveShadow = true;
   vGroup.add(chassis);
 
-  // 3. Cabin / Greenhouse Structure
-  const cabinMat = (type === 'truck') ? MAT.carWhite : (type === 'van' ? colorMat : MAT.buildingTrim);
-  const cabinX = (type === 'truck' ? 1.5 : (type === 'van' ? 0.2 : -0.2));
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLength, cabinHeight, bodyWidth * 0.92), cabinMat);
-  cabin.position.set(cabinX, bodyHeight + cabinHeight / 2 + 0.22, 0);
-  cabin.castShadow = true;
-  vGroup.add(cabin);
+  // Front & Rear Aerodynamic Bumper Trim Strips (eliminates flat box look)
+  const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(0.12, bodyHeight * 0.45, bodyWidth * 0.96), MAT.machineDark);
+  frontBumper.position.set(bodyLength / 2 + 0.05, 0.35, 0);
+  vGroup.add(frontBumper);
 
-  // Tinted Windshield & Window Glass
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(cabinLength * 0.96, cabinHeight * 0.88, bodyWidth * 0.96), MAT.portalGlass);
-  glass.position.copy(cabin.position);
-  vGroup.add(glass);
+  const rearDiffuser = new THREE.Mesh(new THREE.BoxGeometry(0.12, bodyHeight * 0.40, bodyWidth * 0.94), MAT.carbonFiber);
+  rearDiffuser.position.set(-bodyLength / 2 - 0.05, 0.34, 0);
+  vGroup.add(rearDiffuser);
+
+  // 3. Cabin / Greenhouse Structure (Engineered with non-coplanar clearance)
+  const cabinBaseY = bodyHeight + 0.22;
+  const cabinMidY = cabinBaseY + cabinHeight / 2;
+
+  // Dark Interior Cavity (simulates tinted automotive interior depth)
+  const cabinInterior = new THREE.Mesh(
+    new THREE.BoxGeometry(cabinLength * 0.90, cabinHeight * 0.92, bodyWidth * 0.84),
+    MAT.machineDark
+  );
+  cabinInterior.position.set(cabinX, cabinMidY, 0);
+  vGroup.add(cabinInterior);
+
+  // Structural Roof Cap / Panoramic Panel
+  const roofMat = (type === 'van') ? colorMat : (type === 'truck' ? MAT.carWhite : MAT.carBlack);
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(cabinLength * 0.92, 0.06, bodyWidth * 0.88),
+    roofMat
+  );
+  roof.position.set(cabinX, cabinBaseY + cabinHeight - 0.03, 0);
+  roof.castShadow = true;
+  vGroup.add(roof);
+
+  // Aerodynamically Raked Windshield (angled forward, distinct non-overlapping plane)
+  const wsLength = cabinHeight * 1.15;
+  const windshield = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, wsLength, bodyWidth * 0.82),
+    MAT.carWindow
+  );
+  windshield.rotation.z = -0.38;
+  windshield.position.set(cabinX + cabinLength / 2 * 0.88, cabinMidY, 0);
+  vGroup.add(windshield);
+
+  // Fastback Rear Window
+  const rwLength = cabinHeight * 1.08;
+  const rearWindow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, rwLength, bodyWidth * 0.82),
+    MAT.carWindow
+  );
+  rearWindow.rotation.z = 0.32;
+  rearWindow.position.set(cabinX - cabinLength / 2 * 0.88, cabinMidY, 0);
+  vGroup.add(rearWindow);
+
+  // Flush Inset Side Windows (offset 0.015m outside interior cavity to eliminate z-fighting)
+  const sideWinWidth = bodyWidth * 0.44;
+  [-sideWinWidth, sideWinWidth].forEach(sz => {
+    const sideGlass = new THREE.Mesh(
+      new THREE.BoxGeometry(cabinLength * 0.80, cabinHeight * 0.78, 0.02),
+      MAT.carWindow
+    );
+    sideGlass.position.set(cabinX, cabinMidY, sz);
+    vGroup.add(sideGlass);
+
+    // Slim Vertical B-Pillar Divider
+    const bPillar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, cabinHeight * 0.82, 0.025),
+      colorMat
+    );
+    bPillar.position.set(cabinX, cabinMidY, sz * 1.01);
+    vGroup.add(bPillar);
+  });
 
   // 4. Type-Specific Details
   if (type === 'car') {
@@ -5229,39 +5322,85 @@ function createDetailedVehicleMesh(colorMat, hasLights = true, type = 'car') {
     });
   }
 
-  // 5. 4 Rotating Wheels with Realistic Tires and Alloy Rims
-  const tireGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 20);
-  tireGeo.rotateX(Math.PI / 2);
+  // 5. Rotating Wheels with Active Front Steering Pivots & Brake Assemblies
+  const tireGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 24);
+  tireGeo.rotateX(Math.PI / 2); // Transverse axle oriented along Z-axis
 
   vGroup.wheels = [];
-  const wOffsets = [
-    [-bodyLength * 0.35, bodyWidth * 0.52],
-    [bodyLength * 0.35, bodyWidth * 0.52],
-    [-bodyLength * 0.35, -bodyWidth * 0.52],
-    [bodyLength * 0.35, -bodyWidth * 0.52],
+  vGroup.frontSteerPivots = [];
+
+  const wheelPositions = [
+    { x: bodyLength * 0.33, z: bodyWidth * 0.52, isFront: true },   // Front Left
+    { x: bodyLength * 0.33, z: -bodyWidth * 0.52, isFront: true },  // Front Right
+    { x: -bodyLength * 0.33, z: bodyWidth * 0.52, isFront: false }, // Rear Left
+    { x: -bodyLength * 0.33, z: -bodyWidth * 0.52, isFront: false },// Rear Right
   ];
 
-  wOffsets.forEach(([wx, wz]) => {
-    // Wheel assembly group that rotates together
+  wheelPositions.forEach(wp => {
+    // Wheel assembly group that rotates smoothly around transverse Z-axis
     const wheelAssembly = new THREE.Group();
-    wheelAssembly.position.set(wx, 0.28, wz);
 
-    // Rubber Tire
+    // Tread Rubber Tire
     const tire = new THREE.Mesh(tireGeo, MAT.tireRubber);
     wheelAssembly.add(tire);
 
-    // Alloy Rim with Center Cap
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.23, 16), MAT.wheelRim);
+    // Multi-Spoke Machined Alloy Wheel Rim
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.165, 0.23, 18), MAT.wheelRim);
     rim.rotation.x = Math.PI / 2;
     wheelAssembly.add(rim);
 
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.24, 12), MAT.steelChrome);
+    // Chrome Center Hub Cap
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.24, 12), MAT.steelChrome);
     cap.rotation.x = Math.PI / 2;
     wheelAssembly.add(cap);
 
-    vGroup.add(wheelAssembly);
+    if (wp.isFront) {
+      // Front active steering pivot group (rotates around Y-axis)
+      const steerPivot = new THREE.Group();
+      steerPivot.position.set(wp.x, 0.28, wp.z);
+
+      // Ventilated Brake Disc Rotor (stationary inside wheel hub)
+      const brakeRotor = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.02, 16), MAT.steelChrome);
+      brakeRotor.rotation.x = Math.PI / 2;
+      brakeRotor.position.set(0, 0, wp.z > 0 ? -0.06 : 0.06);
+      steerPivot.add(brakeRotor);
+
+      // Red Brembo High-Performance Brake Caliper
+      const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.09, 0.05), MAT.carRed);
+      caliper.position.set(-0.11, 0.08, wp.z > 0 ? -0.06 : 0.06);
+      steerPivot.add(caliper);
+
+      steerPivot.add(wheelAssembly);
+      vGroup.add(steerPivot);
+      vGroup.frontSteerPivots.push(steerPivot);
+    } else {
+      // Rear fixed axle mount
+      wheelAssembly.position.set(wp.x, 0.28, wp.z);
+
+      // Rear Brake Rotor & Caliper
+      const brakeRotor = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.02, 16), MAT.steelChrome);
+      brakeRotor.rotation.x = Math.PI / 2;
+      brakeRotor.position.set(wp.x, 0.28, wp.z + (wp.z > 0 ? -0.06 : 0.06));
+      vGroup.add(brakeRotor);
+
+      vGroup.add(wheelAssembly);
+    }
+
     vGroup.wheels.push(wheelAssembly);
   });
+
+  // Physically Coupled Zero-Slip Wheel Rolling & Active Steering Helper
+  vGroup.rollWheels = function(distMoved, steerAngle = 0) {
+    const dTheta = distMoved / 0.28; // delta Theta = ground distance / tire radius
+    this.wheels.forEach(w => {
+      w.rotation.z -= dTheta; // rolls forward around transverse Z-axis
+    });
+    if (this.frontSteerPivots) {
+      this.frontSteerPivots.forEach(pivot => {
+        pivot.rotation.y = steerAngle; // turns wheels into corners
+      });
+    }
+  };
 
   // 6. High-Visibility Headlights, Taillights & Signals
   if (hasLights) {
@@ -5388,57 +5527,104 @@ function createSkylineBuilding(w, d, h) {
 }
 
 /**
- * Updates traffic vehicle positions along closed-loop road waypoints
+ * Updates traffic vehicle positions along closed-loop road perimeter with smooth 6.0m corner fillet arcs,
+ * active front steering angle calculations, and physically coupled zero-slip wheel rotation.
  */
 export function updateTrafficVehicles(trafficFleet, delta = 0.016) {
   if (!trafficFleet || !Array.isArray(trafficFleet)) return;
 
-  // Waypoints define a rectangular loop:
-  // Leg 0: (46, 36) -> (46, -36)   [Moving North along East road, dir: -Z]
-  // Leg 1: (46, -36) -> (-46, -36) [Moving West along North road, dir: -X]
-  // Leg 2: (-46, -36) -> (-46, 36) [Moving South along West road, dir: +Z]
-  // Leg 3: (-46, 36) -> (46, 36)   [Moving East along South road, dir: +X]
-  const perimeter = (72 * 2) + (92 * 2); // 328m total loop length
+  // Closed loop geometry with rounded 6.0m radius fillet corners:
+  // - East straight:  length 60m  (46.0,  30.0) -> (46.0, -30.0)   dir: -Z
+  // - NE fillet turn: arc 9.425m  center: (40.0, -30.0), R=6.0
+  // - North straight: length 80m  (40.0, -36.0) -> (-40.0, -36.0)  dir: -X
+  // - NW fillet turn: arc 9.425m  center: (-40.0, -30.0), R=6.0
+  // - West straight:  length 60m  (-46.0, -30.0) -> (-46.0, 30.0)  dir: +Z
+  // - SW fillet turn: arc 9.425m  center: (-40.0, 30.0), R=6.0
+  // - South straight: length 80m  (-40.0, 36.0) -> (40.0, 36.0)    dir: +X
+  // - SE fillet turn: arc 9.425m  center: (40.0, 30.0), R=6.0
+  const arcLen = 6.0 * (Math.PI / 2); // 9.424778m
+  const perimeter = 60.0 + arcLen + 80.0 + arcLen + 60.0 + arcLen + 80.0 + arcLen; // 317.6991m
 
   trafficFleet.forEach(v => {
-    v.progress = (v.progress + (v.speed * 1.5 * delta) / (perimeter * 0.1)) % 1.0;
+    // Ground distance moved this physics step (scaled to realistic 14-22 km/h campus traffic)
+    const distMoved = (v.speed || 0.12) * 55.0 * delta;
 
-    const totalDist = v.progress * perimeter;
-    let x = 0, z = 0, angle = 0;
+    if (v.distance === undefined) {
+      v.distance = (v.progress !== undefined ? v.progress : 0) * perimeter;
+    }
+    v.distance = (v.distance + distMoved) % perimeter;
+    v.progress = v.distance / perimeter;
 
-    if (totalDist < 72) {
-      // East road moving North (-Z)
-      const t = totalDist / 72;
-      x = 48.0;
-      z = 36.0 - t * 72.0;
-      angle = -Math.PI / 2;
-    } else if (totalDist < 72 + 92) {
-      // North road moving West (-X)
-      const t = (totalDist - 72) / 92;
-      x = 46.0 - t * 92.0;
+    const d = v.distance;
+    let x = 0, z = 0, heading = 0, steerAngle = 0;
+
+    if (d < 60.0) {
+      // 1. East Road heading North (-Z)
+      const u = d;
+      x = 46.0;
+      z = 30.0 - u;
+      heading = -Math.PI / 2;
+      steerAngle = 0;
+    } else if (d < 60.0 + arcLen) {
+      // 2. Corner 1 (NE Fillet Turn: -Z to -X)
+      const phi = (d - 60.0) / 6.0;
+      x = 40.0 + 6.0 * Math.cos(phi);
+      z = -30.0 - 6.0 * Math.sin(phi);
+      heading = -Math.PI / 2 - phi;
+      steerAngle = 0.36 * Math.sin(phi * 2.0); // smooth turn-in, apex hold, and exit straighten
+    } else if (d < 60.0 + arcLen + 80.0) {
+      // 3. North Road heading West (-X)
+      const u = d - (60.0 + arcLen);
+      x = 40.0 - u;
       z = -36.0;
-      angle = Math.PI;
-    } else if (totalDist < 72 + 92 + 72) {
-      // West road moving South (+Z)
-      const t = (totalDist - (72 + 92)) / 72;
-      x = -48.0;
-      z = -36.0 + t * 72.0;
-      angle = Math.PI / 2;
-    } else {
-      // South road moving East (+X)
-      const t = (totalDist - (72 + 92 + 72)) / 92;
-      x = -46.0 + t * 92.0;
+      heading = Math.PI;
+      steerAngle = 0;
+    } else if (d < 60.0 + arcLen + 80.0 + arcLen) {
+      // 4. Corner 2 (NW Fillet Turn: -X to +Z)
+      const phi = (d - (60.0 + arcLen + 80.0)) / 6.0;
+      x = -40.0 - 6.0 * Math.sin(phi);
+      z = -30.0 - 6.0 * Math.cos(phi);
+      heading = -Math.PI - phi;
+      steerAngle = 0.36 * Math.sin(phi * 2.0);
+    } else if (d < 60.0 + 2 * arcLen + 80.0 + 60.0) {
+      // 5. West Road heading South (+Z)
+      const u = d - (60.0 + 2 * arcLen + 80.0);
+      x = -46.0;
+      z = -30.0 + u;
+      heading = Math.PI / 2;
+      steerAngle = 0;
+    } else if (d < 60.0 + 3 * arcLen + 140.0) {
+      // 6. Corner 3 (SW Fillet Turn: +Z to +X)
+      const phi = (d - (60.0 + 2 * arcLen + 140.0)) / 6.0;
+      x = -40.0 - 6.0 * Math.cos(phi);
+      z = 30.0 + 6.0 * Math.sin(phi);
+      heading = Math.PI / 2 - phi;
+      steerAngle = 0.36 * Math.sin(phi * 2.0);
+    } else if (d < 60.0 + 3 * arcLen + 220.0) {
+      // 7. South Road heading East (+X)
+      const u = d - (60.0 + 3 * arcLen + 140.0);
+      x = -40.0 + u;
       z = 36.0;
-      angle = 0;
+      heading = 0;
+      steerAngle = 0;
+    } else {
+      // 8. Corner 4 (SE Fillet Turn: +X to -Z)
+      const phi = (d - (60.0 + 3 * arcLen + 220.0)) / 6.0;
+      x = 40.0 + 6.0 * Math.sin(phi);
+      z = 30.0 + 6.0 * Math.cos(phi);
+      heading = -phi;
+      steerAngle = 0.36 * Math.sin(phi * 2.0);
     }
 
     v.mesh.position.set(x, -0.22, z);
-    v.mesh.rotation.y = angle;
+    v.mesh.rotation.y = heading;
 
-    // Rotate vehicle wheels
-    if (v.mesh.wheels) {
+    // Physically coupled zero-slip wheel rolling (around transverse Z-axle) & active steering
+    if (typeof v.mesh.rollWheels === 'function') {
+      v.mesh.rollWheels(distMoved, steerAngle);
+    } else if (v.mesh.wheels) {
       v.mesh.wheels.forEach(w => {
-        w.rotation.x += v.speed * 1.5;
+        w.rotation.z -= distMoved / 0.28;
       });
     }
   });

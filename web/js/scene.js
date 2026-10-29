@@ -98,29 +98,39 @@ export function initScene(container) {
   scene.fog = new THREE.FogExp2(0xf1f5f9, 0.005);
 
   // 2. Camera: starts in Campus / Town overview so user sees the building and bustling town
-  camera = new THREE.PerspectiveCamera(38, Math.max(0.1, width / Math.max(1, height)), 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(38, Math.max(0.1, width / Math.max(1, height)), 0.5, 600);
   camera.position.copy(campusCamPos);
 
-  // 3. Renderer with robust fallback
+  // 3. Renderer with robust fallback and high-precision depth buffer
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "default" });
+    renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "default",
+      logarithmicDepthBuffer: true
+    });
   } catch (err) {
-    console.warn("Standard WebGLRenderer failed, trying minimal fallback:", err);
+    console.warn("Standard WebGLRenderer with logarithmicDepthBuffer failed, trying standard fallback:", err);
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
-    } catch (fatalErr) {
-      console.error("WebGL completely unavailable:", fatalErr);
-      const fallbackDiv = document.createElement('div');
-      fallbackDiv.className = 'webgl-fallback-notice';
-      fallbackDiv.innerHTML = `
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-main); font-family: var(--font-sans); padding: 28px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-hud); max-width: 520px; z-index: 5;">
-          <h3 style="margin-bottom: 8px; color: var(--color-amber);">⚠️ 3D WebGL Acceleration Not Active</h3>
-          <p style="font-size: 13px; line-height: 1.5; color: var(--text-muted); margin-bottom: 12px;">WebGL context could not be created in this browser profile. The 2D Operations Dashboard, Live Telemetry Stream, Predictive Health Analytics, and Standard Operating Procedures remain fully operational.</p>
-          <p style="font-size: 12px; color: var(--text-dim);">To enable 3D: Ensure hardware acceleration is enabled in Chrome Settings &gt; System.</p>
-        </div>
-      `;
-      container.appendChild(fallbackDiv);
-      return { scene: null, camera: null, renderer: null, controls: null, machines: new Map() };
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "default" });
+    } catch (fallbackErr) {
+      console.warn("Standard WebGLRenderer failed, trying minimal fallback:", fallbackErr);
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+      } catch (fatalErr) {
+        console.error("WebGL completely unavailable:", fatalErr);
+        const fallbackDiv = document.createElement('div');
+        fallbackDiv.className = 'webgl-fallback-notice';
+        fallbackDiv.innerHTML = `
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-main); font-family: var(--font-sans); padding: 28px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-hud); max-width: 520px; z-index: 5;">
+            <h3 style="margin-bottom: 8px; color: var(--color-amber);">⚠️ 3D WebGL Acceleration Not Active</h3>
+            <p style="font-size: 13px; line-height: 1.5; color: var(--text-muted); margin-bottom: 12px;">WebGL context could not be created in this browser profile. The 2D Operations Dashboard, Live Telemetry Stream, Predictive Health Analytics, and Standard Operating Procedures remain fully operational.</p>
+            <p style="font-size: 12px; color: var(--text-dim);">To enable 3D: Ensure hardware acceleration is enabled in Chrome Settings &gt; System.</p>
+          </div>
+        `;
+        container.appendChild(fallbackDiv);
+        return { scene: null, camera: null, renderer: null, controls: null, machines: new Map() };
+      }
     }
   }
 
@@ -522,6 +532,13 @@ function updateAGVNavigation() {
       agvRobot1.position.x += Math.cos(angle) * agv1Speed;
       agvRobot1.position.z += Math.sin(angle) * agv1Speed;
       agvRobot1.rotation.y = -angle;
+
+      // Physically coupled zero-slip wheel rotation
+      if (typeof agvRobot1.rollWheels === 'function') {
+        agvRobot1.rollWheels(agv1Speed);
+      } else if (agvRobot1.wheels) {
+        agvRobot1.wheels.forEach(w => { w.rotation.z -= agv1Speed / 0.28; });
+      }
     }
 
     if (agv1FollowMode) {
@@ -544,6 +561,13 @@ function updateAGVNavigation() {
       agvRobot2.position.x += Math.cos(angle) * agv2Speed;
       agvRobot2.position.z += Math.sin(angle) * agv2Speed;
       agvRobot2.rotation.y = -angle;
+
+      // Physically coupled zero-slip wheel rotation
+      if (typeof agvRobot2.rollWheels === 'function') {
+        agvRobot2.rollWheels(agv2Speed);
+      } else if (agvRobot2.wheels) {
+        agvRobot2.wheels.forEach(w => { w.rotation.z -= agv2Speed / 0.28; });
+      }
     }
 
     if (agv2FollowMode) {
@@ -648,7 +672,6 @@ function animate(time) {
 
   [agvRobot1, agvRobot2].forEach(agv => {
     if (agv) {
-      if (agv.wheels) agv.wheels.forEach(w => { w.rotation.x += 0.15; });
       if (agv.lidarPuck) agv.lidarPuck.rotation.y += 0.2;
       if (agv.lidarCone) agv.lidarCone.material.opacity = 0.15 + Math.sin(t * 6.0) * 0.06;
       if (agv.strobeBeacon) agv.strobeBeacon.material.opacity = (Math.sin(t * 12.0) > 0) ? 1.0 : 0.2;
