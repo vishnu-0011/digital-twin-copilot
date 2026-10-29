@@ -43,8 +43,6 @@ import {
 
 import { initTourUI } from './tour.js';
 
-export { addLogMessage };
-
 let fleetCache = [];
 let pollIntervalId = null;
 let telemetryWs = null;
@@ -231,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. Initialize HUD, Badges & Pipeline UI
   initHUD(selectMachine, (theme) => setSceneTheme(theme));
   window.selectMachine = selectMachine;
+  window.dispatchAction = dispatchAction;
   window.getInteriorMode = getInteriorMode;
 
   // Listen for automatic zoom-out to Campus View from scene
@@ -259,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
   syncBadges();
 
   // 6. Initialize Guided Presentation Tour UI
-  initTourUI();
+  initTourUI({ selectMachine, dispatchAction });
 
   addLogMessage("Titan Aerospace Precision Fab operations center online. 2021 TCN engine active.", "READY");
 });

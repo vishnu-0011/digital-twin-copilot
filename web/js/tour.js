@@ -18,8 +18,8 @@ import {
 } from './scene.js';
 
 import {
-  selectMachine,
-  closeDrawer
+  closeDrawer,
+  addLogMessage
 } from './hud.js';
 
 import {
@@ -29,10 +29,10 @@ import {
   playRepairSuccess
 } from './audio.js';
 
-import {
-  dispatchAction,
-  addLogMessage
-} from './app.js';
+let deps = {
+  selectMachine: (id) => (window.selectMachine ? window.selectMachine(id) : null),
+  dispatchAction: async (action, payload) => (window.dispatchAction ? window.dispatchAction(action, payload) : null)
+};
 
 let isRunning = false;
 let currentStepIndex = 0;
@@ -73,7 +73,7 @@ const TOUR_STEPS = [
     action: async () => {
       focusOnMachine('CNC-01');
       playAlarm();
-      await dispatchAction('inject_fault', { machine_id: 'CNC-01', wear_level: 0.86, status: 'critical' });
+      await deps.dispatchAction('inject_fault', { machine_id: 'CNC-01', wear_level: 0.86, status: 'critical' });
       addLogMessage("Guided Tour [3/7]: Spindle bearing anomaly injected into CNC-01. Vibration spiking!", "ALERT");
     }
   },
@@ -85,7 +85,7 @@ const TOUR_STEPS = [
     action: async () => {
       triggerRadarScan();
       playScan();
-      await dispatchAction('scan');
+      await deps.dispatchAction('scan');
       addLogMessage("Guided Tour [4/7]: Sweeping factory radar plane & running LangGraph anomaly check.", "SCAN");
     }
   },
@@ -95,7 +95,7 @@ const TOUR_STEPS = [
     desc: "Inspection drawer opens: 1D Dilated Residual TCN forecasts remaining useful life, applying a 15% asymmetric safety margin.",
     duration: 8500,
     action: async () => {
-      selectMachine('CNC-01');
+      deps.selectMachine('CNC-01');
       playClick();
       addLogMessage("Guided Tour [5/7]: Inspecting CNC-01 telemetry and 2021 TCN prognostic RUL.", "SCADA");
 
@@ -125,7 +125,7 @@ const TOUR_STEPS = [
     desc: "Dispatching maintenance procedure; physical digital twin resets wear to 0.0, restoring nominal production line balance.",
     duration: 6500,
     action: async () => {
-      await dispatchAction('repair', { machine_id: 'CNC-01' });
+      await deps.dispatchAction('repair', { machine_id: 'CNC-01' });
       playRepairSuccess();
       addLogMessage("Guided Tour [6/7]: Closed-loop maintenance dispatched. CNC-01 wear reset to nominal 0.0.", "SUCCESS");
     }
@@ -270,7 +270,9 @@ export function isTourRunning() {
   return isRunning;
 }
 
-export function initTourUI() {
+export function initTourUI(injected = {}) {
+  deps = { ...deps, ...injected };
+
   const btnTour = document.getElementById('btn-tour');
   if (btnTour) {
     btnTour.addEventListener('click', () => {
