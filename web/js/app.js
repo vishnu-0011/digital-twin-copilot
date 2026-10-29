@@ -215,53 +215,90 @@ function passiveHeartbeat() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function startApp() {
   const container = document.getElementById('canvas-container');
   if (!container) return;
 
   // 1. Initialize 3D WebGL Scene
-  initScene(container);
+  try {
+    initScene(container);
+  } catch (err) {
+    console.error("3D WebGL scene initialization error:", err);
+  }
 
   // Apply default theme to Three.js scene
-  const initialTheme = localStorage.getItem('titan_theme') || 'light';
-  setSceneTheme(initialTheme);
+  try {
+    const initialTheme = localStorage.getItem('titan_theme') || 'light';
+    setSceneTheme(initialTheme);
+  } catch (e) {
+    console.warn("Theme set warning:", e);
+  }
 
   // 2. Initialize HUD, Badges & Pipeline UI
-  initHUD(selectMachine, (theme) => setSceneTheme(theme));
+  try {
+    initHUD(selectMachine, (theme) => setSceneTheme(theme));
+  } catch (err) {
+    console.error("HUD initialization error:", err);
+  }
+
   window.selectMachine = selectMachine;
   window.dispatchAction = dispatchAction;
   window.getInteriorMode = getInteriorMode;
 
   // Listen for automatic zoom-out to Campus View from scene
-  registerModeChangeHandler((isInterior) => {
-    if (!isInterior) {
-      const directorButtons = document.querySelectorAll('.btn-director');
-      directorButtons.forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-preset') === 'campus');
-      });
-      addLogMessage("Camera zoomed out of company — switched to Campus View.", "CAMPUS");
-    }
-  });
+  try {
+    registerModeChangeHandler((isInterior) => {
+      if (!isInterior) {
+        const directorButtons = document.querySelectorAll('.btn-director');
+        directorButtons.forEach(b => {
+          b.classList.toggle('active', b.getAttribute('data-preset') === 'campus');
+        });
+        addLogMessage("Camera zoomed out of company — switched to Campus View.", "CAMPUS");
+      }
+    });
+  } catch (e) {}
 
   // 3. Setup UI Event Listeners (Controls & Camera Director)
-  setupControls(container);
+  try {
+    setupControls(container);
+  } catch (err) {
+    console.error("Setup controls error:", err);
+  }
 
   // 4. Start Real-Time WebSocket Telemetry Stream (with automatic HTTP fallback)
-  fetchAllData();
-  initWebSocketClient();
+  try {
+    fetchAllData();
+    initWebSocketClient();
+  } catch (err) {
+    console.error("Telemetry initialization error:", err);
+  }
 
   // 5. Keep floating badges synchronized on each animation tick
   function syncBadges() {
     requestAnimationFrame(syncBadges);
-    updateFloatingBadges(getMachineScreenPositions(), selectMachine);
+    try {
+      updateFloatingBadges(getMachineScreenPositions(), selectMachine);
+    } catch (e) {}
   }
   syncBadges();
 
   // 6. Initialize Guided Presentation Tour UI
-  initTourUI({ selectMachine, dispatchAction });
+  try {
+    initTourUI({ selectMachine, dispatchAction });
+  } catch (err) {
+    console.error("Tour UI initialization error:", err);
+  }
 
-  addLogMessage("Titan Aerospace Precision Fab operations center online. 2021 TCN engine active.", "READY");
-});
+  try {
+    addLogMessage("Titan Aerospace Precision Fab operations center online. 2021 TCN engine active.", "READY");
+  } catch (e) {}
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
 
 function setupControls(canvasContainer) {
   // Raycast click detection on 3D machines

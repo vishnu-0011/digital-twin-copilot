@@ -21,7 +21,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -326,6 +326,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Smart Manufacturing Digital Twin Copilot", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(("/js/", "/css/", "/vendor/")) or request.url.path in ("/", "/index.html"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 class SimulateRequest(BaseModel):

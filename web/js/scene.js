@@ -89,8 +89,8 @@ const telemetryState = {
 
 export function initScene(container) {
   containerEl = container;
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  const width = container.clientWidth || window.innerWidth || 1200;
+  const height = container.clientHeight || window.innerHeight || 800;
 
   // 1. Scene
   scene = new THREE.Scene();
@@ -98,13 +98,34 @@ export function initScene(container) {
   scene.fog = new THREE.FogExp2(0xf1f5f9, 0.005);
 
   // 2. Camera: starts in Campus / Town overview so user sees the building and bustling town
-  camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(38, Math.max(0.1, width / Math.max(1, height)), 0.1, 1000);
   camera.position.copy(campusCamPos);
 
-  // 3. Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+  // 3. Renderer with robust fallback
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "default" });
+  } catch (err) {
+    console.warn("Standard WebGLRenderer failed, trying minimal fallback:", err);
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+    } catch (fatalErr) {
+      console.error("WebGL completely unavailable:", fatalErr);
+      const fallbackDiv = document.createElement('div');
+      fallbackDiv.className = 'webgl-fallback-notice';
+      fallbackDiv.innerHTML = `
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-main); font-family: var(--font-sans); padding: 28px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-hud); max-width: 520px; z-index: 5;">
+          <h3 style="margin-bottom: 8px; color: var(--color-amber);">⚠️ 3D WebGL Acceleration Not Active</h3>
+          <p style="font-size: 13px; line-height: 1.5; color: var(--text-muted); margin-bottom: 12px;">WebGL context could not be created in this browser profile. The 2D Strategy HUD, Live Telemetry Stream, 2021 TCN Prognostics, and AI Reasoning Engine remain fully operational.</p>
+          <p style="font-size: 12px; color: var(--text-dim);">To enable 3D: Ensure hardware acceleration is enabled in Chrome Settings &gt; System.</p>
+        </div>
+      `;
+      container.appendChild(fallbackDiv);
+      return { scene: null, camera: null, renderer: null, controls: null, machines: new Map() };
+    }
+  }
+
   renderer.setSize(width, height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -249,6 +270,8 @@ function setupAtmosphericDustMotes() {
 export function setSceneTheme(themeName) {
   const isLight = themeName !== 'dark';
   setFactoryTheme(isLight);
+
+  if (!scene || !ambientLight) return;
 
   if (isLight) {
     scene.background.setHex(0xf1f5f9);
@@ -496,6 +519,7 @@ function updateAGVNavigation() {
 
 function animate(time) {
   requestAnimationFrame(animate);
+  if (!renderer || !scene || !camera || !controls) return;
   const t = time * 0.001;
 
   // 1. Camera Tween
