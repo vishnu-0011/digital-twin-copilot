@@ -204,6 +204,32 @@ export function initScene(container) {
   agvRobot2.position.copy(agv2Waypoints[0]);
   scene.add(agvRobot2);
 
+  // Enable realistic contact shadows and depth across all equipment and architecture
+  const rootGroups = [
+    factoryFloor,
+    townEnvironment.townGroup,
+    factoryBuilding.buildingGroup,
+    cnc1, cnc2, press1, press2, furn1, robot1, laser1, conv1,
+    agvRobot1, agvRobot2
+  ];
+
+  rootGroups.forEach(grp => {
+    if (!grp) return;
+    grp.traverse(child => {
+      if (child.isMesh) {
+        const mat = child.material;
+        const isTransparent = mat && (mat.transparent || (mat.opacity !== undefined && mat.opacity < 0.9));
+        const isBasic = mat instanceof THREE.MeshBasicMaterial;
+        if (!isTransparent && !isBasic) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        } else {
+          child.receiveShadow = true;
+        }
+      }
+    });
+  });
+
   // 7. Radar Scanner Plane
   setupRadarScanner();
 
@@ -220,15 +246,15 @@ export function initScene(container) {
 }
 
 function setupLighting() {
-  ambientLight = new THREE.AmbientLight(0xffffff, 1.25);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
   scene.add(ambientLight);
 
-  hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x070a10, 0.0);
-  hemiLight.position.set(0, 30, 0);
+  hemiLight = new THREE.HemisphereLight(0xffffff, 0x94a3b8, 0.45);
+  hemiLight.position.set(0, 40, 0);
   scene.add(hemiLight);
 
-  dirLight = new THREE.DirectionalLight(0xffffff, 1.35);
-  dirLight.position.set(30, 48, 30);
+  dirLight = new THREE.DirectionalLight(0xffffff, 1.45);
+  dirLight.position.set(32, 54, 32);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize.width = 2048;
   dirLight.shadow.mapSize.height = 2048;
@@ -241,7 +267,7 @@ function setupLighting() {
   dirLight.shadow.bias = -0.0004;
   scene.add(dirLight);
 
-  fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.6);
+  fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.7);
   fillLight.position.set(-36, 24, -30);
   scene.add(fillLight);
 }
@@ -277,12 +303,16 @@ export function setSceneTheme(themeName) {
     scene.background.setHex(0xf1f5f9);
     scene.fog.color.setHex(0xf1f5f9);
     ambientLight.color.setHex(0xffffff);
-    ambientLight.intensity = 1.25;
-    if (hemiLight) hemiLight.intensity = 0.0;
+    ambientLight.intensity = 0.75;
+    if (hemiLight) {
+      hemiLight.color.setHex(0xffffff);
+      hemiLight.groundColor.setHex(0x94a3b8);
+      hemiLight.intensity = 0.45;
+    }
     dirLight.color.setHex(0xffffff);
-    dirLight.intensity = 1.35;
+    dirLight.intensity = 1.45;
     fillLight.color.setHex(0xe2e8f0);
-    fillLight.intensity = 0.6;
+    fillLight.intensity = 0.7;
     if (dustParticles) dustParticles.visible = false;
     if (radarMesh) radarMesh.material.color.setHex(0x0284c7);
   } else {

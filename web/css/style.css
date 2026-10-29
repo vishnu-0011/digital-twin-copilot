@@ -336,6 +336,7 @@ body[data-theme="dark"] .btn-step {
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  white-space: nowrap;
 }
 
 .badge-status-dot {
@@ -344,6 +345,7 @@ body[data-theme="dark"] .btn-step {
   border-radius: 50%;
   background: var(--color-emerald);
   box-shadow: 0 0 6px var(--color-emerald);
+  flex-shrink: 0;
 }
 
 .badge-id {
@@ -352,6 +354,7 @@ body[data-theme="dark"] .btn-step {
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--badge-text);
+  white-space: nowrap;
 }
 
 .badge-rul {
@@ -359,6 +362,7 @@ body[data-theme="dark"] .btn-step {
   font-size: 10px;
   font-weight: 600;
   color: var(--color-cyan);
+  white-space: nowrap;
 }
 
 .badge-pin {
@@ -1072,6 +1076,7 @@ body[data-theme="dark"] .btn-director:hover {
   display: none;
   flex-direction: column;
   gap: 14px;
+  padding-bottom: 32px;
 }
 
 .drawer-tab-pane.active {

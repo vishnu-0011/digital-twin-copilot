@@ -496,6 +496,14 @@ function setupControls(canvasContainer) {
 
   // URL query parameter support for direct deep linking & verification
   const urlParams = new URLSearchParams(window.location.search);
+  const initialTheme = urlParams.get('theme');
+  if (initialTheme) {
+    document.body.setAttribute('data-theme', initialTheme);
+    const themeBtn = document.getElementById('btn-theme-toggle');
+    if (themeBtn) themeBtn.textContent = initialTheme === 'dark' ? '🌙 Dark' : '☀️ Light';
+    setSceneTheme(initialTheme);
+  }
+
   const initialView = urlParams.get('view');
   const initialMachine = urlParams.get('machine');
   const isSnap = urlParams.get('snap') === 'true' || urlParams.has('view');

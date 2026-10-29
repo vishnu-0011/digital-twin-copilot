@@ -38,25 +38,25 @@ export const MAT = {
   rackOrange: new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.35, metalness: 0.4 }),
   woodPallet: new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.85, metalness: 0.05 }),
 
-  // Machinery Chassis & Enclosures
-  machineChassis: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.35, metalness: 0.65 }),
-  machineDark: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.45, metalness: 0.6 }),
-  machineLight: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, metalness: 0.5 }),
-  machineAccentCyan: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.25, metalness: 0.85 }),
-  pressBody: new THREE.MeshStandardMaterial({ color: 0x1e2638, roughness: 0.45, metalness: 0.55 }),
-  pressSafetyOrange: new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.3, metalness: 0.6 }),
-  furnaceInsulation: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.4 }),
-  robotYellow: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.5 }),
-  graniteBase: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.15, metalness: 0.3 }),
-  steelChrome: new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.08, metalness: 0.98 }),
-  aluminumExtrusion: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.25, metalness: 0.85 }),
+  // Machinery Chassis & Enclosures (Authentic industrial powder-coated finishes)
+  machineChassis: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.38, metalness: 0.45 }),
+  machineDark: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.42, metalness: 0.4 }),
+  machineLight: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, metalness: 0.35 }),
+  machineAccentCyan: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.28, metalness: 0.65 }),
+  pressBody: new THREE.MeshStandardMaterial({ color: 0x242e42, roughness: 0.42, metalness: 0.45 }),
+  pressSafetyOrange: new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.32, metalness: 0.45 }),
+  furnaceInsulation: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.55, metalness: 0.35 }),
+  robotYellow: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.32, metalness: 0.45 }),
+  graniteBase: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.18, metalness: 0.25 }),
+  steelChrome: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.28, metalness: 0.65 }),
+  aluminumExtrusion: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.32, metalness: 0.65 }),
 
   // Aerospace Workpieces & Components
-  workpieceAlloy: new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.18, metalness: 0.9 }),
+  workpieceAlloy: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.65 }),
   hotBillet: new THREE.MeshStandardMaterial({
-    color: 0xff3b00,
-    emissive: 0xff2200,
-    emissiveIntensity: 0.9,
+    color: 0xff4500,
+    emissive: 0xff2a00,
+    emissiveIntensity: 0.95,
     roughness: 0.3,
   }),
   cargoPallet: new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.45, metalness: 0.4 }),
@@ -89,11 +89,10 @@ export const MAT = {
     blending: THREE.AdditiveBlending,
   }),
   lightCurtainBeam: new THREE.MeshBasicMaterial({
-    color: 0xff0044,
+    color: 0xff3b30,
     transparent: true,
-    opacity: 0.75,
+    opacity: 0.45,
     side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
   }),
   coolantMist: new THREE.MeshBasicMaterial({
     color: 0x38bdf8,
@@ -416,25 +415,34 @@ export function createEStopStation() {
   return estop;
 }
 
-export function createLocLineCoolant(tipTarget = { x: 0, y: -0.8, z: 0 }) {
+export function createLocLineCoolant(tipTarget = { x: -0.3, y: -1.2, z: 0.3 }) {
   const group = new THREE.Group();
-  const segments = 6;
-  let currY = 0;
-  let currZ = 0;
+  // Manifold base mount
+  const baseFitting = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 12), MAT.structuralSteel);
+  baseFitting.position.set(0, 0.05, 0);
+  group.add(baseFitting);
+
+  const segments = 8;
   for (let i = 0; i < segments; i++) {
+    const t = i / (segments - 1);
+    const px = THREE.MathUtils.lerp(0, tipTarget.x, t);
+    const py = -Math.pow(t, 1.15) * Math.abs(tipTarget.y);
+    const pz = Math.sin(t * Math.PI * 0.75) * 0.28 + t * tipTarget.z;
+
     const isBlue = i % 2 === 0;
     const seg = new THREE.Mesh(
-      new THREE.SphereGeometry(0.09, 10, 10),
+      new THREE.SphereGeometry(0.075, 12, 12),
       isBlue ? MAT.coolantBlue : MAT.coolantOrange
     );
-    seg.position.set((i * 0.04), currY, currZ);
+    seg.position.set(px, py, pz);
     group.add(seg);
-    currY += tipTarget.y / segments;
-    currZ += tipTarget.z / segments;
   }
-  const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 12), MAT.extinguisherBrass);
-  nozzle.rotation.x = -Math.PI / 3;
-  nozzle.position.set(0.25, tipTarget.y, tipTarget.z);
+
+  // Angled Brass Flat-Fan Spray Nozzle
+  const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.22, 12), MAT.extinguisherBrass);
+  nozzle.rotation.x = Math.PI / 4;
+  nozzle.rotation.y = -Math.PI / 6;
+  nozzle.position.set(tipTarget.x, tipTarget.y - 0.06, tipTarget.z + 0.08);
   group.add(nozzle);
   return group;
 }
@@ -616,44 +624,82 @@ export function createHazardBorder(width, depth) {
 export function createOverheadCraneSystem(parentGroup) {
   const craneGroup = new THREE.Group();
 
+  // 1. High-Bay Runway Beams mounted along ceiling perimeter columns (Y = 13.0)
   [-23.5, 23.5].forEach(z => {
-    const runway = new THREE.Mesh(new THREE.BoxGeometry(62.8, 0.6, 0.45), MAT.craneYellow);
-    runway.position.set(0, 9.2, z);
+    // Structural steel runway I-beam
+    const runway = new THREE.Mesh(new THREE.BoxGeometry(62.8, 0.55, 0.45), MAT.structuralSteel);
+    runway.position.set(0, 13.0, z);
     craneGroup.add(runway);
 
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(62.8, 0.1, 0.12), MAT.structuralSteel);
-    rail.position.set(0, 9.55, z);
+    // Hardened steel crane rail
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(62.8, 0.1, 0.12), MAT.steelChrome);
+    rail.position.set(0, 13.32, z);
     craneGroup.add(rail);
+
+    // Column support brackets
+    for (let bx = -28; bx <= 28; bx += 14) {
+      const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.6), MAT.structuralSteel);
+      bracket.position.set(bx, 12.5, z);
+      craneGroup.add(bracket);
+    }
   });
 
-  const bridgeX = 2.0;
-  [-0.6, 0.6].forEach(dx => {
-    const girder = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.9, 47.0), MAT.craneYellow);
-    girder.position.set(bridgeX + dx, 9.8, 0);
+  // 2. Parked Overhead Double-Girder Crane Bridge (Parked at X = -25.0 over Bay 1 rear storage zone)
+  // Completely frees all central and foreground views of workcells!
+  const bridgeX = -25.0;
+
+  // End-truck wheel carriages resting on the rails
+  [-23.5, 23.5].forEach(z => {
+    const endTruck = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.5, 0.6), MAT.craneYellow);
+    endTruck.position.set(bridgeX, 13.6, z);
+    craneGroup.add(endTruck);
+
+    [-1.2, 1.2].forEach(wx => {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.14, 16), MAT.steelChrome);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(bridgeX + wx, 13.4, z);
+      craneGroup.add(wheel);
+    });
+  });
+
+  // Twin Box Girders spanning across the plant
+  [-0.7, 0.7].forEach(dx => {
+    const girder = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 46.4), MAT.craneYellow);
+    girder.position.set(bridgeX + dx, 13.9, 0);
     craneGroup.add(girder);
+
+    if (dx < 0) {
+      const catwalk = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 46.0), MAT.structuralSteel);
+      catwalk.position.set(bridgeX + dx - 0.65, 14.1, 0);
+      craneGroup.add(catwalk);
+    }
   });
 
-  const trolley = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 1.8), MAT.machineDark);
-  trolley.position.set(bridgeX, 10.3, 2.0);
+  // Hoist Trolley
+  const trolleyZ = -4.0;
+  const trolley = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 2.0), MAT.machineDark);
+  trolley.position.set(bridgeX, 14.6, trolleyZ);
   craneGroup.add(trolley);
 
-  const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 16), MAT.steelChrome);
-  drum.rotation.z = Math.PI / 2;
-  drum.position.set(bridgeX, 10.7, 2.0);
-  craneGroup.add(drum);
+  const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 16), MAT.machineAccentCyan);
+  motor.rotation.z = Math.PI / 2;
+  motor.position.set(bridgeX, 15.0, trolleyZ);
+  craneGroup.add(motor);
 
-  [-0.3, 0.3].forEach(rx => {
-    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 3.8, 8), MAT.steelChrome);
-    rope.position.set(bridgeX + rx, 8.4, 2.0);
+  // Steel wire ropes dropping to 25T hook block
+  [-0.35, 0.35].forEach(rx => {
+    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 5.4, 8), MAT.steelChrome);
+    rope.position.set(bridgeX + rx, 11.6, trolleyZ);
     craneGroup.add(rope);
   });
 
-  const hookBlock = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.5), MAT.craneYellow);
-  hookBlock.position.set(bridgeX, 6.4, 2.0);
+  // 25-Ton Forged Hook Block
+  const hookBlock = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.6, 0.6), MAT.craneYellow);
+  hookBlock.position.set(bridgeX, 8.8, trolleyZ);
   craneGroup.add(hookBlock);
 
-  const hook = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.06, 8, 16, Math.PI * 1.5), MAT.structuralSteel);
-  hook.position.set(bridgeX, 6.05, 2.0);
+  const hook = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.08, 12, 24, Math.PI * 1.5), MAT.structuralSteel);
+  hook.position.set(bridgeX, 8.35, trolleyZ);
   hook.rotation.z = Math.PI / 2;
   craneGroup.add(hook);
 
@@ -817,12 +863,8 @@ export function createFactoryFloor(scene) {
   group.add(createSwarfDumpster(-13.5, -6.8, 0));
   group.add(createSwarfDumpster(-3.5, -6.8, 0));
 
-  // 3. Wall/Column Safety Stations (Extinguishers & Eyewash)
-  group.add(createFireExtinguisherUnit(-31.6, -10, Math.PI / 2));
-  group.add(createFireExtinguisherUnit(-31.6, 10, Math.PI / 2));
-  group.add(createFireExtinguisherUnit(31.6, -10, -Math.PI / 2));
-  group.add(createFireExtinguisherUnit(31.6, 10, -Math.PI / 2));
-  group.add(createEmergencyEyeWashStation(-31.6, 0, Math.PI / 2));
+  // 3. Heavy Factory Structural Columns with Collision Bollards & Safety Stations
+  createStructuralColumns(group);
 
   // OVERHEAD TRAVELING BRIDGE CRANE & HOIST SYSTEM
   createOverheadCraneSystem(group);
@@ -832,6 +874,47 @@ export function createFactoryFloor(scene) {
 
   scene.add(group);
   return group;
+}
+
+export function createStructuralColumns(parentGroup) {
+  const colGroup = new THREE.Group();
+  const colCoords = [
+    { x: -24, z: -16, bay: "BAY 01" },
+    { x: 0,   z: -16, bay: "CENTRAL" },
+    { x: 24,  z: -16, bay: "BAY 02" },
+    { x: -24, z: 16,  bay: "BAY 03" },
+    { x: 0,   z: 16,  bay: "CENTRAL" },
+    { x: 24,  z: 16,  bay: "BAY 04" }
+  ];
+
+  colCoords.forEach(c => {
+    // 1. Heavy Structural Steel Column
+    const col = new THREE.Mesh(new THREE.BoxGeometry(0.7, 14.0, 0.7), MAT.structuralSteel);
+    col.position.set(c.x, 7.0, c.z);
+    col.castShadow = true;
+    colGroup.add(col);
+
+    // 2. Heavy Yellow Forklift/AMR Collision Bollard Wrap
+    const bollardWrap = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.4, 1.0), MAT.safetyBollard);
+    bollardWrap.position.set(c.x, 0.7, c.z);
+    bollardWrap.castShadow = true;
+    colGroup.add(bollardWrap);
+
+    // 3. Hazard Stripe Band around the bollard
+    const hazardRing = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.25, 1.02), MAT.hazardDark);
+    hazardRing.position.set(c.x, 0.7, c.z);
+    colGroup.add(hazardRing);
+
+    // 4. Mount Fire Extinguishers on side columns
+    if (c.x !== 0) {
+      colGroup.add(createFireExtinguisherUnit(c.x + (c.x > 0 ? -0.42 : 0.42), c.z, c.x > 0 ? -Math.PI / 2 : Math.PI / 2));
+    }
+  });
+
+  // Central Column: Mount Emergency EyeWash & Safety Shower Station
+  colGroup.add(createEmergencyEyeWashStation(0, -15.5, 0));
+
+  parentGroup.add(colGroup);
 }
 
 function createWarehouseRack(parentGroup, posX, posZ) {
@@ -1571,21 +1654,28 @@ export function createHydraulicPress(position = { x: 7, y: 0, z: -11 }) {
     group.add(pbBtn);
   });
 
-  // Safety Light Curtains: Dual Yellow Optical Sensor Pillars with Translucent Barrier Beam
+  // Safety Light Curtains: Keyence-style Dual Yellow Extruded Optical Sensor Pylons
   [-2.8, 2.8].forEach(lx => {
-    const sensorPost = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.8, 0.18), MAT.hazardYellow);
+    const sensorPost = new THREE.Mesh(new THREE.BoxGeometry(0.16, 3.8, 0.18), MAT.hazardYellow);
     sensorPost.position.set(lx, 3.7, 2.4);
     group.add(sensorPost);
 
-    const optoStrip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.4, 0.04), MAT.lightCurtainBeam);
-    optoStrip.position.set(lx, 3.7, 2.5);
-    group.add(optoStrip);
+    // Micro optical lenses along the post
+    for (let ly = -1.6; ly <= 1.6; ly += 0.4) {
+      const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 8), MAT.extinguisherRed);
+      lens.rotation.x = Math.PI / 2;
+      lens.position.set(lx, 3.7 + ly, 2.49);
+      group.add(lens);
+    }
   });
 
-  // Glowing Optoelectronic Light Curtain Barrier Sheet
-  const curtainMesh = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 3.6), MAT.lightCurtainBeam);
-  curtainMesh.position.set(0, 3.7, 2.4);
-  group.add(curtainMesh);
+  // Fine Red Laser Safety Grid Lines across opening (Clear sightline into die cavity)
+  [-1.2, -0.4, 0.4, 1.2].forEach(dy => {
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 5.5, 6), MAT.lightCurtainBeam);
+    beam.rotation.z = Math.PI / 2;
+    beam.position.set(0, 3.7 + dy, 2.4);
+    group.add(beam);
+  });
 
   const crown = new THREE.Mesh(new THREE.BoxGeometry(7.0, 2.0, 6.2), MAT.pressSafetyOrange);
   crown.position.y = 9.0;
@@ -1799,20 +1889,34 @@ export function createVacuumFurnace(position = { x: 13, y: 0, z: -2 }) {
   counterweight.position.set(3.3, 4.4, 2.3);
   group.add(counterweight);
 
-  // Glowing Quartz Observation Viewport (Radiant Orange Heat)
-  const windowFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.15, 20), MAT.steelChrome);
+  // Glowing Quartz Observation Viewport (Heavy Machined 316L Flange + Recessed Borosilicate Glass)
+  const windowFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.18, 24), MAT.steelChrome);
   windowFrame.rotation.z = Math.PI / 2;
-  windowFrame.position.set(3.75, 2.6, 0);
+  windowFrame.position.set(3.72, 2.6, 0);
   group.add(windowFrame);
 
-  const glowPort = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), new THREE.MeshBasicMaterial({
-    color: 0xff4500,
-    side: THREE.DoubleSide,
+  // 6 Hex cap screws on viewport retaining ring
+  for (let sb = 0; sb < Math.PI * 2; sb += Math.PI / 3) {
+    const sBolt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 6), MAT.hazardDark);
+    sBolt.rotation.z = Math.PI / 2;
+    sBolt.position.set(3.82, 2.6 + Math.sin(sb) * 0.54, Math.cos(sb) * 0.54);
+    group.add(sBolt);
+  }
+
+  // Recessed Quartz Sight Glass with radiant internal molybdenum heating glow
+  const quartzGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.08, 24), new THREE.MeshPhysicalMaterial({
+    color: 0xff8800,
+    transparent: true,
+    opacity: 0.85,
+    roughness: 0.12,
+    transmission: 0.5,
+    emissive: 0xff5500,
+    emissiveIntensity: 0.65
   }));
-  glowPort.rotation.y = Math.PI / 2;
-  glowPort.position.set(3.85, 2.6, 0);
-  group.add(glowPort);
-  group.glowPort = glowPort;
+  quartzGlass.rotation.z = Math.PI / 2;
+  quartzGlass.position.set(3.74, 2.6, 0);
+  group.add(quartzGlass);
+  group.glowPort = quartzGlass;
 
   // Water-Cooling Distribution Manifold (Blue = Inlet, Red = Outlet)
   const blueHose = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.8, 12), MAT.coolantBlue);
@@ -1889,40 +1993,73 @@ export function createRoboticCell(position = { x: -16, y: 0, z: 8 }) {
   // Foundation Hazard Safety Perimeter
   group.add(createHazardBorder(6.8, 6.8));
 
-  // Workcell Perimeter Yellow Safety Fence with Polycarbonate Windows
+  // Workcell Perimeter 4-Sided Yellow Safety Fence with Polycarbonate Guarding
   const fenceSize = 6.4;
+  const halfF = fenceSize / 2;
   const fenceH = 2.8;
-  const postGeo = new THREE.BoxGeometry(0.12, fenceH, 0.12);
-  const railGeoX = new THREE.BoxGeometry(fenceSize, 0.1, 0.1);
-  const railGeoZ = new THREE.BoxGeometry(0.1, 0.1, fenceSize);
 
-  // Perimeter Rails & Posts
-  [0, fenceH].forEach(y => {
-    const rx = new THREE.Mesh(railGeoX, MAT.hazardYellow);
-    rx.position.set(0, y, -fenceSize / 2);
-    group.add(rx);
+  // 4 Corner Posts with floor anchor plates
+  [[-halfF, -halfF], [halfF, -halfF], [-halfF, halfF], [halfF, halfF]].forEach(([cx, cz]) => {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.14, fenceH, 0.14), MAT.hazardYellow);
+    post.position.set(cx, fenceH / 2, cz);
+    group.add(post);
 
-    const rz = new THREE.Mesh(railGeoZ, MAT.hazardYellow);
-    rz.position.set(-fenceSize / 2, y, 0);
-    group.add(rz);
+    const anchorPlate = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 0.28), MAT.structuralSteel);
+    anchorPlate.position.set(cx, 0.02, cz);
+    group.add(anchorPlate);
+  });
+
+  // Perimeter Rails (North, South, West)
+  [0.15, fenceH - 0.1].forEach(y => {
+    // North rail
+    const rN = new THREE.Mesh(new THREE.BoxGeometry(fenceSize, 0.08, 0.08), MAT.hazardYellow);
+    rN.position.set(0, y, -halfF);
+    group.add(rN);
+
+    // South rail
+    const rS = new THREE.Mesh(new THREE.BoxGeometry(fenceSize, 0.08, 0.08), MAT.hazardYellow);
+    rS.position.set(0, y, halfF);
+    group.add(rS);
+
+    // West rail
+    const rW = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, fenceSize), MAT.hazardYellow);
+    rW.position.set(-halfF, y, 0);
+    group.add(rW);
   });
 
   // Polycarbonate Transparent Safety View Windows
-  const winNorth = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, fenceH - 0.2, 0.04), MAT.glassChamber);
-  winNorth.position.set(0, fenceH / 2, -fenceSize / 2);
+  const winNorth = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, fenceH - 0.35, 0.04), MAT.glassChamber);
+  winNorth.position.set(0, fenceH / 2, -halfF);
   group.add(winNorth);
 
-  const winWest = new THREE.Mesh(new THREE.BoxGeometry(0.04, fenceH - 0.2, fenceSize - 0.2), MAT.glassChamber);
-  winWest.position.set(-fenceSize / 2, fenceH / 2, 0);
+  const winSouth = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, fenceH - 0.35, 0.04), MAT.glassChamber);
+  winSouth.position.set(0, fenceH / 2, halfF);
+  group.add(winSouth);
+
+  const winWest = new THREE.Mesh(new THREE.BoxGeometry(0.04, fenceH - 0.35, fenceSize - 0.2), MAT.glassChamber);
+  winWest.position.set(-halfF, fenceH / 2, 0);
   group.add(winWest);
 
-  // Interlocked Safety Access Gate on East face with Safety Switch
-  const gateFrame = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 1.4), MAT.hazardYellow);
-  gateFrame.position.set(fenceSize / 2, 1.2, 0);
+  // East Side (Operator Entry Face): Fixed panel + Interlocked Swing Door
+  const winEastFixed = new THREE.Mesh(new THREE.BoxGeometry(0.04, fenceH - 0.35, 3.4), MAT.glassChamber);
+  winEastFixed.position.set(halfF, fenceH / 2, -1.2);
+  group.add(winEastFixed);
+
+  // Interlocked Safety Access Gate Frame with magnetic safety switch & lever handle
+  const gateFrame = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 1.6), MAT.hazardYellow);
+  gateFrame.position.set(halfF, 1.2, 1.3);
   group.add(gateFrame);
 
-  const gateSwitch = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.2, 0.12), MAT.eStopYellow);
-  gateSwitch.position.set(fenceSize / 2, 1.4, 0.8);
+  const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.2, 1.4), MAT.glassChamber);
+  gateMesh.position.set(halfF, 1.2, 1.3);
+  group.add(gateMesh);
+
+  const gateHandle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.25, 0.06), MAT.steelChrome);
+  gateHandle.position.set(halfF + 0.06, 1.2, 2.0);
+  group.add(gateHandle);
+
+  const gateSwitch = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.24, 0.14), MAT.eStopYellow);
+  gateSwitch.position.set(halfF, 1.5, 2.15);
   group.add(gateSwitch);
 
   // Base Pedestal with Anchor Bolts

@@ -339,13 +339,22 @@ export function populateDrawer(machineData) {
   if (typeEl) typeEl.textContent = friendlyType;
 
   // Status Badge
+  const vib = machineData.vibration_rms || 0;
+  const isVibCritical = vib >= 0.71;
+  const isVibWarning = vib >= 0.45;
+
+  let computedStatus = (machineData.status || 'HEALTHY').toUpperCase();
+  if (computedStatus === 'HEALTHY' || computedStatus === 'NOMINAL') {
+    if (isVibCritical) computedStatus = 'CRITICAL (ZONE D)';
+    else if (isVibWarning) computedStatus = 'WARNING (ZONE C)';
+  }
+
   const statusEl = document.getElementById('drawer-m-status');
-  const rawStatus = (machineData.status || 'HEALTHY').toUpperCase();
   if (statusEl) {
-    statusEl.textContent = rawStatus;
+    statusEl.textContent = computedStatus;
     statusEl.style.color =
-      (rawStatus === 'CRITICAL' || rawStatus === 'FAILED') ? 'var(--color-rose)' :
-      (rawStatus === 'WARNING' || rawStatus === 'DEGRADING') ? 'var(--color-amber)' : 'var(--color-emerald)';
+      (computedStatus.includes('CRITICAL') || computedStatus === 'FAILED') ? 'var(--color-rose)' :
+      (computedStatus.includes('WARNING') || computedStatus === 'DEGRADING') ? 'var(--color-amber)' : 'var(--color-emerald)';
   }
 
   // Wear Bar
@@ -377,10 +386,10 @@ export function populateDrawer(machineData) {
   const loadEl = document.getElementById('drawer-load-val');
   const isoEl = document.getElementById('drawer-iso-val');
 
-  const vib = machineData.vibration_rms || 0.15;
+  const liveVib = machineData.vibration_rms != null ? machineData.vibration_rms : 0.15;
   const temp = machineData.temperature_c != null ? machineData.temperature_c : (machineData.temperature || 42.0);
 
-  if (vibEl) vibEl.textContent = `${vib.toFixed(3)} mm/s`;
+  if (vibEl) vibEl.textContent = `${liveVib.toFixed(3)} mm/s`;
   if (tempEl) tempEl.textContent = `${temp.toFixed(1)} °C`;
   if (loadEl) loadEl.textContent = machineData.load_factor ? `${(machineData.load_factor * 100).toFixed(0)}%` : '85%';
 
@@ -547,7 +556,8 @@ export function populateDrawer(machineData) {
   // SOP Diagnosis Card
   const sopBox = document.getElementById('drawer-sop-content');
   if (sopBox) {
-    if (rawStatus === 'CRITICAL' || rawStatus === 'WARNING' || rawStatus === 'FAILED' || rawStatus === 'DEGRADING') {
+    const isDegraded = computedStatus.includes('CRITICAL') || computedStatus.includes('WARNING') || computedStatus === 'FAILED' || computedStatus === 'DEGRADING';
+    if (isDegraded) {
       sopBox.innerHTML = `
         <div class="sop-title">⚠️ SOP-AERO-04: High-Harmonic Vibration Mitigation</div>
         <div class="sop-cause">Harmonic vibration peaks detected along rotational axis. Risk of micro-fractures in aerospace components.</div>
