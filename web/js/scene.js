@@ -68,7 +68,7 @@ let radarProgress = 0;
 // Camera tween state
 let targetCamPos = null;
 let targetLookAt = null;
-const defaultCamPos = new THREE.Vector3(38, 30, 38);
+const defaultCamPos = new THREE.Vector3(32, 24, 30);
 const defaultLookAt = new THREE.Vector3(0, 2, 0);
 
 // Campus / Town Overview Camera
@@ -368,7 +368,7 @@ export function getInteriorMode() {
   return isInteriorMode;
 }
 
-export function setCameraPreset(presetName) {
+export function setCameraPreset(presetName, immediate = false) {
   agv1FollowMode = false;
   agv2FollowMode = false;
 
@@ -378,36 +378,34 @@ export function setCameraPreset(presetName) {
       break;
     case 'global':
     case 'interior':
-      setInteriorMode(true);
-      targetCamPos = defaultCamPos.clone();
-      targetLookAt = defaultLookAt.clone();
+      setInteriorMode(true, true);
       break;
     case 'bay1': // Machining Bay (CNC-01 & CNC-02)
-      setInteriorMode(true);
-      targetCamPos = new THREE.Vector3(-11, 16, 2);
-      targetLookAt = new THREE.Vector3(-11, 2, -10);
+      setInteriorMode(true, false);
+      targetCamPos = new THREE.Vector3(-11, 13, 0);
+      targetLookAt = new THREE.Vector3(-11, 2.2, -10);
       break;
     case 'bay2': // Forming & Heat (PRESS-01, PRESS-02, FURN-01)
-      setInteriorMode(true);
-      targetCamPos = new THREE.Vector3(13, 18, 5);
+      setInteriorMode(true, false);
+      targetCamPos = new THREE.Vector3(13, 15, 2);
       targetLookAt = new THREE.Vector3(13, 3, -8);
       break;
     case 'bay3': // Robotics & QC (ROBOT-01, LASER-01)
-      setInteriorMode(true);
-      targetCamPos = new THREE.Vector3(-11, 16, 20);
-      targetLookAt = new THREE.Vector3(-11, 2, 8);
+      setInteriorMode(true, false);
+      targetCamPos = new THREE.Vector3(-11, 13, 17);
+      targetLookAt = new THREE.Vector3(-11, 2.2, 8);
       break;
     case 'bay4': // Assembly Line (CONV-01)
-      setInteriorMode(true);
-      targetCamPos = new THREE.Vector3(13, 16, 20);
+      setInteriorMode(true, false);
+      targetCamPos = new THREE.Vector3(13, 13, 17);
       targetLookAt = new THREE.Vector3(13, 2, 8);
       break;
     case 'agv1':
-      setInteriorMode(true);
+      setInteriorMode(true, false);
       agv1FollowMode = true;
       break;
     case 'agv2':
-      setInteriorMode(true);
+      setInteriorMode(true, false);
       agv2FollowMode = true;
       break;
     case 'parking': // Company Parking Lot & Guardhouse
@@ -429,14 +427,22 @@ export function setCameraPreset(presetName) {
       targetLookAt = new THREE.Vector3(-4, 3.6, 25.0);
       break;
     default:
-      // Focus on specific machine ID
-      setInteriorMode(true);
+      // Focus on specific machine ID with close-up dramatic angle
+      setInteriorMode(true, false);
       if (machines.has(presetName)) {
         const m = machines.get(presetName);
-        targetCamPos = new THREE.Vector3(m.position.x + 8, m.position.y + 7, m.position.z + 8);
-        targetLookAt = new THREE.Vector3(m.position.x, m.position.y + 2, m.position.z);
+        targetCamPos = new THREE.Vector3(m.position.x + 6.2, m.position.y + 5.2, m.position.z + 6.2);
+        targetLookAt = new THREE.Vector3(m.position.x, m.position.y + 1.8, m.position.z);
       }
       break;
+  }
+
+  if (immediate && targetCamPos && targetLookAt) {
+    camera.position.copy(targetCamPos);
+    controls.target.copy(targetLookAt);
+    controls.update();
+    targetCamPos = null;
+    targetLookAt = null;
   }
 }
 
@@ -533,10 +539,10 @@ function animate(time) {
   }
   controls.update();
 
-  // Automatic transition to Campus View when zooming out of the company
+  // Automatic transition to Campus View when zooming far out of the plant
   if (isInteriorMode && !targetCamPos && !agv1FollowMode && !agv2FollowMode) {
     const camDist = camera.position.distanceTo(controls.target);
-    if (camDist >= 68.0) {
+    if (camDist >= 145.0) {
       setInteriorMode(false, false);
     }
   }
@@ -772,5 +778,5 @@ export function getMachines() {
 
 export const updateMachineStates = updateFleetTelemetry;
 export const triggerRadarScan = triggerRadarSweep;
-export function focusOnMachine(machineId) { setCameraPreset(machineId); }
+export function focusOnMachine(machineId, immediate = false) { setCameraPreset(machineId, immediate); }
 export function resetCamera() { setCameraPreset(isInteriorMode ? 'global' : 'campus'); }

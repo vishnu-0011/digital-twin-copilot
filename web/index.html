@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Titan Aerospace — 3D Digital Twin Operations Center</title>
-  <link rel="stylesheet" href="/css/style.css?v=2.2">
+  <link rel="stylesheet" href="/css/style.css?v=2.3">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
 </head>
 <body>
@@ -157,6 +157,44 @@
             </div>
           </div>
         </div>
+
+        <!-- Operational Specifications & Tooling -->
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Machine State & Tooling</span>
+            <span id="drawer-asset-tag" style="font-size: 10px; color: var(--color-cyan)">ASSET # TA-CNC-2024-X8</span>
+          </div>
+          <div class="telemetry-grid">
+            <div class="telemetry-cell">
+              <div class="t-label">Spindle / Drive</div>
+              <div class="t-val" id="drawer-rpm-val">14,200 RPM</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Feed Rate</div>
+              <div class="t-val" id="drawer-feed-val">3,200 mm/min</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Coolant Pressure</div>
+              <div class="t-val" id="drawer-coolant-val">4.2 bar (18 L/m)</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Power Draw</div>
+              <div class="t-val" id="drawer-power-val">18.4 kW</div>
+            </div>
+            <div class="telemetry-cell" style="grid-column: span 2">
+              <div class="t-label">Active Tooling Profile</div>
+              <div class="t-val" id="drawer-tool-val" style="font-size: 12px; font-family: var(--font-mono)">T14: 4-Flute Carbide End Mill (Ø12mm)</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Tool Life Elapsed</div>
+              <div class="t-val" id="drawer-toollife-val">4.2 hrs / 12 hrs</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">Shift Cycle Run Time</div>
+              <div class="t-val" id="drawer-runtime-val">06h 42m 18s</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Tab 2: Predictive Health Forecast Card -->
@@ -185,6 +223,32 @@
             <div class="tcn-spec-row">
               <span>Sensor Validation:</span>
               <strong style="color: var(--color-emerald)">Multi-Axis Dynamic Waveforms</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bearing Harmonics & Fault Frequencies -->
+        <div class="scada-card">
+          <div class="scada-card-title">
+            <span>Harmonic Fault Frequencies (FFT)</span>
+            <span style="font-size: 10px; color: var(--color-cyan)">ISO 13373-1</span>
+          </div>
+          <div class="telemetry-grid">
+            <div class="telemetry-cell">
+              <div class="t-label">1X Shaft Speed</div>
+              <div class="t-val" id="drawer-fft-1x" style="color: var(--color-emerald)">Nominal</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">BPFO (Outer Race)</div>
+              <div class="t-val" id="drawer-fft-bpfo" style="color: var(--color-emerald)">0.04 mm/s</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">BPFI (Inner Race)</div>
+              <div class="t-val" id="drawer-fft-bpfi" style="color: var(--color-emerald)">0.03 mm/s</div>
+            </div>
+            <div class="telemetry-cell">
+              <div class="t-label">BSF (Ball Spin)</div>
+              <div class="t-val" id="drawer-fft-bsf" style="color: var(--color-emerald)">0.02 mm/s</div>
             </div>
           </div>
         </div>
@@ -239,10 +303,10 @@
   </section>
 
   <!-- Three.js Offline Vendored Core & Controls -->
-  <script src="/vendor/three.min.js?v=2.2"></script>
-  <script src="/vendor/OrbitControls.js?v=2.2"></script>
+  <script src="/vendor/three.min.js?v=2.3"></script>
+  <script src="/vendor/OrbitControls.js?v=2.3"></script>
 
   <!-- Application Main Controller -->
-  <script type="module" src="/js/app.js?v=2.2"></script>
+  <script type="module" src="/js/app.js?v=2.3"></script>
 </body>
 </html>

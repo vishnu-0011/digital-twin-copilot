@@ -209,7 +209,7 @@ function setupPipelineRibbon() {
   const viewProd = document.getElementById('pipeline-view-prod');
   const viewAi = document.getElementById('pipeline-view-ai');
   const toggleBtn = document.getElementById('btn-ribbon-toggle');
-  const ribbon = document.getElementById('process-pipeline-ribbon');
+  const ribbon = document.getElementById('pipeline-ribbon') || document.getElementById('process-pipeline-ribbon');
 
   if (tabProd && tabAi && viewProd && viewAi) {
     tabProd.addEventListener('click', () => {
@@ -230,6 +230,7 @@ function setupPipelineRibbon() {
   }
 
   if (toggleBtn && ribbon) {
+    toggleBtn.innerHTML = ribbon.classList.contains('collapsed') ? '&#9650;' : '&#9660;';
     toggleBtn.addEventListener('click', () => {
       playClick();
       ribbon.classList.toggle('collapsed');
@@ -400,6 +401,146 @@ export function populateDrawer(machineData) {
     }
   }
 
+  // Populate Detailed Machine State & Tooling Specs
+  const machineSpecs = {
+    "CNC-01": {
+      asset: "TA-CNC-2024-X8",
+      rpm: "14,200 RPM",
+      feed: "3,200 mm/min",
+      coolant: "4.2 bar (18 L/m)",
+      power: "18.4 kW",
+      tool: "T14: 4-Flute Carbide End Mill (Ø12mm)",
+      toolLife: "4.8 hrs / 12 hrs",
+      runTime: "06h 42m 18s"
+    },
+    "CNC-02": {
+      asset: "TA-CNC-2024-F4",
+      rpm: "24,000 RPM",
+      feed: "4,800 mm/min",
+      coolant: "5.0 bar (22 L/m)",
+      power: "14.2 kW",
+      tool: "T08: Diamond Micro-Ball Finishing (Ø4mm)",
+      toolLife: "2.1 hrs / 8 hrs",
+      runTime: "07h 15m 04s"
+    },
+    "PRESS-01": {
+      asset: "TA-PRS-1000-01",
+      rpm: "28 SPM (Strokes/min)",
+      feed: "120 mm/s ram",
+      coolant: "Hydr: 280 bar ISO-VG46",
+      power: "75.0 kW",
+      tool: "DIE-B7: Ti-6Al-4V Bulkhead Cavity Die",
+      toolLife: "1,420 cycles / 5,000",
+      runTime: "05h 10m 42s"
+    },
+    "PRESS-02": {
+      asset: "TA-EXT-0500-02",
+      rpm: "18 SPM (Extrusion)",
+      feed: "45 mm/s ram",
+      coolant: "Hydr: 210 bar ISO-VG46",
+      power: "45.0 kW",
+      tool: "EXT-S02: Wing Spar Profile Die",
+      toolLife: "890 cycles / 3,000",
+      runTime: "04h 55m 20s"
+    },
+    "FURN-01": {
+      asset: "TA-FRN-2023-V1",
+      rpm: "Vac: 2.4×10⁻⁵ mbar",
+      feed: "Heat: 8.5 °C/min",
+      coolant: "Closed Loop H₂O (2.8 bar)",
+      power: "92.0 kW",
+      tool: "CHAMBER: Inconel 718 Refractory Retort",
+      toolLife: "420 thermal cycles / 1,200",
+      runTime: "09h 12m 30s"
+    },
+    "ROBOT-01": {
+      asset: "TA-ROB-06AX-01",
+      rpm: "18,000 RPM Spindle",
+      feed: "TCP Vel: 1,250 mm/s",
+      coolant: "Pneumatic Mist (6.0 bar)",
+      power: "8.6 kW",
+      tool: "BURR-03: Tungsten Conical Rotary File",
+      toolLife: "18.4 hrs / 40 hrs",
+      runTime: "06h 04m 15s"
+    },
+    "LASER-01": {
+      asset: "TA-MTR-LSR-01",
+      rpm: "Scan: 120 Hz Line",
+      feed: "Resolution: 0.2 µm",
+      coolant: "Chilled Optics (20.0 °C)",
+      power: "2.8 kW",
+      tool: "OPTIC-D2: Blue Triangulation Head (405nm)",
+      toolLife: "3,100 hrs / 10,000 hrs",
+      runTime: "08h 30m 00s"
+    },
+    "CONV-01": {
+      asset: "TA-ASY-CNV-01",
+      rpm: "Belt: 0.85 m/s",
+      feed: "Takt: 48 sec/pallet",
+      coolant: "Air Lube (4.0 bar)",
+      power: "5.5 kW",
+      tool: "FIXTURE: ESD Dual-Rail Avionics Carrier",
+      toolLife: "Continuous Modular",
+      runTime: "07h 48m 12s"
+    }
+  };
+
+  const spec = machineSpecs[machineData.machine_id] || machineSpecs["CNC-01"];
+  const assetTagEl = document.getElementById('drawer-asset-tag');
+  const rpmEl = document.getElementById('drawer-rpm-val');
+  const feedEl = document.getElementById('drawer-feed-val');
+  const coolantEl = document.getElementById('drawer-coolant-val');
+  const powerEl = document.getElementById('drawer-power-val');
+  const toolEl = document.getElementById('drawer-tool-val');
+  const toolLifeEl = document.getElementById('drawer-toollife-val');
+  const runTimeEl = document.getElementById('drawer-runtime-val');
+
+  if (assetTagEl) assetTagEl.textContent = `ASSET # ${spec.asset}`;
+  if (rpmEl) rpmEl.textContent = spec.rpm;
+  if (feedEl) feedEl.textContent = spec.feed;
+  if (coolantEl) coolantEl.textContent = spec.coolant;
+  if (powerEl) powerEl.textContent = spec.power;
+  if (toolEl) toolEl.textContent = spec.tool;
+  if (toolLifeEl) toolLifeEl.textContent = spec.toolLife;
+  if (runTimeEl) runTimeEl.textContent = spec.runTime;
+
+  // Harmonic Fault Frequencies (FFT)
+  const fft1xEl = document.getElementById('drawer-fft-1x');
+  const fftBpfoEl = document.getElementById('drawer-fft-bpfo');
+  const fftBpfiEl = document.getElementById('drawer-fft-bpfi');
+  const fftBsfEl = document.getElementById('drawer-fft-bsf');
+
+  if (fft1xEl && fftBpfoEl && fftBpfiEl && fftBsfEl) {
+    if (vib >= 0.75) {
+      fft1xEl.textContent = "Elevated (0.42 mm/s)";
+      fft1xEl.style.color = "var(--color-rose)";
+      fftBpfoEl.textContent = "Harmonic Spike (0.58 mm/s)";
+      fftBpfoEl.style.color = "var(--color-rose)";
+      fftBpfiEl.textContent = "0.14 mm/s";
+      fftBpfiEl.style.color = "var(--color-amber)";
+      fftBsfEl.textContent = "0.08 mm/s";
+      fftBsfEl.style.color = "var(--color-amber)";
+    } else if (vib >= 0.45) {
+      fft1xEl.textContent = "Nominal";
+      fft1xEl.style.color = "var(--color-emerald)";
+      fftBpfoEl.textContent = "0.18 mm/s (Alert)";
+      fftBpfoEl.style.color = "var(--color-amber)";
+      fftBpfiEl.textContent = "0.06 mm/s";
+      fftBpfiEl.style.color = "var(--color-emerald)";
+      fftBsfEl.textContent = "0.04 mm/s";
+      fftBsfEl.style.color = "var(--color-emerald)";
+    } else {
+      fft1xEl.textContent = "Nominal";
+      fft1xEl.style.color = "var(--color-emerald)";
+      fftBpfoEl.textContent = "0.04 mm/s";
+      fftBpfoEl.style.color = "var(--color-emerald)";
+      fftBpfiEl.textContent = "0.03 mm/s";
+      fftBpfiEl.style.color = "var(--color-emerald)";
+      fftBsfEl.textContent = "0.02 mm/s";
+      fftBsfEl.style.color = "var(--color-emerald)";
+    }
+  }
+
   // Push samples to dual oscilloscope buffer
   pushDualSample(vib, temp);
 
@@ -530,6 +671,25 @@ function startWaveformRenderer() {
     });
     ctx.stroke();
     ctx.shadowBlur = 0;
+
+    // Harmonic frequency markers (1X Rotational & 2X Harmonic)
+    ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.25)' : 'rgba(2, 132, 199, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(w * 0.32, 0); ctx.lineTo(w * 0.32, h);
+    ctx.moveTo(w * 0.64, 0); ctx.lineTo(w * 0.64, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = isDark ? 'rgba(56, 189, 248, 0.65)' : 'rgba(2, 132, 199, 0.65)';
+    ctx.font = '9px monospace';
+    ctx.fillText('1X ROTOR', w * 0.32 + 3, 11);
+    ctx.fillText('2X HARM', w * 0.64 + 3, 11);
+
+    const latestVib = vibrationBuffer[vibrationBuffer.length - 1] || 0.15;
+    ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(15, 23, 42, 0.5)';
+    ctx.fillText(`Vpp: ${(latestVib * 2.8).toFixed(2)} mm/s`, 6, h - 6);
   }
 
   renderWaveform();

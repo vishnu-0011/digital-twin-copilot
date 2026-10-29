@@ -493,12 +493,30 @@ function setupControls(canvasContainer) {
       }
     });
   }
+
+  // URL query parameter support for direct deep linking & verification
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialView = urlParams.get('view');
+  const initialMachine = urlParams.get('machine');
+  const isSnap = urlParams.get('snap') === 'true' || urlParams.has('view');
+  if (initialView) {
+    const directorButtons = document.querySelectorAll('.btn-director');
+    const targetBtn = document.querySelector(`.btn-director[data-preset="${initialView}"]`);
+    if (targetBtn) {
+      directorButtons.forEach(b => b.classList.remove('active'));
+      targetBtn.classList.add('active');
+    }
+    setCameraPreset(initialView, isSnap);
+  }
+  if (initialMachine) {
+    selectMachine(initialMachine, isSnap);
+  }
 }
 
 /**
  * Focuses camera and opens inspection drawer for the given machine ID
  */
-export function selectMachine(machineId) {
+export function selectMachine(machineId, immediate = false) {
   if (machineId === "ENTER_FACTORY") {
     setInteriorMode(true);
     addLogMessage("Entering Titan Aerospace Factory Cleanroom Interior.", "ENTER");
@@ -509,7 +527,7 @@ export function selectMachine(machineId) {
     return;
   }
 
-  focusOnMachine(machineId);
+  focusOnMachine(machineId, immediate);
 
   // Sync director buttons
   const directorButtons = document.querySelectorAll('.btn-director');
