@@ -83,14 +83,14 @@ export function updateFloatingBadges(projectedPositions, onSelectMachine) {
       el.className = 'float-badge';
       if (item.isCampus) {
         el.innerHTML = `
-          <div class="badge-card campus-badge-card" style="background: rgba(15, 23, 42, 0.88); border: 1.5px solid var(--color-cyan); padding: 8px 14px; border-radius: 8px; backdrop-filter: blur(8px); cursor: pointer; box-shadow: 0 4px 16px rgba(0, 243, 255, 0.25);">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; color: var(--color-cyan); font-size: 13px;">
+          <div class="badge-card campus-badge-card" style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 7px 12px; border-radius: 8px; backdrop-filter: blur(12px); cursor: pointer; box-shadow: var(--shadow-hud);">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; color: var(--text-main); font-size: 12px;">
               <span class="badge-status-dot" style="background: var(--color-emerald)"></span>
-              <span>TITAN AEROSPACE CAMPUS</span>
+              <span>Production Complex</span>
             </div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">8 Workcells Active &bull; <span style="color: #38bdf8; font-weight: 600;">Click to Enter &rarr;</span></div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">8 Workcells &bull; <span style="color: var(--color-cyan); font-weight: 500;">Enter Floor &rarr;</span></div>
           </div>
-          <div class="badge-pin" style="height: 12px; border-left: 2px dashed var(--color-cyan);"></div>
+          <div class="badge-pin" style="height: 10px; border-left: 1px solid var(--color-cyan);"></div>
         `;
         el.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -367,7 +367,7 @@ export function populateDrawer(machineData) {
   if (rulCyclesEl) rulCyclesEl.textContent = rulCycles;
   if (rulHoursEl) {
     const hours = rulCycles !== '--' ? (rulCycles * 0.45).toFixed(1) : '--';
-    rulHoursEl.textContent = `≈ ${hours} operating hrs (-15% safety buffer included)`;
+    rulHoursEl.textContent = `≈ ${hours} operating hrs (15% safety buffer applied)`;
   }
 
   // Telemetry Cells
@@ -422,9 +422,9 @@ export function populateDrawer(machineData) {
         <div class="sop-title" style="color: var(--color-emerald)">✓ SOP-AERO-01: Standard Aerospace Operating Protocol</div>
         <div class="sop-cause">Telemetry within ISO 10816 Zone A tolerance limits. Tooling profile nominal.</div>
         <ul class="sop-actions">
-          <li><input type="checkbox" checked disabled> Continuous 60Hz SimPy telemetry stream active</li>
-          <li><input type="checkbox" checked disabled> Zero-leakage observable physics model verified</li>
-          <li><input type="checkbox"> Routine surface laser inspection scheduled at shift change</li>
+          <li><input type="checkbox" checked disabled> High-frequency telemetry stream operational</li>
+          <li><input type="checkbox" checked disabled> Thermal and vibration boundaries verified within nominal tolerance</li>
+          <li><input type="checkbox"> Scheduled visual inspection at shift changeover</li>
         </ul>
       `;
     }

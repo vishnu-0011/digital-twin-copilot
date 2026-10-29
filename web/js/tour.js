@@ -42,62 +42,62 @@ let progressIntervalId = null;
 const TOUR_STEPS = [
   {
     step: 1,
-    title: "1/7: Titan Aerospace City Campus",
-    desc: "Autonomous precision manufacturing facility: Surrounding animated town traffic, employee parking, EV charging & covered entrance corridor.",
+    title: "1/7: Facility Campus Overview",
+    desc: "Titan Aerospace precision manufacturing campus: exterior grounds, logistics corridors, and cleanroom production complex.",
     duration: 6500,
     action: async () => {
       closeDrawer();
       setCameraPreset('campus');
       playClick();
       updateDirectorButtons('campus');
-      addLogMessage("Guided Tour [1/7]: Viewing Titan Aerospace exterior campus & town grid.", "TOUR");
+      addLogMessage("Tour [1/7]: Viewing exterior facility campus and access logistics.", "TOUR");
     }
   },
   {
     step: 2,
-    title: "2/7: Cleanroom Mega-Factory Interior",
-    desc: "Dollhouse cutaway reveals 8 high-precision aerospace workcells, 2 AMRs, and 10-stage WIP process line with live 60Hz telemetry.",
+    title: "2/7: Production Cleanroom Interior",
+    desc: "Live isometric view of 8 aerospace workcells, autonomous mobile robots (AMRs), and active production line telemetry.",
     duration: 6500,
     action: async () => {
       setCameraPreset('global');
       playClick();
       updateDirectorButtons('global');
-      addLogMessage("Guided Tour [2/7]: Entering factory cleanroom interior with active 60Hz telemetry.", "TOUR");
+      addLogMessage("Tour [2/7]: Entering cleanroom production floor with active telemetry.", "TOUR");
     }
   },
   {
     step: 3,
-    title: "3/7: Simulating Spindle Anomaly on CNC-01",
-    desc: "Injecting severe spindle bearing degradation: Vibration RMS surges to >3.2 mm/s (ISO 10816 Zone C/D alert threshold).",
+    title: "3/7: Anomaly Simulation (CNC-01)",
+    desc: "Simulating spindle bearing degradation. Vibration telemetry increases above nominal operational limits (ISO 10816 Zone C/D).",
     duration: 7000,
     action: async () => {
       focusOnMachine('CNC-01');
       playAlarm();
       await deps.dispatchAction('inject_fault', { machine_id: 'CNC-01', wear_level: 0.86, status: 'critical' });
-      addLogMessage("Guided Tour [3/7]: Spindle bearing anomaly injected into CNC-01. Vibration spiking!", "ALERT");
+      addLogMessage("Tour [3/7]: Spindle bearing degradation simulated on CNC-01. Vibration warning active.", "ALERT");
     }
   },
   {
     step: 4,
-    title: "4/7: AI Radar Scan & LangGraph Anomaly Detection",
-    desc: "Tactical laser radar sweeps across the plant; Isolation Forest detects multivariate anomaly signature with zero sensor leakage.",
+    title: "4/7: Automated Health Diagnostics",
+    desc: "Plant-wide telemetry scan isolates the vibration variance and pinpoints anomalous harmonics in the spindle assembly.",
     duration: 6500,
     action: async () => {
       triggerRadarScan();
       playScan();
       await deps.dispatchAction('scan');
-      addLogMessage("Guided Tour [4/7]: Sweeping factory radar plane & running LangGraph anomaly check.", "SCAN");
+      addLogMessage("Tour [4/7]: Diagnostic scan complete. Anomaly isolated to CNC-01.", "SCAN");
     }
   },
   {
     step: 5,
-    title: "5/7: Holographic SCADA Drawer & 2021 TCN Prognostics",
-    desc: "Inspection drawer opens: 1D Dilated Residual TCN forecasts remaining useful life, applying a 15% asymmetric safety margin.",
+    title: "5/7: Predictive Health & RUL Forecast",
+    desc: "Inspection drawer reveals real-time telemetry waveforms, Remaining Useful Life (RUL) trajectory, and standard operating procedures.",
     duration: 8500,
     action: async () => {
       deps.selectMachine('CNC-01');
       playClick();
-      addLogMessage("Guided Tour [5/7]: Inspecting CNC-01 telemetry and 2021 TCN prognostic RUL.", "SCADA");
+      addLogMessage("Tour [5/7]: Inspecting CNC-01 telemetry and Remaining Useful Life forecast.", "SCADA");
 
       // Smoothly cycle drawer tabs for the audience
       setTimeout(() => {
@@ -121,26 +121,26 @@ const TOUR_STEPS = [
   },
   {
     step: 6,
-    title: "6/7: Autonomous Closed-Loop Maintenance",
-    desc: "Dispatching maintenance procedure; physical digital twin resets wear to 0.0, restoring nominal production line balance.",
+    title: "6/7: Corrective Maintenance Dispatch",
+    desc: "Executing automated maintenance procedure. Bearing serviced, wear cleared to nominal 0.0, and machine restored to service.",
     duration: 6500,
     action: async () => {
       await deps.dispatchAction('repair', { machine_id: 'CNC-01' });
       playRepairSuccess();
-      addLogMessage("Guided Tour [6/7]: Closed-loop maintenance dispatched. CNC-01 wear reset to nominal 0.0.", "SUCCESS");
+      addLogMessage("Tour [6/7]: Maintenance completed. CNC-01 tooling restored to nominal baseline.", "SUCCESS");
     }
   },
   {
     step: 7,
-    title: "7/7: Presentation Demo Complete",
-    desc: "Factory restored to nominal 98.4% balance ($22k/hr downtime averted). The operations center is now ready for interactive exploration.",
+    title: "7/7: Nominal Operations Restored",
+    desc: "Production line restored to 98.4% balance. The digital twin operations center is now unlocked for interactive exploration.",
     duration: 4500,
     action: async () => {
       closeDrawer();
       setCameraPreset('global');
       updateDirectorButtons('global');
       playClick();
-      addLogMessage("Guided Tour [7/7]: Complete! Operations center unlocked for interactive exploration.", "READY");
+      addLogMessage("Tour [7/7]: Walkthrough complete. Operations center unlocked for interactive exploration.", "READY");
     }
   }
 ];

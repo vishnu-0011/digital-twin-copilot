@@ -250,12 +250,10 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid var(--border-subtle);
@@ -265,8 +263,7 @@ html, body {
 
 .btn-hud:hover {
   background: var(--btn-hud-hover);
-  border-color: rgba(15, 23, 42, 0.2);
-  transform: translateY(-1px);
+  border-color: rgba(15, 23, 42, 0.15);
 }
 
 .btn-hud:active {
@@ -371,16 +368,12 @@ body[data-theme="dark"] .btn-step {
 }
 
 .campus-badge-card {
-  animation: campusPulse 2.5s infinite ease-in-out;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-@keyframes campusPulse {
-  0%, 100% {
-    box-shadow: 0 4px 16px rgba(0, 243, 255, 0.25);
-  }
-  50% {
-    box-shadow: 0 6px 26px rgba(0, 243, 255, 0.6);
-  }
+.campus-badge-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.15);
 }
 
 /* Badge Status Variants */
@@ -752,37 +745,38 @@ body[data-theme="dark"] .telemetry-cell {
    ========================================================================== */
 #camera-director-bar {
   position: absolute;
-  top: 90px;
+  top: 88px;
   left: 20px;
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: var(--bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 5px 10px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 4px 8px;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 999px;
   box-shadow: var(--shadow-hud);
 }
 
 .director-title {
   font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
   color: var(--text-dim);
   font-family: var(--font-mono);
-  margin-right: 4px;
+  margin-left: 6px;
+  margin-right: 6px;
 }
 
 .btn-director {
-  background: rgba(15, 23, 42, 0.04);
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  padding: 5px 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 4px 10px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -790,22 +784,24 @@ body[data-theme="dark"] .telemetry-cell {
 }
 
 body[data-theme="dark"] .btn-director {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 
 .btn-director:hover {
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--btn-hud-bg);
   color: var(--text-main);
 }
 
 body[data-theme="dark"] .btn-director:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .btn-director.active {
   background: var(--color-cyan);
   border-color: var(--color-cyan);
   color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
 }
 
 /* ==========================================================================

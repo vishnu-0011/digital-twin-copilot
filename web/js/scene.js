@@ -115,7 +115,7 @@ export function initScene(container) {
       fallbackDiv.innerHTML = `
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-main); font-family: var(--font-sans); padding: 28px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-hud); max-width: 520px; z-index: 5;">
           <h3 style="margin-bottom: 8px; color: var(--color-amber);">⚠️ 3D WebGL Acceleration Not Active</h3>
-          <p style="font-size: 13px; line-height: 1.5; color: var(--text-muted); margin-bottom: 12px;">WebGL context could not be created in this browser profile. The 2D Strategy HUD, Live Telemetry Stream, 2021 TCN Prognostics, and AI Reasoning Engine remain fully operational.</p>
+          <p style="font-size: 13px; line-height: 1.5; color: var(--text-muted); margin-bottom: 12px;">WebGL context could not be created in this browser profile. The 2D Operations Dashboard, Live Telemetry Stream, Predictive Health Analytics, and Standard Operating Procedures remain fully operational.</p>
           <p style="font-size: 12px; color: var(--text-dim);">To enable 3D: Ensure hardware acceleration is enabled in Chrome Settings &gt; System.</p>
         </div>
       `;

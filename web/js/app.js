@@ -290,7 +290,7 @@ function startApp() {
   }
 
   try {
-    addLogMessage("Titan Aerospace Precision Fab operations center online. 2021 TCN engine active.", "READY");
+    addLogMessage("Titan Aerospace Operations Center active. Live telemetry stream connected.", "READY");
   } catch (e) {}
 }
 
@@ -325,13 +325,13 @@ function setupControls(canvasContainer) {
       setCameraPreset(preset);
 
       if (preset === 'campus') {
-        addLogMessage("Camera set to Titan Aerospace City Campus & Town Traffic overview.", "CAMPUS");
+        addLogMessage("Perspective switched to Facility Campus overview.", "VIEW");
       } else if (preset === 'global') {
-        addLogMessage("Camera entered tactical factory cleanroom interior.", "INTERIOR");
+        addLogMessage("Perspective switched to Cleanroom Production Floor.", "VIEW");
       } else if (preset === 'agv1' || preset === 'agv2') {
-        addLogMessage(`Engaged dynamic ${preset.toUpperCase()} Chase Cam tracking logistics rover.`, "CHASE");
+        addLogMessage("Tracking autonomous mobile robot (AMR) logistics fleet.", "VIEW");
       } else {
-        addLogMessage(`Camera director focused on ${preset.toUpperCase()} workcell.`, "FOCUS");
+        addLogMessage(`Focused view on ${preset.toUpperCase()} production bay.`, "VIEW");
       }
     });
   });
@@ -343,7 +343,7 @@ function setupControls(canvasContainer) {
       playClick();
       playScan();
       triggerRadarScan();
-      addLogMessage("Initiating factory laser radar sweep & anomaly detection...", "SCAN");
+      addLogMessage("Executing facility-wide diagnostics scan...", "SCAN");
 
       if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
         telemetryWs.send(JSON.stringify({ action: "scan" }));
@@ -430,13 +430,14 @@ function setupControls(canvasContainer) {
     });
   }
 
-  // "🔊 Audio" toggle button
+  // Audio toggle button (default muted)
   const audioBtn = document.getElementById('btn-audio');
   if (audioBtn) {
+    audioBtn.textContent = isMuted() ? "🔇 Audio Off" : "🔊 Audio On";
     audioBtn.addEventListener('click', () => {
       const muted = toggleMute();
-      audioBtn.textContent = muted ? "🔇 Muted" : "🔊 Audio";
-      playClick();
+      audioBtn.textContent = muted ? "🔇 Audio Off" : "🔊 Audio On";
+      if (!muted) playClick();
     });
   }
 
@@ -464,7 +465,7 @@ function setupControls(canvasContainer) {
       if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
         telemetryWs.send(JSON.stringify({ action: "repair", machine_id: mId }));
         repairBtn.disabled = false;
-        repairBtn.textContent = "🔧 Trigger Maintenance & Reset Wear";
+        repairBtn.textContent = "🔧 Execute Maintenance & Reset Wear";
       } else {
         try {
           const resp = await fetch('/maintenance/trigger', {
@@ -487,7 +488,7 @@ function setupControls(canvasContainer) {
           addLogMessage(`Maintenance request error on ${mId}`, "ERROR");
         } finally {
           repairBtn.disabled = false;
-          repairBtn.textContent = "🔧 Trigger Maintenance & Reset Wear";
+          repairBtn.textContent = "🔧 Execute Maintenance & Reset Wear";
         }
       }
     });

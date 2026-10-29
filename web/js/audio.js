@@ -6,7 +6,7 @@
  */
 
 let audioCtx = null;
-let muted = false;
+let muted = true;
 
 function getAudioContext() {
   if (!audioCtx) {
