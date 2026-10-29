@@ -176,18 +176,37 @@ export const MAT = {
   bulkTankWhite: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, metalness: 0.4 }),
   evPedestal: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2, metalness: 0.7 }),
   evGlow: new THREE.MeshBasicMaterial({ color: 0x10b981 }),
+
+  // High-Fidelity Mechanical & Hardware Materials
+  bellowsBlack: new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.85, metalness: 0.1 }),
+  bellowsArmor: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.25, metalness: 0.85 }),
+  hydraulicHose: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7, metalness: 0.3 }),
+  brassFitting: new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.25, metalness: 0.85 }),
+  wireMesh: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.35, metalness: 0.7, wireframe: true }),
+  heatSinkBlue: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.25, metalness: 0.8 }),
+  workLightLed: new THREE.MeshBasicMaterial({ color: 0xf8fafc }),
+  tireRubber: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9, metalness: 0.05 }),
+  wheelRim: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.2, metalness: 0.9 }),
 };
 
 let gridHelperLight = null;
 let gridHelperDark = null;
+export let factoryFloorSurfacePlane = null;
 
 /**
  * Dynamically toggles material colors between Executive Cleanroom (light) and Cyberpunk (dark)
  */
 export function setFactoryTheme(isLight) {
+  // Procedural high-resolution epoxy floor texture handles crisp 2m expansion seams directly
   if (gridHelperLight && gridHelperDark) {
-    gridHelperLight.visible = isLight;
-    gridHelperDark.visible = !isLight;
+    gridHelperLight.visible = false;
+    gridHelperDark.visible = false;
+  }
+
+  if (factoryFloorSurfacePlane) {
+    factoryFloorSurfacePlane.material.map = getFactoryFloorTexture(isLight);
+    factoryFloorSurfacePlane.material.roughness = isLight ? 0.22 : 0.35;
+    factoryFloorSurfacePlane.material.needsUpdate = true;
   }
 
   if (isLight) {
@@ -236,6 +255,1104 @@ export function setFactoryTheme(isLight) {
     MAT.skylineGlass.color.setHex(0x00f3ff);
     MAT.streetlampGlow.color.setHex(0x00f3ff);
   }
+}
+
+// =========================================================================
+// HIGH-FIDELITY PROCEDURAL TEXTURE GENERATORS (Canvas PBR Maps)
+// =========================================================================
+
+let _floorTexLight = null;
+let _floorTexDark = null;
+
+/**
+ * Generates an ultra-crisp 2048x1536 cleanroom epoxy floor texture mapping 64m x 48m:
+ * - 2m x 2m expansion seams with beveled highlights
+ * - 4 Zoned bays with black/yellow hazard perimeter hatching, equipment footprint boxes & stencils
+ * - Central high-visibility safety green pedestrian arterial highway with ISO walking man pictograms,
+ *   zebra crosswalks, speed limit circles (5 km/h), and forklift hazard diamonds
+ * - Dual AMR magnetic navigation tracks with directional chevrons & transit warning text
+ * - Cleanroom entrance corporate portal placard
+ */
+export function getFactoryFloorTexture(isLight = true) {
+  if (isLight && _floorTexLight) return _floorTexLight;
+  if (!isLight && _floorTexDark) return _floorTexDark;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048;
+  canvas.height = 1536;
+  const ctx = canvas.getContext('2d');
+
+  // Math mapping: World (wx: -32..32, wz: -24..24) -> Canvas (cx: 0..2048, cy: 0..1536)
+  const toCx = (wx) => ((wx + 32) / 64) * 2048;
+  const toCy = (wz) => ((wz + 24) / 48) * 1536;
+  const toCw = (w) => (w / 64) * 2048;
+  const toCh = (d) => (d / 48) * 1536;
+
+  // 1. Base High-Gloss Cleanroom Epoxy Ground
+  ctx.fillStyle = isLight ? '#f1f5f9' : '#0a0f19';
+  ctx.fillRect(0, 0, 2048, 1536);
+
+  // 2. 2m x 2m Expansion Joints & Tile Bevels
+  ctx.strokeStyle = isLight ? '#cbd5e1' : '#1e293b';
+  ctx.lineWidth = 1.5;
+  for (let wx = -32; wx <= 32; wx += 2) {
+    const cx = toCx(wx);
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, 1536);
+    ctx.stroke();
+  }
+  for (let wz = -24; wz <= 24; wz += 2) {
+    const cy = toCy(wz);
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(2048, cy);
+    ctx.stroke();
+  }
+
+  // Soft specular bevel highlight on expansion joints
+  ctx.strokeStyle = isLight ? 'rgba(255, 255, 255, 0.45)' : 'rgba(56, 189, 248, 0.08)';
+  ctx.lineWidth = 1.0;
+  for (let wx = -32; wx <= 32; wx += 2) {
+    const cx = toCx(wx) + 1.0;
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, 1536);
+    ctx.stroke();
+  }
+  for (let wz = -24; wz <= 24; wz += 2) {
+    const cy = toCy(wz) + 1.0;
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(2048, cy);
+    ctx.stroke();
+  }
+
+  // 3. Four Manufacturing Bay Foundation Zones
+  const bays = [
+    {
+      id: "BAY 01",
+      name: "5-AXIS PRECISION CNC MACHINING & TURNING",
+      spec: "MIL-STD-1530D • TOLERANCE ±0.002mm • AIRFOIL PROFILES",
+      x: -24, z: -17, w: 22, d: 13,
+      fill: isLight ? '#e2e8f0' : '#0f172a',
+      accent: isLight ? '#0284c7' : '#00f3ff',
+      machines: [
+        { id: "CNC-01", name: "5-AXIS ROUGHING MILL", x: -16, z: -10, w: 7.2, d: 6.4 },
+        { id: "CNC-02", name: "AIRFOIL FINISHING CTR", x: -6, z: -10, w: 6.8, d: 6.0 },
+      ]
+    },
+    {
+      id: "BAY 02",
+      name: "HEAVY HYDRAULIC BULKHEAD FORMING & THERMAL",
+      spec: "AMS-4928 TITANIUM FORGING • HOT-WORK SAFETY ENCLOSURE",
+      x: 2, z: -17, w: 24, d: 13,
+      fill: isLight ? '#e5e7eb' : '#111827',
+      accent: isLight ? '#ea580c' : '#f97316',
+      machines: [
+        { id: "PRESS-01", name: "1000T BULKHEAD FORGE", x: 7, z: -11, w: 7.4, d: 6.6 },
+        { id: "PRESS-02", name: "500T EXTRUSION PRESS", x: 19, z: -11, w: 10.0, d: 4.6 },
+        { id: "FURN-01", name: "VACUUM CARBURIZING", x: 13, z: -2, w: 8.0, d: 5.0 },
+      ]
+    },
+    {
+      id: "BAY 03",
+      name: "6-AXIS ARTICULATED ROBOTICS & LASER QC",
+      spec: "ISO CLASS 7 CLEANROOM • OPTICAL METROLOGY CMM",
+      x: -24, z: 3, w: 22, d: 13,
+      fill: isLight ? '#e0f2fe' : '#091e36',
+      accent: isLight ? '#0284c7' : '#00f3ff',
+      machines: [
+        { id: "ROBOT-01", name: "6-DOF DEBURRING CELL", x: -16, z: 8, w: 6.6, d: 6.6 },
+        { id: "LASER-01", name: "TRIANGULATION QC ARCH", x: -6, z: 8, w: 6.6, d: 5.4 },
+      ]
+    },
+    {
+      id: "BAY 04",
+      name: "CONTINUOUS AVIONICS SMT LINE & PACKOUT",
+      spec: "ESD SAFE ZONE • MIL-STD-1686C FLIGHT CERTIFIED",
+      x: 2, z: 3, w: 24, d: 13,
+      fill: isLight ? '#ecfdf5' : '#042217',
+      accent: isLight ? '#059669' : '#10b981',
+      machines: [
+        { id: "CONV-01", name: "AVIONICS ASSEMBLY LINE", x: 13, z: 8, w: 22.8, d: 3.6 },
+      ]
+    }
+  ];
+
+  bays.forEach(bay => {
+    const bx = toCx(bay.x);
+    const by = toCy(bay.z);
+    const bw = toCw(bay.w);
+    const bh = toCh(bay.d);
+
+    // Bay foundation fill
+    ctx.fillStyle = bay.fill;
+    ctx.fillRect(bx, by, bw, bh);
+
+    // 45-degree hazard perimeter stripe along top and bottom edges
+    const hatchW = 12;
+    ctx.fillStyle = isLight ? '#facc15' : '#eab308';
+    ctx.fillRect(bx, by, bw, hatchW);
+    ctx.fillRect(bx, by + bh - hatchW, bw, hatchW);
+
+    ctx.fillStyle = isLight ? '#0f172a' : '#000000';
+    for (let hx = bx; hx < bx + bw; hx += 24) {
+      // Top hazard border
+      ctx.beginPath();
+      ctx.moveTo(hx, by);
+      ctx.lineTo(hx + 12, by);
+      ctx.lineTo(hx + 24, by + hatchW);
+      ctx.lineTo(hx + 12, by + hatchW);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bottom hazard border
+      ctx.beginPath();
+      ctx.moveTo(hx, by + bh - hatchW);
+      ctx.lineTo(hx + 12, by + bh - hatchW);
+      ctx.lineTo(hx + 24, by + bh);
+      ctx.lineTo(hx + 12, by + bh);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Border outline
+    ctx.strokeStyle = bay.accent;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    // Bay Header Stencil Typography
+    ctx.font = 'bold 24px monospace';
+    ctx.fillStyle = isLight ? '#0f172a' : '#f8fafc';
+    ctx.fillText(`${bay.id} • ${bay.name}`, bx + 18, by + 34);
+    ctx.font = '13px monospace';
+    ctx.fillStyle = isLight ? '#475569' : '#94a3b8';
+    ctx.fillText(bay.spec, bx + 18, by + 52);
+
+    // Machine Footprint Boxes with corner brackets & tags
+    bay.machines.forEach(m => {
+      const mx = toCx(m.x - m.w / 2);
+      const my = toCy(m.z - m.d / 2);
+      const mw = toCw(m.w);
+      const mh = toCh(m.d);
+
+      ctx.strokeStyle = isLight ? 'rgba(15, 23, 42, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([8, 4]);
+      ctx.strokeRect(mx, my, mw, mh);
+      ctx.setLineDash([]);
+
+      // Corner L-brackets
+      const cl = 14;
+      ctx.strokeStyle = bay.accent;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(mx, my + cl); ctx.lineTo(mx, my); ctx.lineTo(mx + cl, my); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx + mw - cl, my); ctx.lineTo(mx + mw, my); ctx.lineTo(mx + mw, my + cl); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx, my + mh - cl); ctx.lineTo(mx, my + mh); ctx.lineTo(mx + cl, my + mh); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx + mw - cl, my + mh); ctx.lineTo(mx + mw, my + mh); ctx.lineTo(mx + mw, my + mh - cl); ctx.stroke();
+
+      // Machine tag label
+      ctx.font = 'bold 15px monospace';
+      ctx.fillStyle = bay.accent;
+      ctx.fillText(`[${m.id}] ${m.name}`, mx + 8, my + mh - 8);
+    });
+  });
+
+  // 4. Central High-Traffic Safety Pedestrian Highway (X: -1.6 to +1.6, Z: -22 to +22)
+  const pwX = toCx(-1.6);
+  const pwW = toCw(3.2);
+  const pwY = toCy(-22);
+  const pwH = toCh(44);
+
+  ctx.fillStyle = isLight ? '#15803d' : '#064e3b';
+  ctx.fillRect(pwX, pwY, pwW, pwH);
+
+  // Yellow Highway Guide Borders
+  ctx.fillStyle = isLight ? '#facc15' : '#eab308';
+  ctx.fillRect(pwX - 4, pwY, 4, pwH);
+  ctx.fillRect(pwX + pwW, pwY, 4, pwH);
+
+  // Cross-aisle pedestrian connector arms at Z = 0
+  const cWalkY = toCy(-1.2);
+  const cWalkH = toCh(2.4);
+  const wArmX = toCx(-24);
+  const wArmW = toCw(22.4);
+  ctx.fillStyle = isLight ? '#15803d' : '#064e3b';
+  ctx.fillRect(wArmX, cWalkY, wArmW, cWalkH);
+  ctx.fillStyle = isLight ? '#facc15' : '#eab308';
+  ctx.fillRect(wArmX, cWalkY - 3, wArmW, 3);
+  ctx.fillRect(wArmX, cWalkY + cWalkH, wArmW, 3);
+
+  const eArmX = toCx(1.6);
+  const eArmW = toCw(24.4);
+  ctx.fillStyle = isLight ? '#15803d' : '#064e3b';
+  ctx.fillRect(eArmX, cWalkY, eArmW, cWalkH);
+  ctx.fillStyle = isLight ? '#facc15' : '#eab308';
+  ctx.fillRect(eArmX, cWalkY - 3, eArmW, 3);
+  ctx.fillRect(eArmX, cWalkY + cWalkH, eArmW, 3);
+
+  // Zebra Crossing Bars at Central Hub
+  ctx.fillStyle = '#ffffff';
+  for (let zx = pwX + 8; zx < pwX + pwW - 12; zx += 20) {
+    ctx.fillRect(zx, cWalkY + 4, 12, cWalkH - 8);
+  }
+
+  // ISO 7010-M024 Walking Person Silhouette
+  function drawWalkingPerson(px, py, scale = 1.0, color = '#ffffff') {
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = color;
+    // Head
+    ctx.beginPath();
+    ctx.arc(0, -22, 6, 0, Math.PI * 2);
+    ctx.fill();
+    // Torso
+    ctx.beginPath();
+    ctx.moveTo(-5, -14);
+    ctx.lineTo(5, -14);
+    ctx.lineTo(3, 2);
+    ctx.lineTo(-3, 2);
+    ctx.closePath();
+    ctx.fill();
+    // Left leg
+    ctx.beginPath();
+    ctx.moveTo(-2, 2);
+    ctx.lineTo(-10, 20);
+    ctx.lineTo(-6, 22);
+    ctx.lineTo(0, 5);
+    ctx.closePath();
+    ctx.fill();
+    // Right leg
+    ctx.beginPath();
+    ctx.moveTo(1, 2);
+    ctx.lineTo(9, 18);
+    ctx.lineTo(13, 17);
+    ctx.lineTo(4, 3);
+    ctx.closePath();
+    ctx.fill();
+    // Arms
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(-4, -10);
+    ctx.lineTo(-12, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(4, -10);
+    ctx.lineTo(10, -2);
+    ctx.lineTo(14, 4);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  [-16, -8, 8, 16].forEach(wz => {
+    drawWalkingPerson(toCx(0), toCy(wz), 0.8, isLight ? '#ffffff' : '#38bdf8');
+  });
+
+  // Forklift / AMR Caution Diamond
+  function drawForkliftCaution(px, py) {
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.moveTo(0, -22);
+    ctx.lineTo(22, 0);
+    ctx.lineTo(0, 22);
+    ctx.lineTo(-22, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-2.5, -12, 5, 14);
+    ctx.beginPath();
+    ctx.arc(0, 8, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  drawForkliftCaution(toCx(0), toCy(-3.5));
+  drawForkliftCaution(toCx(0), toCy(3.5));
+
+  // Speed Limit Circle (MAX 5 KM/H)
+  function drawSpeedLimit(px, py) {
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.beginPath();
+    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('5', 0, -4);
+    ctx.font = 'bold 8px monospace';
+    ctx.fillText('KM/H', 0, 8);
+    ctx.restore();
+  }
+  drawSpeedLimit(toCx(0), toCy(-12));
+  drawSpeedLimit(toCx(0), toCy(12));
+
+  // 5. Dual AMR Magnetic Guidance Tracks
+  const trackColor = isLight ? '#0284c7' : '#00f3ff';
+  ctx.save();
+  ctx.strokeStyle = trackColor;
+  ctx.lineWidth = 3.5;
+  ctx.setLineDash([14, 8]);
+
+  const oLeft = toCx(-22);
+  const oRight = toCx(22);
+  const oTop = toCy(-16);
+  const oBottom = toCy(16);
+  ctx.strokeRect(oLeft, oTop, oRight - oLeft, oBottom - oTop);
+
+  const iLeft = toCx(-10);
+  const iRight = toCx(0);
+  const iTop = toCy(-12);
+  const iBottom = toCy(12);
+  ctx.strokeRect(iLeft, iTop, iRight - iLeft, iBottom - iTop);
+  ctx.setLineDash([]);
+
+  ctx.font = 'bold 12px monospace';
+  ctx.fillStyle = trackColor;
+  ctx.textAlign = 'center';
+  ctx.fillText('◄◄ AMR NAVIGATION TRACK 01 — AUTOMATIC AGV RIGHT-OF-WAY — KEEP CLEAR ◄◄', toCx(0), oTop - 8);
+  ctx.fillText('►► AMR NAVIGATION TRACK 01 — RECIRCULATION RETURN LOOP ►►', toCx(0), oBottom + 16);
+  ctx.restore();
+
+  // 6. South Main Cleanroom Entrance Portal Placard
+  const entX = toCx(0);
+  const entY = toCy(22.2);
+  ctx.save();
+  ctx.fillStyle = isLight ? '#0f172a' : '#1e293b';
+  ctx.fillRect(entX - 280, entY - 24, 560, 48);
+  ctx.strokeStyle = isLight ? '#0284c7' : '#00f3ff';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(entX - 280, entY - 24, 560, 48);
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('TITAN AEROSPACE ADVANCED PROPULSION & AVIONICS — ZERO DEFECTS', entX, entY);
+  ctx.font = '11px monospace';
+  ctx.fillStyle = isLight ? '#38bdf8' : '#00f3ff';
+  ctx.fillText('AUTONOMOUS DIGITAL TWIN OPERATIONS CENTER • AS9100D REV D CERTIFIED', entX, entY + 16);
+  ctx.restore();
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 8;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+
+  if (isLight) _floorTexLight = tex;
+  else _floorTexDark = tex;
+
+  return tex;
+}
+
+let _diamondPlateTex = null;
+export function getDiamondPlateTexture() {
+  if (_diamondPlateTex) return _diamondPlateTex;
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(0, 0, 256, 256);
+
+  for (let y = 0; y < 256; y += 32) {
+    for (let x = 0; x < 256; x += 32) {
+      // First diamond
+      ctx.save();
+      ctx.translate(x + 16, y + 16);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.ellipse(1, 1, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(-1, -1, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Second diamond perpendicular
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-Math.PI / 4);
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.ellipse(1, 1, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(-1, -1, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  _diamondPlateTex = new THREE.CanvasTexture(canvas);
+  _diamondPlateTex.wrapS = THREE.RepeatWrapping;
+  _diamondPlateTex.wrapT = THREE.RepeatWrapping;
+  _diamondPlateTex.repeat.set(4, 4);
+  return _diamondPlateTex;
+}
+
+let _circuitTex = null;
+export function getCircuitBoardTexture() {
+  if (_circuitTex) return _circuitTex;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  // Deep matte green soldermask
+  ctx.fillStyle = '#0a3818';
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Gold ENIG Traces
+  ctx.strokeStyle = '#d4af37';
+  ctx.lineWidth = 2.5;
+
+  for (let y = 40; y < 480; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(30, y);
+    ctx.lineTo(160, y);
+    ctx.lineTo(200, y + 20);
+    ctx.lineTo(340, y + 20);
+    ctx.lineTo(380, y);
+    ctx.lineTo(480, y);
+    ctx.stroke();
+  }
+
+  for (let x = 60; x < 460; x += 50) {
+    ctx.beginPath();
+    ctx.moveTo(x, 30);
+    ctx.lineTo(x, 150);
+    ctx.lineTo(x + 15, 165);
+    ctx.lineTo(x + 15, 360);
+    ctx.stroke();
+  }
+
+  // Silver Solder Pads & Vias
+  ctx.fillStyle = '#cbd5e1';
+  for (let vy = 30; vy < 500; vy += 25) {
+    for (let vx = 30; vx < 500; vx += 35) {
+      ctx.beginPath();
+      ctx.arc(vx, vy, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Gold Edge Connector Fingers along bottom
+  ctx.fillStyle = '#f59e0b';
+  for (let fx = 40; fx < 470; fx += 14) {
+    ctx.fillRect(fx, 470, 8, 38);
+  }
+
+  // IC Footprint 1: 64-Pin Quad Flat Package (QFP) Processor
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(180, 180, 150, 150);
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(180, 180, 150, 150);
+
+  // Pin pads around QFP
+  ctx.fillStyle = '#d4af37';
+  for (let p = 190; p <= 320; p += 10) {
+    ctx.fillRect(p, 168, 5, 10);
+    ctx.fillRect(p, 332, 5, 10);
+    ctx.fillRect(168, p, 10, 5);
+    ctx.fillRect(332, p, 10, 5);
+  }
+
+  // Laser Etched Processor Logo
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = 'bold 13px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('TITAN-X1', 255, 240);
+  ctx.font = '10px monospace';
+  ctx.fillText('AVIONICS SOC', 255, 258);
+  ctx.fillText('MIL-STD-810H', 255, 274);
+
+  // SMD Resistor / Capacitor Arrays
+  ctx.fillStyle = '#0f172a';
+  for (let sy = 70; sy <= 130; sy += 18) {
+    for (let sx = 80; sx <= 160; sx += 22) {
+      ctx.fillRect(sx, sy, 12, 6);
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(sx, sy, 2, 6);
+      ctx.fillRect(sx + 10, sy, 2, 6);
+      ctx.fillStyle = '#0f172a';
+    }
+  }
+
+  // White Silkscreen Markings & Barcode
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('TITAN AVIONICS FC-900 REV.D', 40, 50);
+  ctx.font = '9px monospace';
+  ctx.fillText('S/N: 2026-X8842-FLIGHT', 40, 64);
+  ctx.fillText('ESD SENSITIVE — CLASS 3B', 40, 78);
+
+  // Data Matrix QR code mockup
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(410, 40, 50, 50);
+  ctx.fillStyle = '#0a3818';
+  for (let qy = 44; qy < 86; qy += 7) {
+    for (let qx = 414; qx < 456; qx += 7) {
+      if ((qx + qy) % 14 === 0 || (qx * qy) % 21 === 0) {
+        ctx.fillRect(qx, qy, 5, 5);
+      }
+    }
+  }
+
+  _circuitTex = new THREE.CanvasTexture(canvas);
+  return _circuitTex;
+}
+
+let _bolsterTex = null;
+export function getBolsterPlateTexture() {
+  if (_bolsterTex) return _bolsterTex;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Machined surface grinding circular swirls
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.lineWidth = 1;
+  for (let r = 20; r < 350; r += 12) {
+    ctx.beginPath();
+    ctx.arc(256, 256, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // T-Slot Clamping Channels
+  const slotW = 16;
+  const slotSpacing = 64;
+  for (let x = slotSpacing; x < 512; x += slotSpacing) {
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x - slotW / 2, 0, slotW, 512);
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - slotW / 2, 0); ctx.lineTo(x - slotW / 2, 512);
+    ctx.moveTo(x + slotW / 2, 0); ctx.lineTo(x + slotW / 2, 512);
+    ctx.stroke();
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x - slotW / 4, 0, slotW / 2, 512);
+  }
+
+  // Bolster Mounting Stud Holes
+  for (let y = slotSpacing; y < 512; y += slotSpacing) {
+    for (let x = slotSpacing / 2; x < 512; x += slotSpacing) {
+      ctx.fillStyle = '#020617';
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  _bolsterTex = new THREE.CanvasTexture(canvas);
+  return _bolsterTex;
+}
+
+let _hotForgingTex = null;
+export function getHotForgingTexture() {
+  if (_hotForgingTex) return _hotForgingTex;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  // Radial thermal gradient for forged billet: 1150°C glowing titanium
+  const grad = ctx.createRadialGradient(256, 256, 30, 256, 256, 250);
+  grad.addColorStop(0, '#ffffff');    // White-hot core
+  grad.addColorStop(0.25, '#fef08a'); // Radiant yellow
+  grad.addColorStop(0.55, '#f97316'); // Bright incandescent orange 1050°C
+  grad.addColorStop(0.8, '#dc2626');  // Deep cherry red 900°C
+  grad.addColorStop(0.95, '#7f1d1d'); // Cooling flank
+  grad.addColorStop(1.0, '#360909');  // Dark oxidized crust
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 512);
+
+  ctx.fillStyle = 'rgba(30, 10, 10, 0.25)';
+  for (let i = 0; i < 400; i++) {
+    const rx = Math.random() * 512;
+    const ry = Math.random() * 512;
+    const dist = Math.hypot(rx - 256, ry - 256);
+    if (dist > 90) {
+      ctx.beginPath();
+      ctx.arc(rx, ry, Math.random() * 8 + 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  _hotForgingTex = new THREE.CanvasTexture(canvas);
+  return _hotForgingTex;
+}
+
+const _decalCache = new Map();
+export function getEquipmentDecalTexture(type = 'danger', line1 = 'HIGH VOLTAGE', line2 = '480 VAC 3-PHASE') {
+  const key = `${type}_${line1}_${line2}`;
+  if (_decalCache.has(key)) return _decalCache.get(key);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  if (type === 'danger') {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 256, 128);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(4, 4, 248, 36);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('DANGER', 128, 29);
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.moveTo(35, 110); ctx.lineTo(55, 60); ctx.lineTo(75, 110);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('!', 55, 105);
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(line1, 85, 78);
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#334155';
+    ctx.fillText(line2, 85, 102);
+  } else if (type === 'caution') {
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(0, 0, 256, 128);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(4, 4, 248, 36);
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CAUTION', 128, 29);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(line1, 128, 75);
+    ctx.font = '12px monospace';
+    ctx.fillText(line2, 128, 100);
+  } else {
+    // Manufacturer badge (silver brushed / corporate dark)
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, 256, 128);
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(4, 4, 248, 120);
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(line1, 128, 55);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px monospace';
+    ctx.fillText(line2, 128, 85);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  _decalCache.set(key, tex);
+  return tex;
+}
+
+const _placardCache = new Map();
+export function getBarcodePlacardTexture(code = 'RACK A-01-01', desc = 'AERO SPARS') {
+  const key = `${code}_${desc}`;
+  if (_placardCache.has(key)) return _placardCache.get(key);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 256, 128);
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(4, 4, 248, 120);
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 18px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(code, 128, 36);
+
+  // Barcode simulation lines
+  ctx.fillStyle = '#000000';
+  let bx = 30;
+  while (bx < 226) {
+    const barW = (bx % 7 === 0 || bx % 11 === 0) ? 4 : 2;
+    ctx.fillRect(bx, 48, barW, 46);
+    bx += barW + ((bx % 5 === 0) ? 4 : 2);
+  }
+
+  ctx.fillStyle = '#475569';
+  ctx.font = '11px monospace';
+  ctx.fillText(desc, 128, 112);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  _placardCache.set(key, tex);
+  return tex;
+}
+
+/**
+ * Creates pleated accordion way cover (bellows) for machine slide axes
+ */
+export function createAccordionBellows(width = 1.0, height = 0.6, depth = 0.8, folds = 6, isVertical = false) {
+  const group = new THREE.Group();
+  const foldStep = depth / folds;
+  for (let i = 0; i < folds; i++) {
+    const z = -depth / 2 + i * foldStep + foldStep / 2;
+    const pleatGeo = new THREE.BoxGeometry(width, height, foldStep * 0.7);
+    const pleat = new THREE.Mesh(pleatGeo, MAT.bellowsBlack);
+    pleat.position.set(0, 0, z);
+    group.add(pleat);
+
+    const armorGeo = new THREE.BoxGeometry(width + 0.04, height + 0.04, 0.02);
+    const armor = new THREE.Mesh(armorGeo, MAT.bellowsArmor);
+    armor.position.set(0, 0, z + foldStep * 0.35);
+    group.add(armor);
+  }
+  if (isVertical) {
+    group.rotation.x = Math.PI / 2;
+  }
+  return group;
+}
+
+/**
+ * Creates sculpted 5-axis aerospace titanium blisk (bladed disk) workpiece
+ */
+export function createBliskWorkpiece() {
+  const bliskGroup = new THREE.Group();
+
+  // Central Turned Titanium Hub
+  const hubGeo = new THREE.CylinderGeometry(0.55, 0.65, 0.35, 24);
+  const hub = new THREE.Mesh(hubGeo, MAT.workpieceAlloy);
+  bliskGroup.add(hub);
+
+  // Clamping Arbor Stud with Hex Nut
+  const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.55, 12), MAT.steelChrome);
+  stud.position.y = 0.15;
+  bliskGroup.add(stud);
+
+  const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.15, 6), MAT.hazardDark);
+  nut.position.y = 0.35;
+  bliskGroup.add(nut);
+
+  // 8 Aerodynamic Curved Titanium Blades with Individual 3D Twist Angles
+  const bladeCount = 8;
+  for (let b = 0; b < bladeCount; b++) {
+    const angle = (b / bladeCount) * Math.PI * 2;
+    const bladeArm = new THREE.Group();
+    bladeArm.rotation.y = angle;
+
+    const bladeGeo = new THREE.BoxGeometry(0.08, 0.65, 0.36);
+    const bladeMesh = new THREE.Mesh(bladeGeo, MAT.workpieceAlloy);
+    bladeMesh.position.set(0.68, 0.1, 0);
+    bladeMesh.rotation.z = -0.35;
+    bladeMesh.rotation.x = 0.45;
+    bladeArm.add(bladeMesh);
+
+    bliskGroup.add(bladeArm);
+  }
+  bliskGroup.castShadow = true;
+  return bliskGroup;
+}
+
+/**
+ * Creates sculpted turbine airfoil blade with fir-tree dovetail root and aerodynamic cambered twist
+ */
+export function createAirfoilBlade() {
+  const bladeGroup = new THREE.Group();
+
+  // 1. Dovetail / Fir-Tree Root Mount (stepped clamping base)
+  const rootBase = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.44), MAT.structuralSteel);
+  bladeGroup.add(rootBase);
+
+  // Stepped root serrations
+  [-0.1, 0.0, 0.1].forEach((sy, i) => {
+    const serration = new THREE.Mesh(new THREE.BoxGeometry(0.38 - i * 0.04, 0.06, 0.44), MAT.hazardDark);
+    serration.position.y = sy;
+    bladeGroup.add(serration);
+  });
+
+  // 2. Transition Platform / Collar
+  const platform = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.08, 0.58), MAT.steelChrome);
+  platform.position.y = 0.18;
+  bladeGroup.add(platform);
+
+  // 3. Aerodynamic Twisted Airfoil Blade Sections (3 stacked lofted sections with progressive twist)
+  const foilSections = [
+    { y: 0.45, w: 0.14, h: 0.45, d: 0.48, rotY: 0.0, rotX: 0.1 },
+    { y: 0.85, w: 0.10, h: 0.45, d: 0.42, rotY: 0.25, rotX: 0.15 },
+    { y: 1.25, w: 0.06, h: 0.45, d: 0.36, rotY: 0.45, rotX: 0.2 },
+  ];
+
+  foilSections.forEach(s => {
+    const foil = new THREE.Mesh(new THREE.BoxGeometry(s.w, s.h, s.d), MAT.workpieceAlloy);
+    foil.position.y = s.y;
+    foil.rotation.y = s.rotY;
+    foil.rotation.x = s.rotX;
+    bladeGroup.add(foil);
+
+    // Bullnose leading edge
+    const edge = new THREE.Mesh(new THREE.CylinderGeometry(s.w * 0.5, s.w * 0.5, s.h, 12), MAT.steelChrome);
+    edge.position.set(0, s.y, s.d * 0.48);
+    edge.rotation.y = s.rotY;
+    bladeGroup.add(edge);
+  });
+
+  // 4. Shrouded Blade Tip Cap
+  const tip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.38), MAT.workpieceAlloy);
+  tip.position.y = 1.5;
+  bladeGroup.add(tip);
+
+  bladeGroup.castShadow = true;
+  return bladeGroup;
+}
+
+/**
+ * Creates sculpted aerospace structural bulkhead forging workpiece.
+ * MUST return a THREE.Mesh with MAT.hotBillet so scene.js can animate press1.hotBillet.material.emissiveIntensity.
+ */
+export function createBulkheadForging() {
+  // Main Bulkhead Flange Base Plate (Mesh with MAT.hotBillet)
+  const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 1.8), MAT.hotBillet);
+  baseMesh.castShadow = true;
+
+  // Center Machined Boss Ring
+  const centerBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.35, 24), MAT.hotBillet);
+  centerBoss.position.y = 0.15;
+  baseMesh.add(centerBoss);
+
+  // Longitudinal Center Rib
+  const longRib = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.28, 0.16), MAT.hotBillet);
+  longRib.position.y = 0.15;
+  baseMesh.add(longRib);
+
+  // Transverse Cross Rib
+  const crossRib = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.28, 1.7), MAT.hotBillet);
+  crossRib.position.y = 0.15;
+  baseMesh.add(crossRib);
+
+  // 4 Stiffener Pocket Framing Edges
+  [-1.1, 1.1].forEach(px => {
+    const edgeRibX = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.25, 1.7), MAT.hotBillet);
+    edgeRibX.position.set(px, 0.14, 0);
+    baseMesh.add(edgeRibX);
+  });
+  [-0.8, 0.8].forEach(pz => {
+    const edgeRibZ = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.25, 0.14), MAT.hotBillet);
+    edgeRibZ.position.set(0, 0.14, pz);
+    baseMesh.add(edgeRibZ);
+  });
+
+  return baseMesh;
+}
+
+let _metrologyHUDTex = null;
+export function getMetrologyHUDTexture() {
+  if (_metrologyHUDTex) return _metrologyHUDTex;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 384;
+  const ctx = canvas.getContext('2d');
+
+  // Dark slate HUD background
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, 512, 384);
+
+  // Top header bar
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, 512, 42);
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, 512, 42);
+
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 15px monospace';
+  ctx.fillText('ZEISS METROTOM 1500 // 3D LASER PROFILER', 16, 26);
+
+  // Status Badge: CPK 1.67 PASS
+  ctx.fillStyle = '#064e3b';
+  ctx.fillRect(360, 8, 136, 26);
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(360, 8, 136, 26);
+  ctx.fillStyle = '#34d399';
+  ctx.font = 'bold 13px monospace';
+  ctx.fillText('CPK 1.67 PASS', 374, 25);
+
+  // 3D Point-Cloud Deviation Heatmap Simulation Box
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(16, 56, 280, 220);
+  ctx.strokeStyle = '#334155';
+  ctx.strokeRect(16, 56, 280, 220);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+  ctx.lineWidth = 1;
+  for (let x = 16; x < 296; x += 28) {
+    ctx.beginPath(); ctx.moveTo(x, 56); ctx.lineTo(x, 276); ctx.stroke();
+  }
+  for (let y = 56; y < 276; y += 22) {
+    ctx.beginPath(); ctx.moveTo(16, y); ctx.lineTo(296, y); ctx.stroke();
+  }
+
+  // Draw 3D Airfoil contour deviation heatmap
+  const grad = ctx.createLinearGradient(40, 70, 260, 250);
+  grad.addColorStop(0, '#0284c7');    // -0.015 mm
+  grad.addColorStop(0.3, '#10b981');  // 0.000 mm nominal
+  grad.addColorStop(0.6, '#34d399');  // +0.002 mm nominal
+  grad.addColorStop(0.85, '#eab308'); // +0.008 mm
+  grad.addColorStop(1.0, '#ef4444');  // +0.018 mm out of tol
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(156, 166, 100, 48, 0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Colorbar legend on side of heatmap
+  const legGrad = ctx.createLinearGradient(0, 66, 0, 266);
+  legGrad.addColorStop(0, '#ef4444');
+  legGrad.addColorStop(0.25, '#eab308');
+  legGrad.addColorStop(0.5, '#10b981');
+  legGrad.addColorStop(0.75, '#06b6d4');
+  legGrad.addColorStop(1.0, '#0284c7');
+  ctx.fillStyle = legGrad;
+  ctx.fillRect(276, 66, 10, 200);
+
+  // Measurement Metrics Dashboard on Right Side
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(310, 56, 186, 220);
+  ctx.strokeStyle = '#334155';
+  ctx.strokeRect(310, 56, 186, 220);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px monospace';
+  ctx.fillText('FEATURE INSPECTION', 324, 78);
+
+  const metrics = [
+    { label: 'Chord Length', val: '142.503 mm', pass: true },
+    { label: 'Camber Angle', val: '28.42 deg', pass: true },
+    { label: 'Max Deviation', val: '+0.003 mm', pass: true },
+    { label: 'Root Stepping', val: '18.001 mm', pass: true },
+    { label: 'Surface Ra', val: '0.42 um', pass: true },
+    { label: 'Scan Pts', val: '2,480,192', pass: true }
+  ];
+
+  metrics.forEach((m, i) => {
+    const my = 104 + i * 26;
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px monospace';
+    ctx.fillText(m.label, 324, my);
+    ctx.fillStyle = m.pass ? '#38bdf8' : '#f87171';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(m.val, 324, my + 13);
+  });
+
+  // Bottom Tolerance Gaussian Bell Curve / Histogram
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(16, 290, 480, 80);
+  ctx.strokeStyle = '#1e293b';
+  ctx.strokeRect(16, 290, 480, 80);
+
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px monospace';
+  ctx.fillText('PROCESS DISTRIBUTION (3-SIGMA TOLERANCE BAND +/- 0.010 mm)', 28, 308);
+
+  // Bell curve
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= 100; i++) {
+    const x = 40 + i * 4.3;
+    const norm = (i - 50) / 16;
+    const y = 360 - Math.exp(-0.5 * norm * norm) * 45;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Nominal center mark
+  ctx.strokeStyle = '#10b981';
+  ctx.beginPath(); ctx.moveTo(255, 312); ctx.lineTo(255, 362); ctx.stroke();
+  ctx.fillStyle = '#10b981';
+  ctx.font = '9px monospace';
+  ctx.fillText('NOMINAL', 236, 322);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  _metrologyHUDTex = tex;
+  return tex;
+}
+
+const _amrScreenCache = new Map();
+export function getAMRScreenTexture(amrId = 'AGV-01') {
+  if (_amrScreenCache.has(amrId)) return _amrScreenCache.get(amrId);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 160;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, 256, 160);
+
+  // Header
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(0, 0, 256, 28);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 13px monospace';
+  ctx.fillText(`OTTO 1500 // ${amrId}`, 12, 19);
+
+  // Battery bar
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(12, 40, 232, 22);
+  ctx.fillStyle = '#10b981';
+  ctx.fillRect(14, 42, 218, 18);
+  ctx.fillStyle = '#090d16';
+  ctx.font = 'bold 11px monospace';
+  ctx.fillText('BATTERY: 94% [CHARGING OPTIMAL]', 24, 55);
+
+  // Status metrics
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px monospace';
+  ctx.fillText('NAV MODE: SLAM AUTO', 14, 86);
+  ctx.fillText('SPEED:    0.85 m/s', 14, 106);
+  ctx.fillText('MISSION:  AERO TRAY ROUTE 4', 14, 126);
+  ctx.fillText('SAFETY:   360 LIDAR ACTIVE', 14, 146);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  _amrScreenCache.set(amrId, tex);
+  return tex;
 }
 
 // Texture singletons
@@ -746,37 +1863,54 @@ export function createHighBayLighting(parentGroup) {
 export function createPedestrianWalkways(parentGroup) {
   const walkGroup = new THREE.Group();
 
-  const mainWalk = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.02, 44.0), MAT.walkwayGreen);
-  mainWalk.position.set(0, 0.03, 0);
-  walkGroup.add(mainWalk);
+  // 3D Physical Safety Hardware along the pedestrian highway
+  // Corner Safety Bollards at the central crossroads (X = ±1.8, Z = ±1.5)
+  [[-1.8, -1.5], [1.8, -1.5], [-1.8, 1.5], [1.8, 1.5]].forEach(([bx, bz]) => {
+    const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.1, 16), MAT.safetyBollard);
+    bollard.position.set(bx, 0.55, bz);
+    bollard.castShadow = true;
+    walkGroup.add(bollard);
 
-  [-1.6, 1.6].forEach(bx => {
-    const bLine = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.025, 44.0), MAT.hazardYellow);
-    bLine.position.set(bx, 0.035, 0);
-    walkGroup.add(bLine);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), MAT.hazardDark);
+    cap.position.set(bx, 1.1, bz);
+    walkGroup.add(cap);
   });
 
-  const crossConfigs = [
-    { x: -11, z: 0, w: 20, d: 2.4 },
-    { x: 13, z: 0, w: 24, d: 2.4 },
+  // Industrial Yellow Steel Safety Handrails at crosswalk corners
+  const railConfigs = [
+    { x: -2.0, z: -4.5, l: 5.0, rotY: 0 },
+    { x: 2.0, z: -4.5, l: 5.0, rotY: 0 },
+    { x: -2.0, z: 4.5, l: 5.0, rotY: 0 },
+    { x: 2.0, z: 4.5, l: 5.0, rotY: 0 },
   ];
-  crossConfigs.forEach(c => {
-    const cWalk = new THREE.Mesh(new THREE.BoxGeometry(c.w, 0.02, c.d), MAT.walkwayGreen);
-    cWalk.position.set(c.x, 0.03, c.z);
-    walkGroup.add(cWalk);
 
-    [-c.d / 2, c.d / 2].forEach(bz => {
-      const bLine = new THREE.Mesh(new THREE.BoxGeometry(c.w, 0.025, 0.14), MAT.hazardYellow);
-      bLine.position.set(c.x, 0.035, c.z + bz);
-      walkGroup.add(bLine);
-    });
+  railConfigs.forEach(rc => {
+    // Top Rail (Y = 1.05)
+    const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, rc.l), MAT.hazardYellow);
+    topRail.position.set(rc.x, 1.05, rc.z);
+    walkGroup.add(topRail);
+
+    // Mid Rail (Y = 0.55)
+    const midRail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, rc.l), MAT.hazardYellow);
+    midRail.position.set(rc.x, 0.55, rc.z);
+    walkGroup.add(midRail);
+
+    // Toe Kick Plate (Y = 0.08)
+    const kickPlate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, rc.l), MAT.hazardDark);
+    kickPlate.position.set(rc.x, 0.08, rc.z);
+    walkGroup.add(kickPlate);
+
+    // Upright Stanchions
+    for (let pz = rc.z - rc.l / 2; pz <= rc.z + rc.l / 2; pz += rc.l / 2) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.05, 10), MAT.hazardYellow);
+      post.position.set(rc.x, 0.525, pz);
+      walkGroup.add(post);
+
+      const footPlate = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.16), MAT.structuralSteel);
+      footPlate.position.set(rc.x, 0.015, pz);
+      walkGroup.add(footPlate);
+    }
   });
-
-  for (let sx = -1.2; sx <= 1.2; sx += 0.5) {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.03, 2.2), MAT.portalWhite);
-    stripe.position.set(sx, 0.04, 20.5);
-    walkGroup.add(stripe);
-  }
 
   parentGroup.add(walkGroup);
 }
@@ -787,7 +1921,7 @@ export function createPedestrianWalkways(parentGroup) {
 export function createFactoryFloor(scene) {
   const group = new THREE.Group();
 
-  // Main ground slab (64m x 48m)
+  // 1. Structural Concrete Sub-Slab (64m x 48m x 0.8m)
   const floorGeo = new THREE.BoxGeometry(64, 0.8, 48);
   const floorMesh = new THREE.Mesh(floorGeo, MAT.floorEpoxy);
   floorMesh.position.y = -0.4;
@@ -800,10 +1934,24 @@ export function createFactoryFloor(scene) {
   rimMesh.position.y = -0.7;
   group.add(rimMesh);
 
-  // Tactical Floor Grids: Light Mode (Subtle Slate/Cobalt) and Dark Mode (Electric Neon Cyan / Deep Slate)
+  // 2. High-Fidelity Textured Cleanroom Epoxy Floor Surface Plane
+  const floorPlaneGeo = new THREE.PlaneGeometry(64, 48);
+  const floorTex = getFactoryFloorTexture(true); // Default Executive Cleanroom Daylight
+  const floorPlaneMat = new THREE.MeshStandardMaterial({
+    map: floorTex,
+    roughness: 0.22,
+    metalness: 0.15,
+  });
+  factoryFloorSurfacePlane = new THREE.Mesh(floorPlaneGeo, floorPlaneMat);
+  factoryFloorSurfacePlane.rotation.x = -Math.PI / 2;
+  factoryFloorSurfacePlane.position.y = 0.005;
+  factoryFloorSurfacePlane.receiveShadow = true;
+  group.add(factoryFloorSurfacePlane);
+
+  // GridHelpers (disabled to showcase procedural cleanroom texture graphics)
   gridHelperLight = new THREE.GridHelper(60, 60, 0x0284c7, 0x94a3b8);
   gridHelperLight.position.y = 0.01;
-  gridHelperLight.visible = true;
+  gridHelperLight.visible = false;
   group.add(gridHelperLight);
 
   gridHelperDark = new THREE.GridHelper(60, 60, 0x00f3ff, 0x1e293b);
@@ -811,30 +1959,24 @@ export function createFactoryFloor(scene) {
   gridHelperDark.visible = false;
   group.add(gridHelperDark);
 
-  // 4 ZONED FOUNDATION PADS
-  const padsConfig = [
-    // Bay 1: Machining Bay (CNC-01 & CNC-02)
-    { x: -11, z: -10, w: 22, d: 11, tag: "BAY 1: CNC MACHINING" },
-    // Bay 2: Heavy Forming & Thermal (PRESS-01, PRESS-02, FURN-01)
-    { x: 13, z: -10, w: 25, d: 13, tag: "BAY 2: FORMING & HEAT" },
-    // Bay 3: Robotics & Metrology (ROBOT-01, LASER-01)
-    { x: -11, z: 9, w: 22, d: 11, tag: "BAY 3: ROBOTICS & QC" },
-    // Bay 4: Assembly Line (CONV-01)
-    { x: 13, z: 9, w: 25, d: 11, tag: "BAY 4: AVIONICS ASSEMBLY" },
+  // 3. Precision Machined Steel Inertia Sole Plates under heavy machinery
+  const machineFootprints = [
+    { x: -16, z: -10, w: 7.2, d: 6.4 }, // CNC-01
+    { x: -6, z: -10, w: 6.8, d: 6.0 },  // CNC-02
+    { x: 7, z: -11, w: 7.4, d: 6.6 },   // PRESS-01
+    { x: 19, z: -11, w: 10.0, d: 4.6 }, // PRESS-02
+    { x: 13, z: -2, w: 8.0, d: 5.0 },   // FURN-01
+    { x: -16, z: 8, w: 6.6, d: 6.6 },   // ROBOT-01
+    { x: -6, z: 8, w: 6.6, d: 5.4 },    // LASER-01
+    { x: 13, z: 8, w: 22.8, d: 3.6 },   // CONV-01
   ];
 
-  padsConfig.forEach(pad => {
-    const padGeo = new THREE.BoxGeometry(pad.w, 0.14, pad.d);
-    const padMesh = new THREE.Mesh(padGeo, MAT.foundationPad);
-    padMesh.position.set(pad.x, 0.07, pad.z);
-    padMesh.receiveShadow = true;
-    group.add(padMesh);
-
-    // Hazard border strip
-    const borderGeo = new THREE.BoxGeometry(pad.w + 0.3, 0.04, pad.d + 0.3);
-    const borderMesh = new THREE.Mesh(borderGeo, MAT.hazardYellow);
-    borderMesh.position.set(pad.x, 0.02, pad.z);
-    group.add(borderMesh);
+  machineFootprints.forEach(fp => {
+    const soleGeo = new THREE.BoxGeometry(fp.w, 0.02, fp.d);
+    const soleMesh = new THREE.Mesh(soleGeo, MAT.structuralSteel);
+    soleMesh.position.set(fp.x, 0.01, fp.z);
+    soleMesh.receiveShadow = true;
+    group.add(soleMesh);
   });
 
   // EXECUTIVE CLEANROOM ENTRANCE PORTAL & BRANDING (TITAN AEROSPACE)
@@ -846,10 +1988,10 @@ export function createFactoryFloor(scene) {
   createWarehouseRack(group, -22, 18);
   createWarehouseRack(group, 22, 18);
 
-  // DUAL AMR NAVIGATION CORRIDORS
+  // DUAL AMR NAVIGATION CORRIDORS & OPTICAL WAYPOINT DISCS
   createDualCorridorPaths(group);
 
-  // HIGH-VISIBILITY PEDESTRIAN SAFETY WALKWAYS & CROSSWALKS
+  // HIGH-VISIBILITY PEDESTRIAN SAFETY HARDWARE & BOLLARDS
   createPedestrianWalkways(group);
 
   // INDUSTRIAL SHOP-FLOOR FURNITURE & SAFETY STATIONS
@@ -925,6 +2067,7 @@ function createWarehouseRack(parentGroup, posX, posZ) {
   const rackDepth = 2.2;
   const rackHeight = 8.5;
 
+  // 4 Main Upright Posts with Teardrop Blue Enamel Finish
   const postGeo = new THREE.BoxGeometry(0.2, rackHeight, 0.2);
   [-rackWidth / 2, rackWidth / 2].forEach(x => {
     [-rackDepth / 2, rackDepth / 2].forEach(z => {
@@ -932,11 +2075,25 @@ function createWarehouseRack(parentGroup, posX, posZ) {
       post.position.set(x, rackHeight / 2, z);
       post.castShadow = true;
       rackGroup.add(post);
+
+      // Floor Anchor Base Plate
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.35), MAT.structuralSteel);
+      foot.position.set(x, 0.02, z);
+      rackGroup.add(foot);
     });
+
+    // Diagonal Cross-Bracing Trusses between front and rear uprights
+    for (let ty = 1.0; ty < rackHeight - 1.5; ty += 2.4) {
+      const brace = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, rackDepth * 1.25, 8), MAT.structuralSteel);
+      brace.rotation.x = Math.PI / 4;
+      brace.position.set(x, ty + 1.0, 0);
+      rackGroup.add(brace);
+    }
   });
 
   const tierY = [1.4, 4.0, 6.6];
-  tierY.forEach(y => {
+  tierY.forEach((y, tIdx) => {
+    // Heavy Orange Step Beams (Front & Back)
     const beamGeo = new THREE.BoxGeometry(rackWidth, 0.25, 0.12);
     [-rackDepth / 2, rackDepth / 2].forEach(z => {
       const beam = new THREE.Mesh(beamGeo, MAT.rackOrange);
@@ -944,17 +2101,89 @@ function createWarehouseRack(parentGroup, posX, posZ) {
       rackGroup.add(beam);
     });
 
-    [-2.4, 0, 2.4].forEach(px => {
-      const palGeo = new THREE.BoxGeometry(1.9, 0.18, 1.8);
-      const pal = new THREE.Mesh(palGeo, MAT.woodPallet);
-      pal.position.set(px, y + 0.1, 0);
-      rackGroup.add(pal);
+    // Wire Mesh Deck Panels on the shelf
+    const deckGeo = new THREE.BoxGeometry(rackWidth - 0.2, 0.04, rackDepth - 0.2);
+    const deck = new THREE.Mesh(deckGeo, MAT.wireMesh);
+    deck.position.set(0, y + 0.14, 0);
+    rackGroup.add(deck);
 
-      const crateGeo = new THREE.BoxGeometry(1.4, 1.1, 1.4);
-      const crate = new THREE.Mesh(crateGeo, MAT.workpieceAlloy);
-      crate.position.set(px, y + 0.74, 0);
-      crate.castShadow = true;
-      rackGroup.add(crate);
+    // Barcode Shelf Location Placards on Front Beam
+    const bayCode = `BAY ${posX > 0 ? 'B' : 'A'}-0${tIdx + 1}`;
+    const placardTex = getBarcodePlacardTexture(bayCode, 'AERO INVENTORY');
+    const placard = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.2), new THREE.MeshBasicMaterial({ map: placardTex }));
+    placard.position.set(0, y, rackDepth / 2 + 0.07);
+    rackGroup.add(placard);
+
+    // Diverse Palletized Inventory Loads across 3 positions
+    [-2.4, 0, 2.4].forEach((px, pIdx) => {
+      const palGroup = new THREE.Group();
+      palGroup.position.set(px, y + 0.16, 0);
+
+      // Authentic Euro-Pallet (3 runners + 5 top deck boards)
+      [-0.7, 0, 0.7].forEach(rx => {
+        const runner = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 1.8), MAT.woodPallet);
+        runner.position.set(rx, 0.06, 0);
+        palGroup.add(runner);
+      });
+      for (let bz = -0.8; bz <= 0.8; bz += 0.4) {
+        const board = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.03, 0.24), MAT.woodPallet);
+        board.position.set(0, 0.135, bz);
+        palGroup.add(board);
+      }
+
+      // Diverse Cargo Types:
+      if ((tIdx + pIdx) % 3 === 0) {
+        // Shrink-wrapped corrugated cartons with shipping label
+        const carton = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 1.4), MAT.woodPallet);
+        carton.position.set(0, 0.7, 0);
+        carton.castShadow = true;
+        palGroup.add(carton);
+
+        const labelTex = getBarcodePlacardTexture('LOT #9842', 'INCONEL-718 BLANKS');
+        const label = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.3), new THREE.MeshBasicMaterial({ map: labelTex }));
+        label.position.set(0, 0.7, 0.71);
+        palGroup.add(label);
+      } else if ((tIdx + pIdx) % 3 === 1) {
+        // Heavy Wire Stillage Metal Tote filled with alloy components
+        const stillageFrame = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.9, 1.3), MAT.wireMesh);
+        stillageFrame.position.set(0, 0.6, 0);
+        stillageFrame.castShadow = true;
+        palGroup.add(stillageFrame);
+
+        const stillageRim = new THREE.Mesh(new THREE.BoxGeometry(1.54, 0.08, 1.34), MAT.structuralSteel);
+        stillageRim.position.set(0, 1.05, 0);
+        palGroup.add(stillageRim);
+
+        // Machined billet stock inside tote
+        [-0.3, 0.3].forEach(bx => {
+          const billetStock = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.8, 12), MAT.workpieceAlloy);
+          billetStock.rotation.z = Math.PI / 2;
+          billetStock.position.set(0, 0.4, bx);
+          palGroup.add(billetStock);
+        });
+      } else {
+        // Aerospace Flight Hardware Shipping Crate
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.0, 1.4), MAT.machineDark);
+        crate.position.set(0, 0.65, 0);
+        crate.castShadow = true;
+        palGroup.add(crate);
+
+        // Aluminum Corner Reinforcement Brackets
+        [-0.7, 0.7].forEach(cx => {
+          [-0.7, 0.7].forEach(cz => {
+            const edgeAngle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, 0.08), MAT.aluminumExtrusion);
+            edgeAngle.position.set(cx, 0.65, cz);
+            palGroup.add(edgeAngle);
+          });
+        });
+
+        const decalTex = getEquipmentDecalTexture('mfg', 'TITAN AERO', 'CRITICAL HARDWARE');
+        const decal = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.3), new THREE.MeshBasicMaterial({ map: decalTex }));
+        decal.position.set(0, 0.65, 0.71);
+        palGroup.add(decal);
+      }
+
+      rackGroup.add(palGroup);
     });
   });
 
@@ -964,30 +2193,23 @@ function createWarehouseRack(parentGroup, posX, posZ) {
 function createDualCorridorPaths(parentGroup) {
   const corridorGroup = new THREE.Group();
 
-  // Outer AGV-01 Loop: (-22,-16) -> (22,-16) -> (22,16) -> (-22,16)
-  const outerSegs = [
-    { x: 0, z: -16, w: 44, d: 0.15 },
-    { x: 0, z: 16, w: 44, d: 0.15 },
-    { x: -22, z: 0, w: 0.15, d: 32 },
-    { x: 22, z: 0, w: 0.15, d: 32 },
+  // Optical Floor RFID Navigation Transponder Discs at Loop Waypoints
+  const rfidGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.02, 16);
+  const waypoints = [
+    [-22, -16], [0, -16], [22, -16],
+    [22, 0], [22, 16], [0, 16],
+    [-22, 16], [-22, 0],
+    [-10, -12], [0, -12], [0, 12], [-10, 12]
   ];
-  outerSegs.forEach(s => {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(s.w, 0.02, s.d), MAT.trackCyan);
-    line.position.set(s.x, 0.025, s.z);
-    corridorGroup.add(line);
-  });
 
-  // Inner AGV-02 Loop: (0,-12) -> (0,12) -> (-10,12) -> (-10,-12)
-  const innerSegs = [
-    { x: -5, z: -12, w: 10, d: 0.15 },
-    { x: -5, z: 12, w: 10, d: 0.15 },
-    { x: 0, z: 0, w: 0.15, d: 24 },
-    { x: -10, z: 0, w: 0.15, d: 24 },
-  ];
-  innerSegs.forEach(s => {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(s.w, 0.02, s.d), MAT.trackCyan);
-    line.position.set(s.x, 0.025, s.z);
-    corridorGroup.add(line);
+  waypoints.forEach(([wx, wz]) => {
+    const disc = new THREE.Mesh(rfidGeo, MAT.steelChrome);
+    disc.position.set(wx, 0.015, wz);
+    corridorGroup.add(disc);
+
+    const centerGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.025, 12), MAT.portalGlowCyan);
+    centerGlow.position.set(wx, 0.018, wz);
+    corridorGroup.add(centerGlow);
   });
 
   parentGroup.add(corridorGroup);
@@ -1352,6 +2574,37 @@ export function createCNCMill(position = { x: -16, y: 0, z: -10 }) {
   crossbeam.position.set(0, 5.3, 0.4);
   group.add(crossbeam);
 
+  // Telescopic Way Cover Bellows along crossbeam (Left & Right of carriage)
+  const bellowsL = createAccordionBellows(1.4, 1.2, 1.2, 5);
+  bellowsL.position.set(-1.25, 4.5, 0.4);
+  group.add(bellowsL);
+
+  const bellowsR = createAccordionBellows(1.4, 1.2, 1.2, 5);
+  bellowsR.position.set(1.25, 4.5, 0.4);
+  group.add(bellowsR);
+
+  // Slanted Chip Enclosure Top Canopy Hood
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.45, 2.6), MAT.machineDark);
+  hood.position.set(0, 6.4, 1.3);
+  hood.rotation.x = 0.22;
+  group.add(hood);
+
+  // Interior Cool-White LED Work Light Bar
+  const workLight = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.06, 0.14), MAT.workLightLed);
+  workLight.position.set(0, 5.8, 1.5);
+  group.add(workLight);
+
+  // Chip Auger & Swarf Chute extending to dumpster
+  const chute = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.35, 2.0), MAT.machineDark);
+  chute.position.set(1.6, 0.5, 3.2);
+  chute.rotation.x = -0.32;
+  group.add(chute);
+
+  const augerScrew = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.0, 8), MAT.steelChrome);
+  augerScrew.rotation.x = Math.PI / 2 - 0.32;
+  augerScrew.position.set(1.6, 0.5, 3.2);
+  group.add(augerScrew);
+
   // Articulated Cable Drag Chain along crossbeam
   const dragChain = createCableDragChain(4.6, true);
   dragChain.position.set(0, 6.0, 0.4);
@@ -1388,17 +2641,11 @@ export function createCNCMill(position = { x: -16, y: 0, z: -10 }) {
   trunnionBase.position.set(0, 1.4, 0.6);
   group.add(trunnionBase);
 
-  // Pneumatic Vise Jaws Clamping Billet
-  [-0.45, 0.45].forEach(jx => {
-    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 0.8), MAT.steelChrome);
-    jaw.position.set(jx, 1.85, 0.6);
-    group.add(jaw);
-  });
-
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.8), MAT.workpieceAlloy);
-  blade.position.set(0, 2.0, 0.6);
-  group.add(blade);
-  group.turbineBlade = blade;
+  // Sculpted 5-Axis Aerospace Titanium Blisk Workpiece
+  const blisk = createBliskWorkpiece();
+  blisk.position.set(0, 1.85, 0.6);
+  group.add(blisk);
+  group.turbineBlade = blisk;
 
   // Coolant Mist
   const mistMesh = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 8), MAT.coolantMist);
@@ -1412,7 +2659,6 @@ export function createCNCMill(position = { x: -16, y: 0, z: -10 }) {
   magHousing.position.set(-3.2, 3.8, 0);
   group.add(magHousing);
 
-  // Individual tool holders along carousel rim
   for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
     const th = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.25, 8), MAT.steelChrome);
     th.rotation.x = Math.PI / 2;
@@ -1420,7 +2666,7 @@ export function createCNCMill(position = { x: -16, y: 0, z: -10 }) {
     group.add(th);
   }
 
-  // Enclosure Glass Doors with Anodized Frames
+  // Enclosure Glass Doors with Anodized Frames & Door Pull Handles
   const doorL = new THREE.Mesh(new THREE.BoxGeometry(2.7, 3.6, 0.08), MAT.glassChamber);
   doorL.position.set(-1.4, 3.2, 2.5);
   group.add(doorL);
@@ -1428,6 +2674,24 @@ export function createCNCMill(position = { x: -16, y: 0, z: -10 }) {
   const doorR = new THREE.Mesh(new THREE.BoxGeometry(2.7, 3.6, 0.08), MAT.glassChamber);
   doorR.position.set(1.4, 3.2, 2.5);
   group.add(doorR);
+
+  // Brushed Stainless Door Pull Handles
+  [-0.2, 0.2].forEach(hx => {
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.6, 0.08), MAT.steelChrome);
+    handle.position.set(hx, 3.2, 2.58);
+    group.add(handle);
+  });
+
+  // Industrial Manufacturer Decal Badge & Warning Placards
+  const dmgDecalTex = getEquipmentDecalTexture('mfg', 'DMG MORI', 'NMV 5000 5-AXIS');
+  const dmgDecal = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 0.32), new THREE.MeshBasicMaterial({ map: dmgDecalTex }));
+  dmgDecal.position.set(-2.5, 5.6, 2.02);
+  group.add(dmgDecal);
+
+  const hvDecalTex = getEquipmentDecalTexture('danger', 'HIGH VOLTAGE', '480 VAC 3-PHASE');
+  const hvDecal = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.25), new THREE.MeshBasicMaterial({ map: hvDecalTex }));
+  hvDecal.position.set(2.5, 3.5, 2.02);
+  group.add(hvDecal);
 
   // Articulating Operator Console Arm & Display (DRO)
   const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 8), MAT.structuralSteel);
@@ -1491,6 +2755,21 @@ export function createAirfoilFinishingCenter(position = { x: -6, y: 0, z: -10 })
   bed.castShadow = true;
   group.add(bed);
 
+  // Heidenhain Optical Linear Glass Scale Reader Encoders on Granite Bed
+  [-2.2, 2.2].forEach(gx => {
+    const scaleRail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 4.6), MAT.steelChrome);
+    scaleRail.position.set(gx, 1.24, 0);
+    group.add(scaleRail);
+
+    const readerHead = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.25), MAT.machineDark);
+    readerHead.position.set(gx, 1.28, 0.5);
+    group.add(readerHead);
+
+    const ledDot = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.04), MAT.ledGreen);
+    ledDot.position.set(gx + (gx > 0 ? 0.08 : -0.08), 1.28, 0.5);
+    group.add(ledDot);
+  });
+
   // Precision Leveling Feet under granite bed
   [-2.6, 2.6].forEach(fx => {
     [-2.2, 2.2].forEach(fz => {
@@ -1512,6 +2791,15 @@ export function createAirfoilFinishingCenter(position = { x: -6, y: 0, z: -10 })
   const beam = new THREE.Mesh(new THREE.BoxGeometry(5.8, 1.2, 2.0), MAT.machineAccentCyan);
   beam.position.set(0, 5.1, 0.2);
   group.add(beam);
+
+  // Accordion Bellows on Portal X-axis
+  const bellows1 = createAccordionBellows(1.2, 1.0, 1.2, 5);
+  bellows1.position.set(-1.1, 4.2, 0.4);
+  group.add(bellows1);
+
+  const bellows2 = createAccordionBellows(1.2, 1.0, 1.2, 5);
+  bellows2.position.set(1.1, 4.2, 0.4);
+  group.add(bellows2);
 
   // Articulated Cable Drag Chain along Top Bridge Beam
   const dragChain = createCableDragChain(4.2, true);
@@ -1542,14 +2830,20 @@ export function createAirfoilFinishingCenter(position = { x: -6, y: 0, z: -10 })
   group.toolCarriage = carriage;
   group.spindleTool = microTool;
 
-  // High-Precision Trunnion Table & Finished Airfoil Blade
+  // High-Precision Trunnion Table & Clamping Chuck
   const trunnion = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.5, 0.45, 24), MAT.steelChrome);
   trunnion.position.set(0, 1.35, 0.5);
   group.add(trunnion);
 
-  // Aerospace Twisted Turbine Blade Profile
-  const airfoil = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.2, 0.7), MAT.workpieceAlloy);
-  airfoil.position.set(0, 1.9, 0.5);
+  // Precision 4-Jaw Collet Chuck
+  const chuckGeo = new THREE.CylinderGeometry(0.45, 0.5, 0.25, 16);
+  const chuck = new THREE.Mesh(chuckGeo, MAT.hazardDark);
+  chuck.position.set(0, 1.65, 0.5);
+  group.add(chuck);
+
+  // Finished Aerodynamic Airfoil Blade Workpiece
+  const airfoil = createAirfoilBlade();
+  airfoil.position.set(0, 1.75, 0.5);
   airfoil.rotation.y = 0.6;
   group.add(airfoil);
   group.turbineBlade = airfoil;
@@ -1564,6 +2858,12 @@ export function createAirfoilFinishingCenter(position = { x: -6, y: 0, z: -10 })
   ductHose.rotation.z = Math.PI / 4;
   ductHose.position.set(1.2, 5.7, -0.4);
   group.add(ductHose);
+
+  // Mikron / DMG Decal Plate
+  const mikronDecalTex = getEquipmentDecalTexture('mfg', 'MIKRON HSM 600U', 'TOLERANCE ±0.001mm');
+  const mikronDecal = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.35), new THREE.MeshBasicMaterial({ map: mikronDecalTex }));
+  mikronDecal.position.set(-2.4, 4.8, 1.81);
+  group.add(mikronDecal);
 
   // Siemens Sinumerik Operator Console with High-Res DRO Canvas Texture
   const consoleMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.2), MAT.machineDark);
@@ -1622,14 +2922,21 @@ export function createHydraulicPress(position = { x: 7, y: 0, z: -11 }) {
   base.castShadow = true;
   group.add(base);
 
-  // Oil Drip Catch Basin & Steel Bolster Grating
-  const basin = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.2, 3.8), MAT.machineDark);
+  // Oil Drip Catch Basin
+  const basin = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, 4.0), MAT.machineDark);
   basin.position.set(0, 1.62, 0);
   group.add(basin);
 
-  const grating = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.05, 3.4), MAT.structuralSteel);
-  grating.position.set(0, 1.74, 0);
-  group.add(grating);
+  // Precision T-Slotted Machined Bolster Bed Plate
+  const bolsterMat = new THREE.MeshStandardMaterial({
+    map: getBolsterPlateTexture(),
+    roughness: 0.35,
+    metalness: 0.6,
+  });
+  const bolster = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.14, 3.8), bolsterMat);
+  bolster.position.set(0, 1.74, 0);
+  bolster.receiveShadow = true;
+  group.add(bolster);
 
   const pillarCoords = [[-2.5, 2.3], [2.5, 2.3], [-2.5, -2.3], [2.5, -2.3]];
   pillarCoords.forEach(([px, pz]) => {
@@ -1660,7 +2967,6 @@ export function createHydraulicPress(position = { x: 7, y: 0, z: -11 }) {
     sensorPost.position.set(lx, 3.7, 2.4);
     group.add(sensorPost);
 
-    // Micro optical lenses along the post
     for (let ly = -1.6; ly <= 1.6; ly += 0.4) {
       const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 8), MAT.extinguisherRed);
       lens.rotation.x = Math.PI / 2;
@@ -1669,7 +2975,7 @@ export function createHydraulicPress(position = { x: 7, y: 0, z: -11 }) {
     }
   });
 
-  // Fine Red Laser Safety Grid Lines across opening (Clear sightline into die cavity)
+  // Fine Red Laser Safety Grid Lines across opening
   [-1.2, -0.4, 0.4, 1.2].forEach(dy => {
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 5.5, 6), MAT.lightCurtainBeam);
     beam.rotation.z = Math.PI / 2;
@@ -1727,10 +3033,72 @@ export function createHydraulicPress(position = { x: 7, y: 0, z: -11 }) {
   die.position.set(0, -0.8, 0);
   ram.add(die);
 
-  const billet = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.38, 2.0), MAT.hotBillet);
-  billet.position.set(0, 1.8, 0);
+  // 4 Precision Hardened Tool Steel Die Guide Pillars with Bronze Bushings
+  const guideCoords = [[-1.5, 1.2], [1.5, 1.2], [-1.5, -1.2], [1.5, -1.2]];
+  guideCoords.forEach(([gx, gz]) => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.0, 16), MAT.steelChrome);
+    post.position.set(gx, 2.6, gz);
+    group.add(post);
+
+    const bushing = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.4, 16), MAT.extinguisherBrass);
+    bushing.position.set(gx, -0.6, gz);
+    ram.add(bushing);
+  });
+
+  // Dedicated Heavy Hydraulic Power Unit (HPU) on Floor
+  const hpuGroup = new THREE.Group();
+  hpuGroup.position.set(4.4, 0, 0);
+
+  const hpuSkid = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.16, 3.4), MAT.structuralSteel);
+  hpuSkid.position.y = 0.08;
+  hpuGroup.add(hpuSkid);
+
+  const hpuTank = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.1, 2.6), MAT.machineDark);
+  hpuTank.position.set(0, 0.71, 0);
+  hpuGroup.add(hpuTank);
+
+  // TEFC Electric Drive Motor with Cooling Fins
+  const hpuMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 1.1, 16), MAT.machineAccentCyan);
+  hpuMotor.rotation.x = Math.PI / 2;
+  hpuMotor.position.set(0, 1.5, -0.5);
+  hpuGroup.add(hpuMotor);
+
+  for (let f = -0.4; f <= 0.4; f += 0.12) {
+    const fin = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.02, 16), MAT.structuralSteel);
+    fin.rotation.x = Math.PI / 2;
+    fin.position.set(0, 1.5, -0.5 + f);
+    hpuGroup.add(fin);
+  }
+
+  // Axial Piston Pump & Valve Manifold
+  const hpuPump = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.7, 16), MAT.steelChrome);
+  hpuPump.rotation.x = Math.PI / 2;
+  hpuPump.position.set(0, 1.5, 0.45);
+  hpuGroup.add(hpuPump);
+
+  const hpuManifold = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.9), MAT.steelChrome);
+  hpuManifold.position.set(0, 1.5, 1.1);
+  hpuGroup.add(hpuManifold);
+
+  for (let sc = -0.3; sc <= 0.3; sc += 0.2) {
+    const coil = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.2, 0.16), MAT.hazardDark);
+    coil.position.set(0.32, 1.55, 0.9 + sc);
+    hpuGroup.add(coil);
+  }
+
+  group.add(hpuGroup);
+
+  // Sculpted Aerospace Structural Bulkhead Forged Component
+  const billet = createBulkheadForging();
+  billet.position.set(0, 1.82, 0);
   group.add(billet);
   group.hotBillet = billet;
+
+  // Schuler 1000T Manufacturer Plaque Decal
+  const schulerTex = getEquipmentDecalTexture('mfg', 'SCHULER 1000T', 'TITANIUM FORGING');
+  const schulerDecal = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.4), new THREE.MeshBasicMaterial({ map: schulerTex }));
+  schulerDecal.position.set(0, 9.8, 3.12);
+  group.add(schulerDecal);
 
   // 3-Tier Andon Status Tower on Crown
   const andon = createAndonTower(1.2);
@@ -1797,10 +3165,17 @@ export function createExtrusionPress(position = { x: 19, y: 0, z: -11 }) {
   group.add(ram);
   group.extrusionRam = ram;
 
-  // Billet Container Chamber (Heated)
+  // Billet Container Chamber (Heated) with Ceramic Induction Bands
   const chamber = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 2.4), MAT.machineDark);
   chamber.position.set(1.4, 2.0, 0);
   group.add(chamber);
+
+  [-0.6, 0.6].forEach(hx => {
+    const heatBand = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.2, 20), MAT.hazardYellow);
+    heatBand.rotation.z = Math.PI / 2;
+    heatBand.position.set(1.4 + hx, 2.0, 0);
+    group.add(heatBand);
+  });
 
   // Forward Runoff Roller Table carrying Extruded Titanium Profile
   const table = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.4, 1.4), MAT.structuralSteel);
@@ -1815,15 +3190,43 @@ export function createExtrusionPress(position = { x: 19, y: 0, z: -11 }) {
     group.add(roller);
   }
 
+  // Quench Water Spray Manifold with Brass Mist Nozzles
+  const quenchPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 8), MAT.structuralSteel);
+  quenchPipe.position.set(3.4, 2.4, 0);
+  group.add(quenchPipe);
+  [-0.4, -0.13, 0.13, 0.4].forEach(nz => {
+    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.08, 6), MAT.brassFitting);
+    nozzle.position.set(3.4, 2.32, nz);
+    group.add(nozzle);
+  });
+
   // Operator Safety Polycarbonate Shield Screen
   const shieldFrame = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.2, 0.08), MAT.glassChamber);
   shieldFrame.position.set(1.4, 2.8, 1.6);
   group.add(shieldFrame);
 
-  // Extruded Spar Part
-  const spar = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.15, 0.6), MAT.workpieceAlloy);
-  spar.position.set(5.2, 1.85, 0);
-  group.add(spar);
+  // Extruded Aircraft Titanium Spar (I-Beam Flanged Profile)
+  const sparGroup = new THREE.Group();
+  sparGroup.position.set(5.2, 1.85, 0);
+
+  const topFlange = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.05, 0.55), MAT.workpieceAlloy);
+  topFlange.position.y = 0.15;
+  sparGroup.add(topFlange);
+
+  const web = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.3, 0.06), MAT.workpieceAlloy);
+  sparGroup.add(web);
+
+  const botFlange = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.05, 0.55), MAT.workpieceAlloy);
+  botFlange.position.y = -0.15;
+  sparGroup.add(botFlange);
+
+  group.add(sparGroup);
+
+  // Extrusion Press Nameplate
+  const pressDecalTex = getEquipmentDecalTexture('mfg', 'SMS MEER 500T', 'AERO SPAR EXTRUSION');
+  const pressDecal = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.38), new THREE.MeshBasicMaterial({ map: pressDecalTex }));
+  pressDecal.position.set(-1.0, 3.4, 1.65);
+  group.add(pressDecal);
 
   // 3-Tier Andon Status Tower
   const andon = createAndonTower(1.0);
@@ -1866,6 +3269,18 @@ export function createVacuumFurnace(position = { x: 13, y: 0, z: -2 }) {
   vessel.castShadow = true;
   group.add(vessel);
 
+  // Water Cooling Jacket Pipes with Brass Shutoff Valves
+  const jacketPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 6.6, 12), MAT.steelChrome);
+  jacketPipe.rotation.z = Math.PI / 2;
+  jacketPipe.position.set(0, 4.85, 0.8);
+  group.add(jacketPipe);
+
+  [-2.0, 2.0].forEach(vx => {
+    const valve = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.16, 8), MAT.brassFitting);
+    valve.position.set(vx, 4.95, 0.8);
+    group.add(valve);
+  });
+
   // Front Heavy Hinged Vacuum Door with Clamping Flange Ring
   const door = new THREE.Mesh(new THREE.CylinderGeometry(2.35, 2.35, 0.6, 28), MAT.machineDark);
   door.rotation.z = Math.PI / 2;
@@ -1880,6 +3295,14 @@ export function createVacuumFurnace(position = { x: 13, y: 0, z: -2 }) {
     group.add(bolt);
   }
 
+  // 8 Heavy Wedge Door Locking Lugs around Door Perimeter
+  for (let b = 0; b < Math.PI * 2; b += Math.PI / 4) {
+    const lug = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.25, 0.3), MAT.structuralSteel);
+    lug.position.set(3.4, 2.6 + Math.sin(b) * 2.42, Math.cos(b) * 2.42);
+    lug.rotation.x = b;
+    group.add(lug);
+  }
+
   // Heavy Counterweight Door Hinge Arm
   const hingeArm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.2, 0.4), MAT.structuralSteel);
   hingeArm.position.set(3.3, 2.6, 2.3);
@@ -1889,13 +3312,12 @@ export function createVacuumFurnace(position = { x: 13, y: 0, z: -2 }) {
   counterweight.position.set(3.3, 4.4, 2.3);
   group.add(counterweight);
 
-  // Glowing Quartz Observation Viewport (Heavy Machined 316L Flange + Recessed Borosilicate Glass)
+  // Glowing Quartz Observation Viewport
   const windowFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.18, 24), MAT.steelChrome);
   windowFrame.rotation.z = Math.PI / 2;
   windowFrame.position.set(3.72, 2.6, 0);
   group.add(windowFrame);
 
-  // 6 Hex cap screws on viewport retaining ring
   for (let sb = 0; sb < Math.PI * 2; sb += Math.PI / 3) {
     const sBolt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 6), MAT.hazardDark);
     sBolt.rotation.z = Math.PI / 2;
@@ -1903,7 +3325,6 @@ export function createVacuumFurnace(position = { x: 13, y: 0, z: -2 }) {
     group.add(sBolt);
   }
 
-  // Recessed Quartz Sight Glass with radiant internal molybdenum heating glow
   const quartzGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.08, 24), new THREE.MeshPhysicalMaterial({
     color: 0xff8800,
     transparent: true,
@@ -1917,6 +3338,34 @@ export function createVacuumFurnace(position = { x: 13, y: 0, z: -2 }) {
   quartzGlass.position.set(3.74, 2.6, 0);
   group.add(quartzGlass);
   group.glowPort = quartzGlass;
+
+  // Heavy Industrial Vacuum Pumping Station Skid beside furnace
+  const vacSkid = new THREE.Group();
+  vacSkid.position.set(0, 0, -2.6);
+
+  const skidBase = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.16, 1.8), MAT.structuralSteel);
+  skidBase.position.y = 0.08;
+  vacSkid.add(skidBase);
+
+  // Roots Blower Vacuum Booster
+  const rootsBooster = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.2, 16), MAT.machineDark);
+  rootsBooster.rotation.z = Math.PI / 2;
+  rootsBooster.position.set(-0.8, 0.75, 0);
+  vacSkid.add(rootsBooster);
+
+  // Rotary Vane Mechanical Backing Pump
+  const roughingPump = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 1.0, 16), MAT.machineAccentCyan);
+  roughingPump.rotation.z = Math.PI / 2;
+  roughingPump.position.set(0.8, 0.55, 0);
+  vacSkid.add(roughingPump);
+
+  // Stainless Steel Vacuum Manifold Pipe to Furnace
+  const vacPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.6, 12), MAT.steelChrome);
+  vacPipe.position.set(-0.8, 1.7, 0.8);
+  vacPipe.rotation.x = Math.PI / 4;
+  vacSkid.add(vacPipe);
+
+  group.add(vacSkid);
 
   // Water-Cooling Distribution Manifold (Blue = Inlet, Red = Outlet)
   const blueHose = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.8, 12), MAT.coolantBlue);
@@ -1993,127 +3442,275 @@ export function createRoboticCell(position = { x: -16, y: 0, z: 8 }) {
   // Foundation Hazard Safety Perimeter
   group.add(createHazardBorder(6.8, 6.8));
 
-  // Workcell Perimeter 4-Sided Yellow Safety Fence with Polycarbonate Guarding
+  // Vibration isolation sole plates under cell corners
   const fenceSize = 6.4;
   const halfF = fenceSize / 2;
   const fenceH = 2.8;
 
-  // 4 Corner Posts with floor anchor plates
-  [[-halfF, -halfF], [halfF, -halfF], [-halfF, halfF], [halfF, halfF]].forEach(([cx, cz]) => {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.14, fenceH, 0.14), MAT.hazardYellow);
+  // Workcell Perimeter 4-Sided Yellow Safety Fence with Polycarbonate & Wire Mesh Guarding
+  // Corner and intermediate vertical stanchions with anchor foot plates
+  const stanchionPositions = [
+    [-halfF, -halfF], [0, -halfF], [halfF, -halfF],
+    [-halfF, halfF], [0, halfF], [halfF, halfF],
+    [-halfF, 0], [halfF, 0]
+  ];
+
+  stanchionPositions.forEach(([cx, cz]) => {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, fenceH, 0.12), MAT.hazardYellow);
     post.position.set(cx, fenceH / 2, cz);
     group.add(post);
 
-    const anchorPlate = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 0.28), MAT.structuralSteel);
+    const anchorPlate = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.04, 0.24), MAT.structuralSteel);
     anchorPlate.position.set(cx, 0.02, cz);
     group.add(anchorPlate);
+
+    // Anchor bolt heads
+    [-0.08, 0.08].forEach(bx => {
+      [-0.08, 0.08].forEach(bz => {
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.06, 6), MAT.steelChrome);
+        bolt.position.set(cx + bx, 0.05, cz + bz);
+        group.add(bolt);
+      });
+    });
   });
 
-  // Perimeter Rails (North, South, West)
-  [0.15, fenceH - 0.1].forEach(y => {
+  // Perimeter Rails (North, South, West framing channels)
+  [0.15, 1.35, fenceH - 0.1].forEach(y => {
     // North rail
-    const rN = new THREE.Mesh(new THREE.BoxGeometry(fenceSize, 0.08, 0.08), MAT.hazardYellow);
+    const rN = new THREE.Mesh(new THREE.BoxGeometry(fenceSize, 0.06, 0.06), MAT.hazardYellow);
     rN.position.set(0, y, -halfF);
     group.add(rN);
 
     // South rail
-    const rS = new THREE.Mesh(new THREE.BoxGeometry(fenceSize, 0.08, 0.08), MAT.hazardYellow);
+    const rS = new THREE.Mesh(new THREE.BoxGeometry(fenceSize, 0.06, 0.06), MAT.hazardYellow);
     rS.position.set(0, y, halfF);
     group.add(rS);
 
     // West rail
-    const rW = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, fenceSize), MAT.hazardYellow);
+    const rW = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, fenceSize), MAT.hazardYellow);
     rW.position.set(-halfF, y, 0);
     group.add(rW);
   });
 
-  // Polycarbonate Transparent Safety View Windows
-  const winNorth = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, fenceH - 0.35, 0.04), MAT.glassChamber);
-  winNorth.position.set(0, fenceH / 2, -halfF);
+  // Lower Section: Heavy Stainless Steel Wire Mesh Panels (North, South, West)
+  const meshH = 1.15;
+  const meshY = 0.75;
+  const wireMeshN = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, meshH, 0.02), MAT.wireMesh);
+  wireMeshN.position.set(0, meshY, -halfF);
+  group.add(wireMeshN);
+
+  const wireMeshS = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, meshH, 0.02), MAT.wireMesh);
+  wireMeshS.position.set(0, meshY, halfF);
+  group.add(wireMeshS);
+
+  const wireMeshW = new THREE.Mesh(new THREE.BoxGeometry(0.02, meshH, fenceSize - 0.2), MAT.wireMesh);
+  wireMeshW.position.set(-halfF, meshY, 0);
+  group.add(wireMeshW);
+
+  // Upper Section: Optical Clear Polycarbonate Impact Safety Guard Windows
+  const glassH = fenceH - 1.5;
+  const glassY = 2.05;
+  const winNorth = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, glassH, 0.03), MAT.glassChamber);
+  winNorth.position.set(0, glassY, -halfF);
   group.add(winNorth);
 
-  const winSouth = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, fenceH - 0.35, 0.04), MAT.glassChamber);
-  winSouth.position.set(0, fenceH / 2, halfF);
+  const winSouth = new THREE.Mesh(new THREE.BoxGeometry(fenceSize - 0.2, glassH, 0.03), MAT.glassChamber);
+  winSouth.position.set(0, glassY, halfF);
   group.add(winSouth);
 
-  const winWest = new THREE.Mesh(new THREE.BoxGeometry(0.04, fenceH - 0.35, fenceSize - 0.2), MAT.glassChamber);
-  winWest.position.set(-halfF, fenceH / 2, 0);
+  const winWest = new THREE.Mesh(new THREE.BoxGeometry(0.03, glassH, fenceSize - 0.2), MAT.glassChamber);
+  winWest.position.set(-halfF, glassY, 0);
   group.add(winWest);
 
-  // East Side (Operator Entry Face): Fixed panel + Interlocked Swing Door
-  const winEastFixed = new THREE.Mesh(new THREE.BoxGeometry(0.04, fenceH - 0.35, 3.4), MAT.glassChamber);
-  winEastFixed.position.set(halfF, fenceH / 2, -1.2);
+  // East Side (Operator Entry Face): Fixed panel + Interlocked Safety Swing Gate
+  const winEastFixed = new THREE.Mesh(new THREE.BoxGeometry(0.03, fenceH - 0.35, 3.2), MAT.glassChamber);
+  winEastFixed.position.set(halfF, fenceH / 2, -1.3);
   group.add(winEastFixed);
 
-  // Interlocked Safety Access Gate Frame with magnetic safety switch & lever handle
-  const gateFrame = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 1.6), MAT.hazardYellow);
-  gateFrame.position.set(halfF, 1.2, 1.3);
+  // Interlocked Safety Access Gate Frame with magnetic safety interlock & lever handle
+  const gateFrame = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.3, 1.7), MAT.hazardYellow);
+  gateFrame.position.set(halfF, 1.25, 1.3);
   group.add(gateFrame);
 
-  const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.2, 1.4), MAT.glassChamber);
-  gateMesh.position.set(halfF, 1.2, 1.3);
+  const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.1, 1.5), MAT.glassChamber);
+  gateMesh.position.set(halfF, 1.25, 1.3);
   group.add(gateMesh);
 
-  const gateHandle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.25, 0.06), MAT.steelChrome);
+  // Tubular Stainless Lever Handle
+  const gateHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.35, 12), MAT.steelChrome);
   gateHandle.position.set(halfF + 0.06, 1.2, 2.0);
   group.add(gateHandle);
 
-  const gateSwitch = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.24, 0.14), MAT.eStopYellow);
-  gateSwitch.position.set(halfF, 1.5, 2.15);
+  // Schmersal-style Safety Interlock Switch with Green OK LED
+  const gateSwitch = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.12), MAT.eStopYellow);
+  gateSwitch.position.set(halfF, 1.55, 2.12);
   group.add(gateSwitch);
 
-  // Base Pedestal with Anchor Bolts
-  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.75, 1.4, 20), MAT.machineDark);
+  const switchLed = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), MAT.ledGreen);
+  switchLed.position.set(halfF + 0.06, 1.6, 2.12);
+  group.add(switchLed);
+
+  // DANGER ROBOT CELL Placard on Gate
+  const robotDecalTex = getEquipmentDecalTexture('danger', 'ROBOT CELL', 'STAY CLEAR');
+  const robotDecal = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 0.32), new THREE.MeshBasicMaterial({ map: robotDecalTex }));
+  robotDecal.position.set(halfF + 0.03, 1.7, 1.3);
+  robotDecal.rotation.y = Math.PI / 2;
+  group.add(robotDecal);
+
+  // Cast Iron Base Pedestal with Radial Anchor Studs & Grounding Strap
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.85, 1.4, 24), MAT.machineDark);
   pedestal.position.y = 0.7;
   pedestal.castShadow = true;
   group.add(pedestal);
 
-  for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
-    const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.1, 6), MAT.steelChrome);
-    bolt.position.set(Math.cos(a) * 0.65, 1.42, Math.sin(a) * 0.65);
+  // Precision machined mounting flange ring
+  const flangeRing = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.12, 24), MAT.structuralSteel);
+  flangeRing.position.y = 1.38;
+  group.add(flangeRing);
+
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+    const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.14, 6), MAT.steelChrome);
+    bolt.position.set(Math.cos(a) * 0.72, 1.44, Math.sin(a) * 0.72);
     group.add(bolt);
   }
 
-  // 6-DOF Industrial Robot Arm Hierarchy
+  // Copper Grounding Strap
+  const groundStrap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.3, 0.02), MAT.brassFitting);
+  groundStrap.position.set(0.72, 0.65, 0);
+  group.add(groundStrap);
+
+  // 6-DOF Industrial Robot Arm Hierarchy (FANUC M-710iC Inspired)
   const robotRoot = new THREE.Group();
-  robotRoot.position.set(0, 1.4, 0);
+  robotRoot.position.set(0, 1.44, 0);
 
-  // Joint 1: Base Turntable
-  const j1 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.5, 16), MAT.robotYellow);
-  robotRoot.add(j1);
+  // Joint 1: Base Turntable & J1 Servo Motor
+  const j1Turntable = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.62, 0.45, 24), MAT.robotYellow);
+  j1Turntable.position.y = 0.22;
+  robotRoot.add(j1Turntable);
 
-  // Joint 2: Lower Boom
+  // Rotary slewing bearing ring
+  const slewRing = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.04, 12, 32), MAT.steelChrome);
+  slewRing.rotation.x = Math.PI / 2;
+  slewRing.position.y = 0.02;
+  robotRoot.add(slewRing);
+
+  // J1 Servo Motor Housing with cooling fins
+  const j1Motor = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.42, 16), MAT.machineDark);
+  j1Motor.position.set(-0.35, 0.25, 0.35);
+  robotRoot.add(j1Motor);
+
+  const j1Resolver = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 16), MAT.eStopYellow);
+  j1Resolver.position.set(-0.35, 0.5, 0.35);
+  robotRoot.add(j1Resolver);
+
+  // Joint 2: Shoulder Pivot & Lower Boom Casting
   const j2Pivot = new THREE.Group();
-  j2Pivot.position.set(0, 0.35, 0);
-  const boom = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.4, 0.45), MAT.robotYellow);
-  boom.position.set(0, 1.1, 0);
+  j2Pivot.position.set(0, 0.45, 0);
+
+  // Dual-flange cast shoulder fork
+  [-0.26, 0.26].forEach(fz => {
+    const shoulderFork = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.65, 0.14), MAT.robotYellow);
+    shoulderFork.position.set(0, 0.25, fz);
+    j2Pivot.add(shoulderFork);
+
+    const shoulderCap = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.18, 16), MAT.machineDark);
+    shoulderCap.rotation.x = Math.PI / 2;
+    shoulderCap.position.set(0, 0.3, fz + (fz > 0 ? 0.06 : -0.06));
+    j2Pivot.add(shoulderCap);
+  });
+
+  // Lower Boom Arm: Sculpted tapered arm casting
+  const boom = new THREE.Mesh(new THREE.BoxGeometry(0.42, 2.3, 0.42), MAT.robotYellow);
+  boom.position.set(0, 1.25, 0);
   boom.rotation.z = 0.25;
+  boom.castShadow = true;
   j2Pivot.add(boom);
 
-  // Joint 3: Upper Arm
-  const j3Pivot = new THREE.Group();
-  j3Pivot.position.set(0.4, 2.1, 0);
-  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 2.0, 0.38), MAT.robotYellow);
-  arm.position.set(0, 0.9, 0);
-  arm.rotation.z = -0.55;
-  j3Pivot.add(arm);
+  // Mechanical Counterbalance Strut Cylinder
+  const balancerCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.4, 16), MAT.machineDark);
+  balancerCyl.position.set(-0.35, 0.85, 0);
+  balancerCyl.rotation.z = 0.15;
+  j2Pivot.add(balancerCyl);
 
-  // Black Corrugated Cable Harness Dress Pack along Arm
-  const dressPack = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 12), MAT.cableCarrier);
-  dressPack.position.set(0.2, 1.0, 0.25);
+  const balancerRod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.9, 12), MAT.steelChrome);
+  balancerRod.position.set(-0.3, 1.5, 0);
+  balancerRod.rotation.z = 0.15;
+  j2Pivot.add(balancerRod);
+
+  // J2 Servo Motor with Ribs
+  const j2Motor = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.45, 16), MAT.machineDark);
+  j2Motor.rotation.x = Math.PI / 2;
+  j2Motor.position.set(-0.1, 0.4, -0.42);
+  j2Pivot.add(j2Motor);
+
+  // Joint 3: Elbow Pivot & Forearm Casting
+  const j3Pivot = new THREE.Group();
+  j3Pivot.position.set(0.42, 2.25, 0);
+
+  // Elbow casting with bearing retainers
+  const elbowHub = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.48, 20), MAT.steelChrome);
+  elbowHub.rotation.x = Math.PI / 2;
+  j3Pivot.add(elbowHub);
+
+  // J3 Servo Motor
+  const j3Motor = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.4, 16), MAT.machineDark);
+  j3Motor.rotation.x = Math.PI / 2;
+  j3Motor.position.set(-0.15, 0.1, 0.38);
+  j3Pivot.add(j3Motor);
+
+  // Forearm Structure
+  const forearm = new THREE.Mesh(new THREE.BoxGeometry(0.34, 1.9, 0.34), MAT.robotYellow);
+  forearm.position.set(0, 0.85, 0);
+  forearm.rotation.z = -0.55;
+  forearm.castShadow = true;
+  j3Pivot.add(forearm);
+
+  // Corrugated Cable Dress-Pack Conduit along Arm with Stainless Stand-Off Clamps
+  const dressPack = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.2, 16), MAT.cableCarrier);
+  dressPack.position.set(0.22, 0.95, 0.24);
   dressPack.rotation.z = -0.55;
   j3Pivot.add(dressPack);
 
-  // Joint 4/5/6: Wrist & Deburring Spindle Tool
-  const wrist = new THREE.Group();
-  wrist.position.set(-0.8, 1.8, 0);
+  [0.3, 0.9, 1.5].forEach(dy => {
+    const clampMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.12), MAT.steelChrome);
+    clampMesh.position.set(0.22 - (dy - 0.9) * 0.3, dy, 0.24);
+    j3Pivot.add(clampMesh);
+  });
 
-  const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.7, 16), MAT.steelChrome);
+  // Joint 4/5/6: Precision 3-Axis Spherical Wrist
+  const wrist = new THREE.Group();
+  wrist.position.set(-0.85, 1.78, 0);
+
+  const wristCasting = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.32, 20), MAT.steelChrome);
+  wristCasting.rotation.z = Math.PI / 2;
+  wrist.add(wristCasting);
+
+  // Pneumatic Compliance Floating Head for Constant-Force Edge Deburring
+  const compHousing = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), MAT.aluminumExtrusion);
+  compHousing.position.set(0, -0.22, 0);
+  wrist.add(compHousing);
+
+  // High-Speed 40,000 RPM Electric Deburring Spindle
+  const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.55, 20), MAT.steelChrome);
+  spindle.position.set(0, -0.55, 0);
   wrist.add(spindle);
 
-  const burr = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 12), MAT.steelChrome);
-  burr.position.set(0, -0.45, 0);
+  // Precision Collet Nut holding Carbide Rotary Burr
+  const collet = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.12, 16), MAT.hazardDark);
+  collet.position.set(0, -0.85, 0);
+  wrist.add(collet);
+
+  const burr = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.25, 12), MAT.steelChrome);
+  burr.position.set(0, -1.0, 0);
   wrist.add(burr);
+
+  // Dual Spindle Nose Work Lights (Angled LED spots on burr contact zone)
+  [-0.14, 0.14].forEach(lx => {
+    const ledSpot = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.08, 12), MAT.workLightLed);
+    ledSpot.position.set(lx, -0.75, 0);
+    ledSpot.rotation.z = (lx > 0 ? -0.3 : 0.3);
+    wrist.add(ledSpot);
+  });
 
   j3Pivot.add(wrist);
   j2Pivot.add(j3Pivot);
@@ -2124,46 +3721,165 @@ export function createRoboticCell(position = { x: -16, y: 0, z: 8 }) {
   group.robotJ2 = j2Pivot;
   group.robotJ3 = j3Pivot;
 
-  // Workpiece Fixture Rotary Table
-  const table = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.0, 1.1, 20), MAT.steelChrome);
-  table.position.set(1.8, 0.55, 0);
-  group.add(table);
+  // Dual-Station Rotary Indexing Table & Workpiece Fixturing (Station A deburring, Station B finished)
+  const indexTableGroup = new THREE.Group();
+  indexTableGroup.position.set(1.9, 0, 0);
 
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, 0.6), MAT.workpieceAlloy);
-  blade.position.set(1.8, 1.6, 0);
-  group.add(blade);
+  // Diamond plate drip tray base
+  const dripPlateTex = getDiamondPlateTexture();
+  const dripPlateMat = new THREE.MeshStandardMaterial({ map: dripPlateTex, roughness: 0.3, metalness: 0.7 });
+  const dripPan = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.45, 0.12, 24), dripPlateMat);
+  dripPan.position.y = 0.06;
+  indexTableGroup.add(dripPan);
 
-  // End-Effector Tool Changing Rack
-  const toolRack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.1, 1.2), MAT.structuralSteel);
-  toolRack.position.set(1.8, 0.55, 2.0);
+  // Raised lip around drip pan
+  const dripLip = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.04, 8, 32), MAT.structuralSteel);
+  dripLip.rotation.x = Math.PI / 2;
+  dripLip.position.y = 0.12;
+  indexTableGroup.add(dripLip);
+
+  // Heavy Indexing Turntable Body
+  const indexBase = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.05, 0.75, 24), MAT.structuralSteel);
+  indexBase.position.y = 0.48;
+  indexTableGroup.add(indexBase);
+
+  // Precision Ground Stainless Steel Indexing Platter
+  const platter = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.18, 24), MAT.steelChrome);
+  platter.position.y = 0.92;
+  indexTableGroup.add(platter);
+
+  // Station A Fixture (holding blade currently being deburred by the robot)
+  const fixtureA = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.28, 0.75), MAT.machineDark);
+  fixtureA.position.set(-0.35, 1.12, 0);
+  indexTableGroup.add(fixtureA);
+
+  // Pneumatic toggle clamp arms
+  [-0.22, 0.22].forEach(cz => {
+    const clampArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.12), MAT.brassFitting);
+    clampArm.position.set(-0.35, 1.32, cz);
+    indexTableGroup.add(clampArm);
+  });
+
+  // Authentic Aerospace Turbine Blade clamped at Station A
+  const bladeA = createAirfoilBlade();
+  bladeA.position.set(-0.35, 1.25, 0);
+  bladeA.rotation.y = 0.25;
+  indexTableGroup.add(bladeA);
+
+  // Station B Fixture (holding finished deburred blade waiting for operator unload)
+  const fixtureB = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.28, 0.75), MAT.machineDark);
+  fixtureB.position.set(0.35, 1.12, 0);
+  indexTableGroup.add(fixtureB);
+
+  const bladeB = createAirfoilBlade();
+  bladeB.position.set(0.35, 1.25, 0);
+  bladeB.rotation.y = Math.PI + 0.25;
+  indexTableGroup.add(bladeB);
+
+  // Green QA inspection dot on finished Station B blade
+  const qaDot = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), MAT.ledGreen);
+  qaDot.position.set(0.35, 2.3, 0.2);
+  indexTableGroup.add(qaDot);
+
+  group.add(indexTableGroup);
+
+  // 4-Station Automatic End-Effector Tool Changing Rack (ATC)
+  const toolRack = new THREE.Group();
+  toolRack.position.set(1.9, 0, 2.1);
+
+  const rackFrame = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.0, 1.2), MAT.structuralSteel);
+  rackFrame.position.y = 0.5;
+  toolRack.add(rackFrame);
+
+  const rackPlate = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 1.3), MAT.steelChrome);
+  rackPlate.position.y = 1.02;
+  toolRack.add(rackPlate);
+
+  // 4 HSK-E32 Tool Holders (carbide burr, nylon cup brush, diamond mounted point, Scotch-Brite flap wheel)
+  [-0.45, -0.15, 0.15, 0.45].forEach((rz, idx) => {
+    // HSK taper shank
+    const hsk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.04, 0.14, 16), MAT.steelChrome);
+    hsk.position.set(0, 1.12, rz);
+    toolRack.add(hsk);
+
+    // Tool head
+    if (idx === 0) {
+      // Cylindrical burr
+      const toolHead = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.16, 12), MAT.steelChrome);
+      toolHead.position.set(0, 1.24, rz);
+      toolRack.add(toolHead);
+    } else if (idx === 1) {
+      // Cup brush
+      const brush = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.04, 0.12, 16), MAT.hazardDark);
+      brush.position.set(0, 1.22, rz);
+      toolRack.add(brush);
+    } else if (idx === 2) {
+      // Diamond ball point
+      const diamond = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), MAT.machineAccentCyan);
+      diamond.position.set(0, 1.22, rz);
+      toolRack.add(diamond);
+    } else {
+      // Abrasive flap wheel
+      const flap = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.08, 16), MAT.woodPallet);
+      flap.position.set(0, 1.21, rz);
+      toolRack.add(flap);
+    }
+  });
+
   group.add(toolRack);
 
-  // Yellow Handheld Robot Teach Pendant Docked on Fence
-  const pendantCradle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.35), MAT.machineDark);
-  pendantCradle.position.set(fenceSize / 2, 1.6, -1.2);
+  // Yellow Handheld Robot Teach Pendant Docked in Holster on Exterior Fence
+  const pendantCradle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.52, 0.36), MAT.machineDark);
+  pendantCradle.position.set(halfF, 1.6, -1.2);
   group.add(pendantCradle);
 
-  const pendant = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.28), MAT.hazardYellow);
-  pendant.position.set(fenceSize / 2 + 0.05, 1.6, -1.2);
+  const pendant = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.44, 0.3), MAT.hazardYellow);
+  pendant.position.set(halfF + 0.05, 1.6, -1.2);
   group.add(pendant);
 
-  // Robot Controller Cabinet (R-30iB style)
-  const ctrlCabinet = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, 0.9), MAT.machineLight);
-  ctrlCabinet.position.set(-2.8, 0.9, 3.4);
+  // Pendant Color LCD Screen
+  const pendantScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.28), MAT.terminalScreen);
+  pendantScreen.position.set(halfF + 0.085, 1.62, -1.2);
+  pendantScreen.rotation.y = Math.PI / 2;
+  group.add(pendantScreen);
+
+  // Pendant Emergency Stop Button
+  const pendantEstop = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.04, 12), MAT.ledRed);
+  pendantEstop.rotation.z = Math.PI / 2;
+  pendantEstop.position.set(halfF + 0.085, 1.78, -1.28);
+  group.add(pendantEstop);
+
+  // Robot Controller Cabinet (FANUC R-30iB style)
+  const ctrlCabinet = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.9, 0.9), MAT.machineLight);
+  ctrlCabinet.position.set(-2.8, 0.95, 3.4);
   ctrlCabinet.castShadow = true;
   group.add(ctrlCabinet);
 
+  // Main Isolator Disconnect Switch with LOTO Padlock
   const ctrlIsolator = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.1, 16), MAT.eStopYellow);
   ctrlIsolator.rotation.x = Math.PI / 2;
-  ctrlIsolator.position.set(-2.8, 1.4, 3.86);
+  ctrlIsolator.position.set(-2.8, 1.45, 3.86);
   group.add(ctrlIsolator);
 
-  // 3-Tier Andon Status Tower on Fence Post
+  // Fan intake louver grills on cabinet
+  [-0.3, 0.3].forEach(lx => {
+    const louver = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.02), MAT.machineDark);
+    louver.position.set(-2.8 + lx, 0.5, 3.86);
+    group.add(louver);
+  });
+
+  // High Voltage Warning Sign on Controller Cabinet
+  const hvDecalTex = getEquipmentDecalTexture('danger', 'HIGH VOLTAGE', '480 VAC 3-PHASE');
+  const hvDecal = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.25), new THREE.MeshBasicMaterial({ map: hvDecalTex }));
+  hvDecal.position.set(-2.8, 1.75, 3.86);
+  group.add(hvDecal);
+
+  // 3-Tier Andon Status Tower on Fence Corner Post
   const andon = createAndonTower(1.0);
-  andon.position.set(-fenceSize / 2, fenceH, -fenceSize / 2);
+  andon.position.set(-halfF, fenceH, -halfF);
   group.add(andon);
 
-  // Status Halo
+  // Status Halo Ring
   const ring = new THREE.Mesh(new THREE.RingGeometry(3.4, 3.8, 32), new THREE.MeshBasicMaterial({ color: 0x059669, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.02;
@@ -2184,14 +3900,21 @@ export function createLaserQCArch(position = { x: -6, y: 0, z: 8 }) {
   // Foundation Hazard Safety Perimeter
   group.add(createHazardBorder(6.4, 5.0));
 
-  // Precision Black Granite Surface Plate
-  const granite = new THREE.Mesh(new THREE.BoxGeometry(5.8, 1.1, 4.4), MAT.graniteBase);
+  // Precision Grade 00 Black Granite Surface Plate (5.8m x 4.4m x 1.0m)
+  const granite = new THREE.Mesh(new THREE.BoxGeometry(5.8, 1.0, 4.4), MAT.graniteBase);
   granite.position.y = 0.55;
   granite.castShadow = true;
   group.add(granite);
 
-  // 4 Pneumatic Vibration-Isolation Air Spring Dampers
-  [-2.4, 2.4].forEach(fx => {
+  // Polished Granite Chamfer Top Edges
+  [-2.2, 2.2].forEach(fx => {
+    const chamferX = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 4.3), MAT.steelChrome);
+    chamferX.position.set(fx, 1.06, 0);
+    group.add(chamferX);
+  });
+
+  // 6 Pneumatic Active Vibration-Isolation Air Spring Dampers with Pressure Dial Gauges
+  [-2.4, 0, 2.4].forEach(fx => {
     [-1.8, 1.8].forEach(fz => {
       const damper = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.18, 16), MAT.hazardDark);
       damper.position.set(fx, 0.09, fz);
@@ -2201,71 +3924,160 @@ export function createLaserQCArch(position = { x: -6, y: 0, z: 8 }) {
       airRing.rotation.x = Math.PI / 2;
       airRing.position.set(fx, 0.12, fz);
       group.add(airRing);
+
+      // Pressure Dial Gauge on corner dampers
+      if (Math.abs(fx) > 1.0) {
+        const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 12), MAT.extinguisherBrass);
+        gauge.position.set(fx + (fx > 0 ? 0.28 : -0.28), 0.14, fz);
+        group.add(gauge);
+      }
     });
   });
 
   // Carbon-Fiber Inverted-U Metrology Gantry Arch
-  const colGeo = new THREE.BoxGeometry(0.6, 4.2, 0.8);
+  const colGeo = new THREE.BoxGeometry(0.65, 4.2, 0.85);
   [-2.2, 2.2].forEach(x => {
     const col = new THREE.Mesh(colGeo, MAT.machineDark);
     col.position.set(x, 2.7, 0);
+    col.castShadow = true;
     group.add(col);
+
+    // Linear guide rails along column vertical face
+    const guideRail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.8, 0.08), MAT.steelChrome);
+    guideRail.position.set(x + (x > 0 ? -0.34 : 0.34), 2.7, 0);
+    group.add(guideRail);
   });
 
-  const archBeam = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.8, 0.9), MAT.machineDark);
-  archBeam.position.set(0, 4.6, 0);
+  const archBeam = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.85, 0.95), MAT.machineDark);
+  archBeam.position.set(0, 4.65, 0);
+  archBeam.castShadow = true;
   group.add(archBeam);
 
-  // Dual Laser Displacement Sensor Heads with Micrometric Adjusters
+  // Precision Horizontal Dual Guide Rails across the Arch
+  [-0.2, 0.2].forEach(ry => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.06, 0.06), MAT.steelChrome);
+    rail.position.set(0, 4.65 + ry, 0.49);
+    group.add(rail);
+  });
+
+  // Dual Laser Displacement Sensor Profiler Heads (Keyence LJ-X8000 Series Inspired)
   [-1.1, 1.1].forEach(lx => {
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.6), MAT.machineAccentCyan);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.75, 0.65), MAT.machineAccentCyan);
     head.position.set(lx, 4.0, 0);
+    head.castShadow = true;
     group.add(head);
 
-    const laserEmitter = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.2), MAT.steelChrome);
-    laserEmitter.position.set(lx, 3.6, 0);
+    // Heatsink cooling fins on sensor head
+    [-0.15, 0, 0.15].forEach(fy => {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.57, 0.02, 0.6), MAT.machineDark);
+      fin.position.set(lx, 4.0 + fy, 0);
+      group.add(fin);
+    });
+
+    // Optical Laser Emitter Slit
+    const laserEmitter = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.18, 16), MAT.steelChrome);
+    laserEmitter.position.set(lx, 3.55, 0);
     group.add(laserEmitter);
 
-    const microScrew = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.12, 12), MAT.extinguisherBrass);
+    const emitterLens = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 12), MAT.laserCyan);
+    emitterLens.position.set(lx, 3.45, 0);
+    group.add(emitterLens);
+
+    // Vernier Micrometer Fine-Pitch Adjuster Screw
+    const microScrew = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.14, 16), MAT.brassFitting);
     microScrew.rotation.z = Math.PI / 2;
-    microScrew.position.set(lx + 0.28, 4.0, 0);
+    microScrew.position.set(lx + (lx > 0 ? 0.32 : -0.32), 4.0, 0);
     group.add(microScrew);
   });
 
   // Sweeping Vertical Planar Laser Sheet
-  const laserPlane = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 2.4), MAT.laserScannerPlane);
-  laserPlane.position.set(0, 2.4, 0);
+  const laserPlane = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 2.5), MAT.laserScannerPlane);
+  laserPlane.position.set(0, 2.35, 0);
   laserPlane.rotation.x = 0;
   group.add(laserPlane);
   group.laserPlane = laserPlane;
 
-  // Clamped Airfoil Component being inspected
-  const part = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.4, 0.8), MAT.workpieceAlloy);
-  part.position.set(0, 1.7, 0);
+  // Blue Projected Laser Scan Line on granite
+  const laserLine = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.02, 0.04), MAT.laserCyan);
+  laserLine.position.set(0, 1.06, 0);
+  group.add(laserLine);
+
+  // Precision 3-2-1 Kinematic Workpiece Staging Fixture
+  const fixtureBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, 0.8), MAT.structuralSteel);
+  fixtureBase.position.set(0, 1.13, 0);
+  group.add(fixtureBase);
+
+  // 3 Spherical Carbide Kinematic Locators
+  [[-0.45, -0.25], [-0.45, 0.25], [0.45, 0]].forEach(([kx, kz]) => {
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), MAT.steelChrome);
+    ball.position.set(kx, 1.22, kz);
+    group.add(ball);
+  });
+
+  // Clamped Airfoil Turbine Blade Component being inspected
+  const part = createAirfoilBlade();
+  part.position.set(0, 1.25, 0);
+  part.rotation.y = 0.4;
   group.add(part);
 
-  // Velvet-Lined Wooden Box with Steel Gauge Blocks
-  const boxWood = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.4), MAT.woodPallet);
-  boxWood.position.set(-1.8, 1.15, 1.4);
+  // Velvet-Lined Wooden Box with Grade K Precision Steel Gauge Blocks
+  const boxWood = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.12, 0.45), MAT.woodPallet);
+  boxWood.position.set(-1.8, 1.12, 1.4);
   group.add(boxWood);
 
-  [-0.15, 0, 0.15].forEach(gx => {
-    const block = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.25), MAT.steelChrome);
-    block.position.set(-1.8 + gx, 1.22, 1.4);
+  // Velvet interior lining
+  const velvet = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.04, 0.39), MAT.hazardDark);
+  velvet.position.set(-1.8, 1.18, 1.4);
+  group.add(velvet);
+
+  // Gauge blocks of varying lengths (10mm, 25mm, 50mm, 100mm)
+  [-0.2, -0.07, 0.07, 0.2].forEach((gx, idx) => {
+    const bH = 0.06 + idx * 0.03;
+    const block = new THREE.Mesh(new THREE.BoxGeometry(0.07, bH, 0.26), MAT.steelChrome);
+    block.position.set(-1.8 + gx, 1.2 + bH / 2, 1.4);
     group.add(block);
   });
 
-  // Digital Micrometer HUD Terminal Column
-  const readout = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.1), MAT.terminalScreen);
-  readout.position.set(2.4, 3.2, 0.5);
-  group.add(readout);
+  // Ceramic Master Optical Calibration Sphere on Magnetic Base
+  const calBase = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.08, 16), MAT.structuralSteel);
+  calBase.position.set(1.8, 1.1, 1.4);
+  group.add(calBase);
 
-  // 3-Tier Andon Status Tower
+  const calStem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.25, 12), MAT.steelChrome);
+  calStem.position.set(1.8, 1.24, 1.4);
+  group.add(calStem);
+
+  const calSphere = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 24), MAT.bulkTankWhite);
+  calSphere.position.set(1.8, 1.42, 1.4);
+  group.add(calSphere);
+
+  // High-Resolution Touchscreen Metrology HUD Terminal on Articulated Monitor Arm
+  const armSupport = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 12), MAT.steelChrome);
+  armSupport.position.set(2.4, 2.6, 0.5);
+  group.add(armSupport);
+
+  const armJoint = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), MAT.machineDark);
+  armJoint.position.set(2.4, 3.2, 0.5);
+  group.add(armJoint);
+
+  const screenBezel = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.1), MAT.machineDark);
+  screenBezel.position.set(2.2, 3.2, 0.6);
+  screenBezel.rotation.y = -0.3;
+  group.add(screenBezel);
+
+  // Metrology HUD Texture showing 3D point cloud deviation colormap & Cpk 1.67 badge
+  const hudTex = getMetrologyHUDTexture();
+  const hudScreen = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.82), new THREE.MeshBasicMaterial({ map: hudTex }));
+  hudScreen.position.set(2.2, 3.2, 0.66);
+  hudScreen.rotation.y = -0.3;
+  group.add(hudScreen);
+
+  // 3-Tier Andon Status Tower on Arch Column
   const andon = createAndonTower(1.0);
-  andon.position.set(-2.2, 4.9, 0);
+  andon.position.set(-2.2, 4.95, 0);
   group.add(andon);
 
-  // Status Halo
+  // Status Halo Ring
   const ring = new THREE.Mesh(new THREE.RingGeometry(3.2, 3.6, 32), new THREE.MeshBasicMaterial({ color: 0x059669, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.02;
@@ -2289,103 +4101,225 @@ export function createConveyorLine(position = { x: 13, y: 0, z: 8 }) {
   // Foundation Hazard Safety Perimeter
   group.add(createHazardBorder(length + 1.2, width + 1.2));
 
-  // Anti-Fatigue Workstation Floor Mat on Operator Side
+  // Anti-Fatigue Ergonomic Workstation Floor Mat on Operator Side (Z > 0)
   const matGeo = new THREE.BoxGeometry(length, 0.03, 1.2);
   const fatigueMat = new THREE.Mesh(matGeo, MAT.rubberMat);
   fatigueMat.position.set(0, 0.02, width / 2 + 0.8);
   group.add(fatigueMat);
 
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(length, 0.7, width), MAT.aluminumExtrusion);
+  // Hazard yellow bevel edge on operator fatigue mat
+  const matBorder = new THREE.Mesh(new THREE.BoxGeometry(length, 0.04, 0.08), MAT.hazardYellow);
+  matBorder.position.set(0, 0.025, width / 2 + 1.4);
+  group.add(matBorder);
+
+  // Main Conveyor Frame: Heavy Industrial Anodized Aluminum Extrusion with T-Slots
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(length, 0.65, width), MAT.aluminumExtrusion);
   frame.position.y = 1.35;
   frame.castShadow = true;
   group.add(frame);
 
-  const belt = new THREE.Mesh(new THREE.BoxGeometry(length - 0.2, 0.1, width - 0.5), MAT.conveyorBelt);
-  belt.position.y = 1.72;
-  group.add(belt);
-
-  // Stainless Steel Guide Fences along both sides
-  [-width / 2 + 0.15, width / 2 - 0.15].forEach(gz => {
-    const fence = new THREE.Mesh(new THREE.BoxGeometry(length - 0.4, 0.18, 0.04), MAT.steelChrome);
-    fence.position.set(0, 1.85, gz);
-    group.add(fence);
+  // Longitudinal T-Slot grooves along exterior sides
+  [-width / 2 - 0.01, width / 2 + 0.01].forEach(fz => {
+    [-0.15, 0.15].forEach(gy => {
+      const slot = new THREE.Mesh(new THREE.BoxGeometry(length - 0.2, 0.04, 0.02), MAT.machineDark);
+      slot.position.set(0, 1.35 + gy, fz);
+      group.add(slot);
+    });
   });
 
-  // Drive Motor & Helical Gearbox at Drive End
+  // Dual Anti-Static UHMW Polyurethane Conveyor Belts
+  [-0.65, 0.65].forEach(bz => {
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(length - 0.2, 0.08, 0.9), MAT.conveyorBelt);
+    belt.position.set(0, 1.72, bz);
+    group.add(belt);
+  });
+
+  // Center Stainless Steel Divider / Cable Raceway
+  const centerRaceway = new THREE.Mesh(new THREE.BoxGeometry(length - 0.2, 0.12, 0.25), MAT.steelChrome);
+  centerRaceway.position.set(0, 1.74, 0);
+  group.add(centerRaceway);
+
+  // Stainless Steel Guide Fences along both sides with Delrin Low-Friction Wear Strips
+  [-width / 2 + 0.15, width / 2 - 0.15].forEach(gz => {
+    const fence = new THREE.Mesh(new THREE.BoxGeometry(length - 0.4, 0.2, 0.04), MAT.steelChrome);
+    fence.position.set(0, 1.85, gz);
+    group.add(fence);
+
+    const wearStrip = new THREE.Mesh(new THREE.BoxGeometry(length - 0.4, 0.06, 0.02), MAT.hazardDark);
+    wearStrip.position.set(0, 1.85, gz + (gz > 0 ? -0.025 : 0.025));
+    group.add(wearStrip);
+  });
+
+  // Helical Bevel Gearmotor Drive Unit at Drive End (+X)
   const driveMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.1, 16), MAT.machineAccentCyan);
   driveMotor.rotation.z = Math.PI / 2;
   driveMotor.position.set(length / 2 + 0.6, 1.35, 0);
   group.add(driveMotor);
 
-  const gearBox = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), MAT.machineDark);
+  const gearBox = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.85), MAT.machineDark);
   gearBox.position.set(length / 2, 1.35, 0);
   group.add(gearBox);
 
-  // E-Stop Cords
-  const cordGeo = new THREE.CylinderGeometry(0.02, 0.02, length - 0.4);
+  // Motor Terminal Junction Box
+  const juncBox = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.2), MAT.machineLight);
+  juncBox.position.set(length / 2 + 0.6, 1.75, 0.25);
+  group.add(juncBox);
+
+  // Emergency Pull-Cord Safety Cables along entire length (Red vinyl coated with tension springs)
+  const cordGeo = new THREE.CylinderGeometry(0.018, 0.018, length - 0.4);
   cordGeo.rotateZ(Math.PI / 2);
-  [-width / 2 - 0.1, width / 2 + 0.1].forEach(ez => {
+  [-width / 2 - 0.12, width / 2 + 0.12].forEach(ez => {
     const cord = new THREE.Mesh(cordGeo, MAT.ledRed);
     cord.position.set(0, 1.6, ez);
     group.add(cord);
+
+    // E-stop pull switches at both ends
+    [-length / 2 + 0.3, length / 2 - 0.3].forEach(ex => {
+      const pSwitch = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.14), MAT.eStopYellow);
+      pSwitch.position.set(ex, 1.6, ez);
+      group.add(pSwitch);
+    });
   });
 
-  // Support Legs
-  const legGeo = new THREE.CylinderGeometry(0.14, 0.14, 1.4);
+  // Heavy Structural Steel Support Legs with Leveling Anchor Foot Plates
+  const legGeo = new THREE.CylinderGeometry(0.14, 0.14, 1.4, 16);
   for (let x = -9.0; x <= 9.0; x += 4.5) {
-    [-1.1, 1.1].forEach(z => {
+    [-1.15, 1.15].forEach(z => {
       const leg = new THREE.Mesh(legGeo, MAT.structuralSteel);
       leg.position.set(x, 0.7, z);
+      leg.castShadow = true;
       group.add(leg);
+
+      const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 12), MAT.steelChrome);
+      foot.position.set(x, 0.025, z);
+      group.add(foot);
     });
   }
 
-  // Laser QC Inspection Tunnel Arch at Midpoint
+  // Pneumatic Pallet Stop Gates & Photo-Eye Sensors along line
+  [-6.75, -2.25, 2.25, 6.75].forEach(sx => {
+    // Pneumatic lift-and-locate cylinder
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16), MAT.steelChrome);
+    cyl.position.set(sx, 1.55, 0);
+    group.add(cyl);
+
+    const snubber = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.12, 0.4), MAT.rubberMat);
+    snubber.position.set(sx, 1.75, 0);
+    group.add(snubber);
+
+    // Retroreflective photoelectric sensor bracket with red emitter LED
+    [-width / 2 + 0.08, width / 2 - 0.08].forEach(pz => {
+      const sensorBracket = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.06), MAT.aluminumExtrusion);
+      sensorBracket.position.set(sx, 1.85, pz);
+      group.add(sensorBracket);
+
+      const sensorLed = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), MAT.ledRed);
+      sensorLed.position.set(sx, 1.88, pz + (pz > 0 ? -0.035 : 0.035));
+      group.add(sensorLed);
+    });
+  });
+
+  // Automated Optical Inspection (AOI) / Laser QC Inspection Tunnel Arch at Midpoint (x = 0)
   const tunnelGroup = new THREE.Group();
   tunnelGroup.position.set(0, 1.7, 0);
 
-  const tunnelArch = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.5, width + 0.5), MAT.machineDark);
-  tunnelArch.position.y = 1.25;
+  const tunnelArch = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.6, width + 0.6), MAT.machineDark);
+  tunnelArch.position.y = 1.3;
+  tunnelArch.castShadow = true;
   tunnelGroup.add(tunnelArch);
 
-  const tunnelChamber = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.7, width - 0.2), MAT.floorEpoxy);
-  tunnelChamber.position.y = 0.85;
+  // Bright white inspection tunnel interior chamber
+  const tunnelChamber = new THREE.Mesh(new THREE.BoxGeometry(3.7, 1.8, width - 0.2), MAT.floorEpoxy);
+  tunnelChamber.position.y = 0.9;
   tunnelGroup.add(tunnelChamber);
 
-  const tunnelLaser = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 1.7), MAT.laserScannerPlane);
-  tunnelLaser.position.set(0, 0.85, 0);
+  // Top Down Vision Camera Unit
+  const aoiCamera = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), MAT.machineAccentCyan);
+  aoiCamera.position.set(0, 2.1, 0);
+  tunnelGroup.add(aoiCamera);
+
+  const aoiLens = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.2, 16), MAT.steelChrome);
+  aoiLens.position.set(0, 1.8, 0);
+  tunnelGroup.add(aoiLens);
+
+  // Laser Sheet inside Tunnel
+  const tunnelLaser = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 1.8), MAT.laserScannerPlane);
+  tunnelLaser.position.set(0, 0.9, 0);
   tunnelLaser.rotation.y = Math.PI / 2;
   tunnelGroup.add(tunnelLaser);
   group.tunnelLaser = tunnelLaser;
 
   group.add(tunnelGroup);
 
-  // Moving Pallets with Detailed Electronics (Green PCB + Heat Sinks)
-  const pcbMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.4 });
-  const heatSinkMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.2, metalness: 0.8 });
+  // Moving Pallets with Detailed Electronics (Avionics Flight Computers with Procedural PCB Canvas Textures)
+  const pcbTex = getCircuitBoardTexture();
+  const pcbMat = new THREE.MeshStandardMaterial({
+    map: pcbTex,
+    roughness: 0.35,
+    metalness: 0.4
+  });
 
   group.crates = [];
   for (let i = 0; i < 5; i++) {
     const palletGroup = new THREE.Group();
     palletGroup.position.set(-9.0 + i * 4.5, 2.0, 0);
 
-    const palBase = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.22, 1.4), MAT.cargoPallet);
+    // ESD-Safe Composite Pallet Carrier Base with Metal Guide Bushings
+    const palBase = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.22, 1.45), MAT.cargoPallet);
     palletGroup.add(palBase);
 
-    // Green Avionics PCB Circuit Board
-    const pcb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 1.0), pcbMat);
-    pcb.position.y = 0.14;
+    // Pallet Location / Barcode Placard
+    const palPlacardTex = getBarcodePlacardTexture(`PAL-AV-0${i + 1}`, 'FLIGHT COMPUTER TRAY');
+    const palPlacard = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.18), new THREE.MeshBasicMaterial({ map: palPlacardTex }));
+    palPlacard.position.set(0, 0, 0.73);
+    palletGroup.add(palPlacard);
+
+    // Corner Locator Bushings
+    [-0.75, 0.75].forEach(bx => {
+      [-0.65, 0.65].forEach(bz => {
+        const bush = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 12), MAT.steelChrome);
+        bush.position.set(bx, 0.02, bz);
+        palletGroup.add(bush);
+      });
+    });
+
+    // High-Resolution Procedural Green Soldermask Avionics PCB with Gold Traces & SoC
+    const pcb = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.04, 1.15), pcbMat);
+    pcb.position.y = 0.13;
     palletGroup.add(pcb);
 
-    // Aluminum Fin Heat Sinks on PCB
-    const heatSink = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.4), heatSinkMat);
-    heatSink.position.set(-0.25, 0.32, 0);
-    palletGroup.add(heatSink);
+    // 64-Pin Ceramic QFP Flight SoC Processor (Center)
+    const soc = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.06, 0.35), MAT.machineDark);
+    soc.position.set(-0.25, 0.17, 0);
+    palletGroup.add(soc);
 
-    // Gold Pin Connector Header
-    const conn = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.2, 0.8), MAT.extinguisherBrass);
-    conn.position.set(0.4, 0.24, 0);
-    palletGroup.add(conn);
+    // Blue Anodized Aluminum Multi-Fin Heat Sink Tower
+    const heatSinkTower = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.38, 0.42), MAT.heatSinkBlue);
+    heatSinkTower.position.set(0.32, 0.33, -0.2);
+    palletGroup.add(heatSinkTower);
+
+    // Individual Heatsink Fins
+    [-0.15, -0.05, 0.05, 0.15].forEach(fy => {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.02, 0.44), MAT.heatSinkBlue);
+      fin.position.set(0.32, 0.33 + fy, -0.2);
+      palletGroup.add(fin);
+    });
+
+    // Gold Pin Connector Headers (Hirose avionics bus)
+    const conn1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.75), MAT.brassFitting);
+    conn1.position.set(0.55, 0.22, 0.15);
+    palletGroup.add(conn1);
+
+    const conn2 = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.12), MAT.brassFitting);
+    conn2.position.set(-0.25, 0.22, 0.45);
+    palletGroup.add(conn2);
+
+    // Surface-mount electrolytic capacitors
+    [-0.35, -0.45].forEach(cx => {
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.12, 12), MAT.aluminumExtrusion);
+      cap.position.set(cx, 0.19, -0.35);
+      palletGroup.add(cap);
+    });
 
     palletGroup.castShadow = true;
     group.add(palletGroup);
@@ -2397,7 +4331,7 @@ export function createConveyorLine(position = { x: 13, y: 0, z: 8 }) {
   andon.position.set(length / 2 - 0.5, 2.0, width / 2);
   group.add(andon);
 
-  // Status Halo
+  // Status Halo Ring
   const ring = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.0, 32), new THREE.MeshBasicMaterial({ color: 0x059669, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.02;
@@ -2415,25 +4349,40 @@ export function createAGVRobot(id = "AGV-01", cargoType = "pallet") {
   const group = new THREE.Group();
   group.userData = { id, type: "AGV", name: id === "AGV-01" ? "Patrol Logistics AMR" : "Transit Cargo AMR" };
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.65, 1.7), MAT.machineChassis);
-  body.position.y = 0.45;
+  // Sculpted Low-Profile AMR Chassis (MiR / OTTO 1500 Style)
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.62, 1.7), MAT.machineChassis);
+  body.position.y = 0.46;
   body.castShadow = true;
   group.add(body);
 
-  [-0.87, 0.87].forEach(z => {
-    const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.15, 0.1), MAT.hazardYellow);
-    skirt.position.set(0, 0.35, z);
+  // Beveled Front & Rear Bumper Skirts in Hazard Striping
+  [-0.88, 0.88].forEach(z => {
+    const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.16, 0.08), MAT.hazardYellow);
+    skirt.position.set(0, 0.36, z);
     group.add(skirt);
   });
 
-  const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 1.5), MAT.machineDark);
-  bumper.position.set(1.2, 0.4, 0);
-  group.add(bumper);
+  // Front Bumper Wedge with Optical Safety Contact Bumper
+  const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 1.55), MAT.machineDark);
+  frontBumper.position.set(1.22, 0.4, 0);
+  group.add(frontBumper);
 
-  const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 1.2), MAT.laserCyan);
-  headlight.position.set(1.32, 0.4, 0);
+  // 360-Degree Perimeter Safety LED Light Ribbon along chassis waist
+  [-0.86, 0.86].forEach(z => {
+    const ribbonSide = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.04, 0.03), MAT.laserCyan);
+    ribbonSide.position.set(0, 0.55, z);
+    group.add(ribbonSide);
+  });
+  const ribbonFront = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 1.5), MAT.laserCyan);
+  ribbonFront.position.set(1.16, 0.55, 0);
+  group.add(ribbonFront);
+
+  // Front Headlight Cluster
+  const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 1.25), MAT.carHeadlight);
+  headlight.position.set(1.33, 0.42, 0);
   group.add(headlight);
 
+  // Forward Directional LED Spot Light
   const driveLight = new THREE.SpotLight(0x0284c7, 2.5, 14, Math.PI / 4, 0.4, 1.0);
   driveLight.position.set(1.3, 0.5, 0);
   const lightTarget = new THREE.Object3D();
@@ -2443,14 +4392,44 @@ export function createAGVRobot(id = "AGV-01", cargoType = "pallet") {
   driveLight.target = lightTarget;
   group.driveLight = driveLight;
 
-  // 3D Rotating LiDAR Puck
-  const lidarPuck = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.3, 20), MAT.steelChrome);
-  lidarPuck.position.set(0.65, 0.95, 0);
+  // Diagonally Opposed Dual SICK MicroScan3 Safety LiDAR Scanners (Front-Right & Rear-Left for 360° Safety)
+  const scannerGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.16, 16);
+  const frontScanner = new THREE.Mesh(scannerGeo, MAT.machineDark);
+  frontScanner.position.set(1.08, 0.28, 0.78);
+  group.add(frontScanner);
+
+  const rearScanner = new THREE.Mesh(scannerGeo, MAT.machineDark);
+  rearScanner.position.set(-1.08, 0.28, -0.78);
+  group.add(rearScanner);
+
+  // Dual Recessed Emergency Stop Pushbuttons with Yellow Shroud Rings
+  [ [1.05, -0.78], [-1.05, 0.78] ].forEach(([ex, ez]) => {
+    const shroud = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 12), MAT.eStopYellow);
+    shroud.position.set(ex, 0.78, ez);
+    group.add(shroud);
+
+    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.06, 12), MAT.ledRed);
+    btn.position.set(ex, 0.81, ez);
+    group.add(btn);
+  });
+
+  // Top Mast with 3D Rotating LiDAR Puck (Velodyne VLP-16 Style)
+  const lidarMast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.35, 16), MAT.structuralSteel);
+  lidarMast.position.set(0.65, 0.85, 0);
+  group.add(lidarMast);
+
+  const lidarPuck = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.28, 24), MAT.steelChrome);
+  lidarPuck.position.set(0.65, 1.05, 0);
   group.add(lidarPuck);
   group.lidarPuck = lidarPuck;
 
-  // LiDAR Scan Cone
-  const coneGeo = new THREE.ConeGeometry(2.2, 3.8, 16, 1, true);
+  // Tinted Optical Window on LiDAR Puck
+  const puckWindow = new THREE.Mesh(new THREE.CylinderGeometry(0.245, 0.245, 0.12, 24), MAT.portalGlass);
+  puckWindow.position.set(0.65, 1.05, 0);
+  group.add(puckWindow);
+
+  // LiDAR 3D Forward Scan Volume Cone
+  const coneGeo = new THREE.ConeGeometry(2.4, 4.0, 16, 1, true);
   coneGeo.rotateX(Math.PI / 2);
   const coneMat = new THREE.MeshBasicMaterial({
     color: 0x0284c7,
@@ -2460,38 +4439,99 @@ export function createAGVRobot(id = "AGV-01", cargoType = "pallet") {
     blending: THREE.AdditiveBlending,
   });
   const lidarCone = new THREE.Mesh(coneGeo, coneMat);
-  lidarCone.position.set(2.4, 0.6, 0);
+  lidarCone.position.set(2.5, 0.7, 0);
   group.add(lidarCone);
   group.lidarCone = lidarCone;
 
-  // Flashing Amber Beacon
-  const strobe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.24, 16), MAT.strobeAmber);
-  strobe.position.set(-0.85, 1.15, 0);
+  // High-Visibility Xenon Flashing Amber Beacon
+  const strobeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.15, 12), MAT.machineDark);
+  strobeBase.position.set(-0.85, 0.85, 0);
+  group.add(strobeBase);
+
+  const strobe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.22, 16), MAT.strobeAmber);
+  strobe.position.set(-0.85, 1.02, 0);
   group.add(strobe);
   group.strobeBeacon = strobe;
 
-  // Wheels
-  const wheelGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.22, 20);
-  wheelGeo.rotateZ(Math.PI / 2);
+  // Rear 7-Inch Interactive Digital Status Touchscreen Display
+  const screenTex = getAMRScreenTexture(id);
+  const screenPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.35), new THREE.MeshBasicMaterial({ map: screenTex }));
+  screenPlane.position.set(-1.16, 0.58, 0);
+  screenPlane.rotation.y = -Math.PI / 2;
+  group.add(screenPlane);
+
+  // Wheels: Differential Center Drive Wheels with Alloy Hubs & Polyurethane Tires + 4 Caster Wheels
+  const tireGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 24);
+  tireGeo.rotateX(Math.PI / 2);
+
   group.wheels = [];
-  [[-0.7, 0.26, 0.9], [0.7, 0.26, 0.9], [-0.7, 0.26, -0.9], [0.7, 0.26, -0.9]].forEach(([x, y, z]) => {
-    const w = new THREE.Mesh(wheelGeo, MAT.machineDark);
-    w.position.set(x, y, z);
-    group.add(w);
-    group.wheels.push(w);
+  [[-0.65, 0.88], [0.65, 0.88], [-0.65, -0.88], [0.65, -0.88]].forEach(([x, z]) => {
+    const tire = new THREE.Mesh(tireGeo, MAT.tireRubber);
+    tire.position.set(x, 0.28, z);
+    group.add(tire);
+    group.wheels.push(tire);
+
+    // Aluminum alloy wheel hub
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.24, 16), MAT.wheelRim);
+    hub.rotation.x = Math.PI / 2;
+    hub.position.set(x, 0.28, z);
+    group.add(hub);
   });
 
-  // Cargo Payload
+  // Authentic Cargo Payload
   const cargoGroup = new THREE.Group();
-  cargoGroup.position.set(-0.1, 0.85, 0);
-  const cargoPallet = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.15, 1.2), MAT.cargoPallet);
-  cargoGroup.add(cargoPallet);
+  cargoGroup.position.set(-0.05, 0.85, 0);
 
-  const partCrate = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.55, 0.85), MAT.workpieceAlloy);
-  partCrate.position.y = 0.35;
-  cargoGroup.add(partCrate);
+  if (id === "AGV-01") {
+    // AGV-01: Logistics AMR transporting Military/Aerospace Sealed Flight Hardware Case (Pelican-Hardigg style)
+    const cargoPallet = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.14, 1.2), MAT.cargoPallet);
+    cargoGroup.add(cargoPallet);
+
+    // Sealed Transit Case in Tactical Olive/Charcoal
+    const caseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.65, 0.95), MAT.machineDark);
+    caseMesh.position.y = 0.42;
+    caseMesh.castShadow = true;
+    cargoGroup.add(caseMesh);
+
+    // Aluminum Reinforcement Corner Edges & Ribs
+    [-0.56, 0.56].forEach(cx => {
+      const edgeX = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.62, 0.93), MAT.aluminumExtrusion);
+      edgeX.position.set(cx, 0.42, 0);
+      cargoGroup.add(edgeX);
+    });
+
+    // Stainless Butterfly Twist Latches
+    [-0.3, 0.3].forEach(lx => {
+      const latch = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.04), MAT.steelChrome);
+      latch.position.set(lx, 0.42, 0.49);
+      cargoGroup.add(latch);
+    });
+
+    // Decal on Transit Case: CRITICAL FLIGHT HARDWARE
+    const decalTex = getEquipmentDecalTexture('caution', 'FLIGHT HARDWARE', 'FRAGILE - CLASS 1');
+    const decal = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 0.32), new THREE.MeshBasicMaterial({ map: decalTex }));
+    decal.position.set(0, 0.46, 0.49);
+    cargoGroup.add(decal);
+  } else {
+    // AGV-02: Hot Billet & Titanium Forging Transfer AMR
+    const cradle = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.16, 1.3), MAT.structuralSteel);
+    cargoGroup.add(cradle);
+
+    // Insulated ceramic refractory staging blocks
+    [-0.45, 0.45].forEach(bx => {
+      const block = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 1.1), MAT.graniteBase);
+      block.position.set(bx, 0.18, 0);
+      cargoGroup.add(block);
+    });
+
+    // Sculpted Titanium Bulkhead Forging clamped on the AMR
+    const forging = createBulkheadForging();
+    forging.position.set(0, 0.35, 0);
+    forging.scale.set(0.55, 0.55, 0.55);
+    cargoGroup.add(forging);
+  }
+
   group.add(cargoGroup);
-
   group.position.set(0, 0, 0);
   return group;
 }
@@ -3069,59 +5109,131 @@ export function createTownEnvironment() {
 }
 
 /**
- * Creates a procedural vehicle mesh (car, delivery van, or cargo truck)
+ * Creates a procedural vehicle mesh (car, delivery van, or cargo truck) with realistic mechanical detailing
  */
 function createDetailedVehicleMesh(colorMat, hasLights = true, type = 'car') {
   const vGroup = new THREE.Group();
 
-  let bodyLength = 3.6;
-  let bodyWidth = 1.6;
-  let bodyHeight = 0.8;
-  let cabinLength = 2.0;
+  let bodyLength = 3.8;
+  let bodyWidth = 1.65;
+  let bodyHeight = 0.75;
+  let cabinLength = 2.1;
   let cabinHeight = 0.65;
 
   if (type === 'van') {
-    bodyLength = 4.4;
-    bodyWidth = 1.7;
-    bodyHeight = 1.2;
-    cabinLength = 3.2;
-    cabinHeight = 0.7;
+    bodyLength = 4.6;
+    bodyWidth = 1.75;
+    bodyHeight = 1.25;
+    cabinLength = 3.4;
+    cabinHeight = 0.75;
   } else if (type === 'truck') {
-    bodyLength = 5.2;
-    bodyWidth = 1.85;
-    bodyHeight = 1.4;
-    cabinLength = 1.6;
-    cabinHeight = 1.0;
+    bodyLength = 5.6;
+    bodyWidth = 1.95;
+    bodyHeight = 1.45;
+    cabinLength = 1.7;
+    cabinHeight = 1.1;
   }
 
-  // Lower Chassis
+  // 1. Lower Chassis Frame & Underbody
+  const underbody = new THREE.Mesh(new THREE.BoxGeometry(bodyLength * 0.95, 0.18, bodyWidth * 0.85), MAT.machineDark);
+  underbody.position.y = 0.22;
+  vGroup.add(underbody);
+
+  // 2. Sculpted Outer Body Shell
   const chassis = new THREE.Mesh(new THREE.BoxGeometry(bodyLength, bodyHeight, bodyWidth), colorMat);
-  chassis.position.y = bodyHeight / 2 + 0.2;
+  chassis.position.y = bodyHeight / 2 + 0.22;
+  chassis.castShadow = true;
   vGroup.add(chassis);
 
-  // Cabin / Greenhouse
+  // 3. Cabin / Greenhouse Structure
   const cabinMat = (type === 'truck') ? MAT.carWhite : (type === 'van' ? colorMat : MAT.buildingTrim);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLength, cabinHeight, bodyWidth * 0.9), cabinMat);
-  cabin.position.set((type === 'truck' ? 1.4 : -0.2), bodyHeight + cabinHeight / 2 + 0.2, 0);
+  const cabinX = (type === 'truck' ? 1.5 : (type === 'van' ? 0.2 : -0.2));
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLength, cabinHeight, bodyWidth * 0.92), cabinMat);
+  cabin.position.set(cabinX, bodyHeight + cabinHeight / 2 + 0.22, 0);
+  cabin.castShadow = true;
   vGroup.add(cabin);
 
-  // Tinted Windshields
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(cabinLength * 0.95, cabinHeight * 0.85, bodyWidth * 0.95), MAT.portalGlass);
+  // Tinted Windshield & Window Glass
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(cabinLength * 0.96, cabinHeight * 0.88, bodyWidth * 0.96), MAT.portalGlass);
   glass.position.copy(cabin.position);
   vGroup.add(glass);
 
-  // If cargo truck, add large cargo box in the back
-  if (type === 'truck') {
-    const cargoBox = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.8, bodyWidth), MAT.machineLight);
-    cargoBox.position.set(-0.9, 1.3, 0);
+  // 4. Type-Specific Details
+  if (type === 'car') {
+    // Front Radiator Grille
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.28, bodyWidth * 0.7), MAT.machineDark);
+    grille.position.set(bodyLength / 2 + 0.02, 0.45, 0);
+    vGroup.add(grille);
+
+    // Side Mirrors
+    [-bodyWidth / 2 - 0.1, bodyWidth / 2 + 0.1].forEach(mz => {
+      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.15), MAT.machineDark);
+      mirror.position.set(0.6, bodyHeight + 0.35, mz);
+      vGroup.add(mirror);
+
+      const mirrorGlass = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, 0.12), MAT.steelChrome);
+      mirrorGlass.position.set(0.55, bodyHeight + 0.35, mz);
+      vGroup.add(mirrorGlass);
+    });
+
+    // Rear Dual Exhaust Pipes
+    [-0.45, 0.45].forEach(ez => {
+      const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.15, 12), MAT.steelChrome);
+      exhaust.rotation.z = Math.PI / 2;
+      exhaust.position.set(-bodyLength / 2 - 0.05, 0.28, ez);
+      vGroup.add(exhaust);
+    });
+  } else if (type === 'van') {
+    // Rear split cargo doors seam & latch
+    const doorSeam = new THREE.Mesh(new THREE.BoxGeometry(0.02, bodyHeight + cabinHeight - 0.2, 0.04), MAT.machineDark);
+    doorSeam.position.set(-bodyLength / 2 - 0.01, (bodyHeight + cabinHeight) / 2 + 0.2, 0);
+    vGroup.add(doorSeam);
+
+    const doorLatch = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.08), MAT.steelChrome);
+    doorLatch.position.set(-bodyLength / 2 - 0.02, 0.9, 0.12);
+    vGroup.add(doorLatch);
+
+    // Roof A/C Ventilation Unit
+    const acUnit = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.18, 0.6), MAT.buildingTrim);
+    acUnit.position.set(-0.6, bodyHeight + cabinHeight + 0.3, 0);
+    vGroup.add(acUnit);
+  } else if (type === 'truck') {
+    // Heavy Freight Box Container with Corrugated Ribs
+    const cargoBox = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.2, bodyWidth * 1.05), MAT.machineLight);
+    cargoBox.position.set(-0.85, 1.45, 0);
+    cargoBox.castShadow = true;
     vGroup.add(cargoBox);
+
+    // Horizontal corrugated ribs along cargo box
+    [-0.5, 0, 0.5].forEach(ry => {
+      [-bodyWidth * 0.53, bodyWidth * 0.53].forEach(rz => {
+        const rib = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.04, 0.02), MAT.structuralSteel);
+        rib.position.set(-0.85, 1.45 + ry, rz);
+        vGroup.add(rib);
+      });
+    });
+
+    // Twin Vertical Chrome Exhaust Stacks
+    [-bodyWidth * 0.45, bodyWidth * 0.45].forEach(sz => {
+      const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 16), MAT.steelChrome);
+      stack.position.set(0.65, 1.8, sz);
+      vGroup.add(stack);
+    });
+
+    // Cylindrical Aluminum Diesel Fuel Tanks under Chassis
+    [-bodyWidth * 0.48, bodyWidth * 0.48].forEach(tz => {
+      const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 1.4, 16), MAT.aluminumExtrusion);
+      tank.rotation.z = Math.PI / 2;
+      tank.position.set(-0.8, 0.38, tz);
+      vGroup.add(tank);
+    });
   }
 
-  // 4 Rotating Wheels
-  const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 16);
-  wheelGeo.rotateX(Math.PI / 2);
-  vGroup.wheels = [];
+  // 5. 4 Rotating Wheels with Realistic Tires and Alloy Rims
+  const tireGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 20);
+  tireGeo.rotateX(Math.PI / 2);
 
+  vGroup.wheels = [];
   const wOffsets = [
     [-bodyLength * 0.35, bodyWidth * 0.52],
     [bodyLength * 0.35, bodyWidth * 0.52],
@@ -3130,25 +5242,45 @@ function createDetailedVehicleMesh(colorMat, hasLights = true, type = 'car') {
   ];
 
   wOffsets.forEach(([wx, wz]) => {
-    const w = new THREE.Mesh(wheelGeo, MAT.machineDark);
-    w.position.set(wx, 0.28, wz);
-    vGroup.add(w);
-    vGroup.wheels.push(w);
+    // Wheel assembly group that rotates together
+    const wheelAssembly = new THREE.Group();
+    wheelAssembly.position.set(wx, 0.28, wz);
+
+    // Rubber Tire
+    const tire = new THREE.Mesh(tireGeo, MAT.tireRubber);
+    wheelAssembly.add(tire);
+
+    // Alloy Rim with Center Cap
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.23, 16), MAT.wheelRim);
+    rim.rotation.x = Math.PI / 2;
+    wheelAssembly.add(rim);
+
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.24, 12), MAT.steelChrome);
+    cap.rotation.x = Math.PI / 2;
+    wheelAssembly.add(cap);
+
+    vGroup.add(wheelAssembly);
+    vGroup.wheels.push(wheelAssembly);
   });
 
-  // Headlights & Taillights
+  // 6. High-Visibility Headlights, Taillights & Signals
   if (hasLights) {
-    // Front headlights (pointing +X forward)
+    // Front LED Headlights (pointing +X forward)
     [-0.55, 0.55].forEach(hz => {
       const hl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.28), MAT.carHeadlight);
-      hl.position.set(bodyLength / 2 + 0.02, 0.45, hz);
+      hl.position.set(bodyLength / 2 + 0.02, 0.46, hz);
       vGroup.add(hl);
+
+      // Amber turn signal strip
+      const turnSignal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.28), MAT.strobeAmber);
+      turnSignal.position.set(bodyLength / 2 + 0.02, 0.36, hz);
+      vGroup.add(turnSignal);
     });
 
-    // Rear taillights (pointing -X backward)
+    // Rear LED Taillights (pointing -X backward)
     [-0.55, 0.55].forEach(tz => {
       const tl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.28), MAT.carTaillight);
-      tl.position.set(-bodyLength / 2 - 0.02, 0.45, tz);
+      tl.position.set(-bodyLength / 2 - 0.02, 0.46, tz);
       vGroup.add(tl);
     });
   }
@@ -3162,19 +5294,24 @@ function createDetailedVehicleMesh(colorMat, hasLights = true, type = 'car') {
 function createModernStreetlamp() {
   const lamp = new THREE.Group();
 
-  // Pole
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.5, 12), MAT.streetlampPole);
+  // Flanged Base Anchor
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.12, 12), MAT.structuralSteel);
+  base.position.y = 0.06;
+  lamp.add(base);
+
+  // Vertical Tubular Pole
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.5, 16), MAT.streetlampPole);
   pole.position.y = 2.25;
   lamp.add(pole);
 
-  // Angled arm
+  // Angled Cantilever Arm
   const arm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), MAT.streetlampPole);
   arm.position.set(0.5, 4.5, 0);
   arm.rotation.z = -0.15;
   lamp.add(arm);
 
-  // Light fixture head
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.24), MAT.streetlampGlow);
+  // Luminaire LED Fixture Head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.26), MAT.streetlampGlow);
   head.position.set(1.0, 4.4, 0);
   lamp.add(head);
 
@@ -3182,24 +5319,41 @@ function createModernStreetlamp() {
 }
 
 /**
- * Creates procedural street tree with trunk and organic canopy
+ * Creates procedural architectural landscaped street tree with sculpted woody trunk and organic canopy
  */
 function createStreetTree() {
   const tree = new THREE.Group();
 
-  // Trunk
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 2.4, 8), MAT.treeTrunk);
-  trunk.position.y = 1.2;
-  tree.add(trunk);
+  // Root Flare Base
+  const rootBase = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.38, 0.3, 12), MAT.treeTrunk);
+  rootBase.position.y = 0.15;
+  tree.add(rootBase);
 
-  // Foliage Canopy (geometric octahedron / sphere layers)
-  const canopy1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4, 1), MAT.treeFoliage);
-  canopy1.position.y = 2.8;
-  tree.add(canopy1);
+  // Sculpted Woody Trunk with Slight Lean
+  const trunk1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 1.8, 12), MAT.treeTrunk);
+  trunk1.position.y = 1.05;
+  tree.add(trunk1);
 
-  const canopy2 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0, 1), MAT.treeFoliage);
-  canopy2.position.set(0.2, 3.8, -0.1);
-  tree.add(canopy2);
+  // Upper Branch Split
+  const trunk2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.4, 10), MAT.treeTrunk);
+  trunk2.position.set(0.1, 2.2, 0);
+  trunk2.rotation.z = -0.15;
+  tree.add(trunk2);
+
+  // Multi-Tiered Clustered Organic Foliage Volumes
+  const foliageTiers = [
+    { x: 0.0, y: 2.9, z: 0.0, r: 1.45 },
+    { x: -0.35, y: 3.6, z: 0.25, r: 1.15 },
+    { x: 0.4, y: 3.7, z: -0.2, r: 1.05 },
+    { x: 0.1, y: 4.4, z: 0.05, r: 0.85 },
+  ];
+
+  foliageTiers.forEach(tier => {
+    const canopy = new THREE.Mesh(new THREE.DodecahedronGeometry(tier.r, 1), MAT.treeFoliage);
+    canopy.position.set(tier.x, tier.y, tier.z);
+    canopy.castShadow = true;
+    tree.add(canopy);
+  });
 
   return tree;
 }
