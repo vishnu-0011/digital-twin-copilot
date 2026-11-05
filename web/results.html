@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Titan Copilot Results</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Measured results: remaining-life accuracy, anomaly detection, maintenance policies and the NASA C-MAPSS benchmark.">
+  <script>
+    try { document.documentElement.dataset.theme = localStorage.getItem('titan_theme') || 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
+  </script>
+  <link rel="stylesheet" href="/css/site.css?v=1">
+  <style>
+    :root { --s1: #0284c7; --s2: #eb6834; --mark-muted: #b8c0cc; --grid: rgba(15, 23, 42, 0.07); }
+    :root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --mark-muted: #4a5568; --grid: rgba(255, 255, 255, 0.07); }
+    .ax text, .lbl { font: 12px var(--sans); fill: var(--ink-3); }
+    .ax line, .ax path { stroke: var(--hair-2); }
+    .gridl { stroke: var(--grid); }
+    .val { font: 600 12.5px var(--sans); fill: var(--ink); font-variant-numeric: tabular-nums; }
+    .name { font: 500 13px var(--sans); fill: var(--ink-2); }
+    .name.hl { fill: var(--ink); font-weight: 650; }
+    .hit { fill: transparent; cursor: default; }
+    .whisk { stroke: var(--ink-2); stroke-width: 1.5; }
+    .grid2c { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    .fig { min-width: 0; }
+    .note { margin-top: 18px; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--hair); background: var(--surface-2); font-size: 14.5px; color: var(--ink-2); }
+    .note b { color: var(--ink); }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+    .legend i.dot { width: 8px; height: 8px; border-radius: 50%; }
+    pre.cmd { background: var(--surface-2); border: 1px solid var(--hair); border-radius: 12px; padding: 14px 16px; font: 13px/1.7 var(--mono); overflow-x: auto; }
+    .stamp { font-size: 12.5px; color: var(--ink-3); margin-top: 10px; }
+    .empty { padding: 40px; text-align: center; color: var(--ink-3); }
+    @media (max-width: 900px) { .grid2c { grid-template-columns: minmax(0, 1fr); } }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="wrap">
+      <a class="logo" href="/?nowelcome" aria-label="Open the live plant">TA</a>
+      <div class="brand"><b>Titan Aerospace</b><span>Maintenance copilot</span></div>
+      <nav class="pages" aria-label="Project pages">
+        <a href="/why.html">Why</a>
+        <a href="/method.html">How it works</a>
+        <a href="/results.html" aria-current="page">Results</a>
+      </nav>
+      <div class="actions">
+        <a class="btn" href="/?tour=quick">3-minute tour</a>
+        <a class="btn btn-primary" href="/?nowelcome">Open the live plant</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <span class="eyebrow">Results</span>
+        <h1>Does it work? Measured, not claimed.</h1>
+        <p class="lead">Every number on this page comes from <code>python -m evaluation.run_all</code>, scored on simulated plants the models never saw and on NASA's public C-MAPSS benchmark. Where something does not win, this page says so.</p>
+        <div class="kpis reveal" id="kpis" style="margin-top: 36px"></div>
+        <p class="stamp" id="stamp"></p>
+      </div>
+    </section>
+
+    <section id="rul">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">1 · Remaining life</span>
+          <h2>How far off is the prediction?</h2>
+          <p id="rul-intro">Scored on readings in the wear phase (true remaining life under 100 cycles), where scheduling decisions are made.</p>
+        </div>
+        <div class="grid2c">
+          <figure class="fig reveal">
+            <h3>Mean absolute error by model</h3>
+            <p class="cap">Cycles, lower is better. The baseline uses no sensors: the average life of the machine type minus the part's age.</p>
+            <div id="ch-rul"></div>
+            <details class="tview"><summary>Show table</summary><div id="tb-rul"></div></details>
+          </figure>
+          <figure class="fig reveal">
+            <h3>Predicted against true remaining life</h3>
+            <p class="cap">TCN, a sample of 400 readings. On the diagonal = exact; the band is ± the mean error shown in the app.</p>
+            <div id="ch-scatter"></div>
+            <details class="tview"><summary>Show error by range</summary><div id="tb-buckets"></div></details>
+          </figure>
+        </div>
+        <div class="note reveal" id="rul-note"></div>
+      </div>
+    </section>
+
+    <section id="anomaly">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">2 · Anomaly detection</span>
+          <h2>How early does it notice wear?</h2>
+          <p>Positive means wear has started (wear at or above 0.25), which is the point P where a fault becomes detectable. The comparison is a fixed vibration threshold at ISO 10816-3 zone C.</p>
+        </div>
+        <div class="grid2c">
+          <figure class="fig reveal">
+            <h3>Warning before failure</h3>
+            <p class="cap">Median cycles between the first alert in a part's life and its failure. More is more time to plan.</p>
+            <div id="ch-lead"></div>
+          </figure>
+          <figure class="fig reveal">
+            <h3>Detection quality</h3>
+            <p class="cap">On every reading from running machines in the test plants.</p>
+            <div id="tb-anomaly"></div>
+          </figure>
+        </div>
+        <div class="note reveal" id="anomaly-note"></div>
+      </div>
+    </section>
+
+    <section id="policy">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">3 · The maintenance decision</span>
+          <h2>Downtime per 8-hour shift, by policy</h2>
+          <p id="policy-intro"></p>
+        </div>
+        <figure class="fig reveal">
+          <h3>Machine-hours lost per shift</h3>
+          <p class="cap">Mean across plants; the whisker is one standard deviation. Downtime is summed over all 8 machines.</p>
+          <div id="ch-policy"></div>
+          <details class="tview" open><summary>Show table</summary><div id="tb-policy"></div></details>
+        </figure>
+        <div class="grid2c" style="margin-top: 16px">
+          <figure class="fig reveal">
+            <h3>What if breakdowns take longer to repair?</h3>
+            <p class="cap">Downtime per shift as the repair time grows (multiple of a planned service). The app assumes 3×.</p>
+            <div class="legend"><span><i style="--c: var(--s2)"></i>Run to failure</span><span><i style="--c: var(--s1)"></i>Copilot (TCN)</span></div>
+            <div id="ch-sens"></div>
+            <details class="tview"><summary>Show table</summary><div id="tb-sens"></div></details>
+          </figure>
+          <figure class="fig reveal">
+            <h3>Choosing the fixed schedule</h3>
+            <p class="cap">Service after k × the machine's average life. The best k is the one compared above.</p>
+            <div id="tb-sweep"></div>
+          </figure>
+        </div>
+        <div class="note reveal" id="policy-note"></div>
+      </div>
+    </section>
+
+    <section id="cmapss">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">4 · Real data</span>
+          <h2 id="cm-title">NASA C-MAPSS benchmark</h2>
+          <p id="cm-intro"></p>
+        </div>
+        <div class="grid2c">
+          <figure class="fig reveal">
+            <h3>Test RMSE (cycles)</h3>
+            <p class="cap">Lower is better. Outlined bars are published results, as reported in each paper [7-9].</p>
+            <div id="ch-cm"></div>
+            <details class="tview"><summary>Show table</summary><div id="tb-cm"></div></details>
+          </figure>
+          <figure class="fig reveal">
+            <h3>Each test engine</h3>
+            <p class="cap">Engines sorted by true remaining life (line); the TCN's prediction for each (dots).</p>
+            <div class="legend"><span><i style="--c: var(--ink-3)"></i>True RUL</span><span><i class="dot" style="--c: var(--s1)"></i>TCN prediction</span></div>
+            <div id="ch-engines"></div>
+          </figure>
+        </div>
+        <div class="note reveal" id="cm-note"></div>
+      </div>
+    </section>
+
+    <section id="reproduce">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">Reproduce it</span>
+          <h2>Two commands</h2>
+          <p>The suite trains nothing new for the twin results (it reuses the cached models, or trains them once), runs about 8 minutes on a laptop CPU, and rewrites this page's data file and <code>docs/RESULTS.md</code>.</p>
+        </div>
+        <pre class="cmd reveal">python -m unittest discover -s tests -p "test_*.py"   # 48 tests
+python -m evaluation.run_all --quick                   # about 8 min; --cmapss-only adds the NASA benchmark</pre>
+        <ul class="limits reveal" style="margin-top: 26px">
+          <li>The twin is our own simulator, so twin scores show the system works end to end; the C-MAPSS benchmark is the check on public data.</li>
+          <li>The perfect-model policy uses the true wear, which no real system can see: it is an upper bound, not a result.</li>
+          <li>The fixed schedule is tuned on the same plants it is scored on, which flatters it; the copilot is not tuned on them.</li>
+          <li>Repair time after a breakdown (3×) is an assumption; the sensitivity chart shows how the conclusion changes with it.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="wrap">References [1]-[11] are listed on <a href="/method.html#references">How it works</a>.</div></footer>
+  <div class="tip" id="tip" role="tooltip"></div>
+
+  <script>
+  (function () {
+    const NS = 'http://www.w3.org/2000/svg';
+    const $ = id => document.getElementById(id);
+    const tip = $('tip');
+    const fmt = (v, d = 1) => Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    function el(tag, attrs, parent, text) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      if (text != null) n.textContent = text;
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    function svg(host, w, h, label) {
+      const s = el('svg', { viewBox: `0 0 ${w} ${h}`, role: 'img', 'aria-label': label });
+      $(host).appendChild(s);
+      return s;
+    }
+    function hover(node, html) {
+      node.addEventListener('pointerenter', () => { tip.innerHTML = html; tip.classList.add('on'); });
+      node.addEventListener('pointermove', e => {
+        const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8);
+        tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+      });
+      node.addEventListener('pointerleave', () => tip.classList.remove('on'));
+    }
+    function table(host, head, rows, hl = -1) {
+      $(host).innerHTML = `<div class="table-wrap"><table class="tbl"><thead><tr>${head.map((h, i) => `<th${i ? ' class="n"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>${
+        rows.map((r, ri) => `<tr${ri === hl ? ' class="hl"' : ''}>${r.map((c, i) => `<td${i ? ' class="n"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    }
+    /** Round axis: a step of 1, 2, 2.5 or 5 x 10^n giving about 4-5 ticks. */
+    function niceAxis(max, target = 4) {
+      const raw = max / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
+      const step = [1, 2, 2.5, 5, 10].map(m => m * p).find(v => v >= raw);
+      return { step, max: Math.ceil(max / step) * step };
+    }
+    const roundUp = v => niceAxis(v).max;
+
+    /** Horizontal bars: rows = [{name, value, sd?, hl?, outline?, tip}] */
+    function hbars(host, rows, unit, label, W = 470) {
+      const rowH = 38, padR = 70, top = 6;
+      const padL = Math.min(W * 0.45, 24 + Math.max(...rows.map(r => r.name.length)) * 7.2);
+      const H = top + rows.length * rowH + 26;
+      const ax = niceAxis(Math.max(...rows.map(r => r.value + (r.sd || 0))));
+      const max = ax.max;
+      const x = v => padL + (v / max) * (W - padL - padR);
+      const s = svg(host, W, H, label);
+      for (let v = 0; v <= max + 1e-9; v += ax.step) {
+        const gx = x(v);
+        el('line', { class: 'gridl', x1: gx, x2: gx, y1: top, y2: H - 22 }, s);
+        el('text', { class: 'lbl', x: gx, y: H - 6, 'text-anchor': 'middle' }, s, fmt(v, ax.step < 1 ? 1 : 0));
+      }
+      rows.forEach((r, i) => {
+        const y = top + i * rowH + 8, bh = 22;
+        const fill = r.hl ? 'var(--s1)' : 'var(--mark-muted)';
+        const w = Math.max(2, x(r.value) - padL);
+        el('text', { class: 'name' + (r.hl ? ' hl' : ''), x: padL - 12, y: y + 15, 'text-anchor': 'end' }, s, r.name);
+        if (r.outline) el('rect', { x: padL, y, width: w, height: bh, rx: 4, fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, s);
+        else el('path', { d: `M${padL},${y} h${w - 4} a4,4 0 0 1 4,4 v${bh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z`, fill }, s);
+        if (r.sd) {
+          el('line', { class: 'whisk', x1: x(r.value - r.sd), x2: x(r.value + r.sd), y1: y + bh / 2, y2: y + bh / 2 }, s);
+          el('line', { class: 'whisk', x1: x(r.value + r.sd), x2: x(r.value + r.sd), y1: y + 6, y2: y + bh - 6 }, s);
+        }
+        el('text', { class: 'val', x: x(r.value + (r.sd || 0)) + 8, y: y + 15 }, s, `${fmt(r.value, unit === 'h' || r.value < 20 ? (r.value < 10 ? 2 : 1) : 1)}${unit === 'h' ? ' h' : ''}`);
+        hover(el('rect', { class: 'hit', x: 0, y: y - 8, width: W, height: rowH }, s), r.tip);
+      });
+    }
+
+    function scatter(host, pts, mae) {
+      const W = 470, H = 340, L = 40, R = 10, T = 10, B = 36;
+      const x = v => L + v / 100 * (W - L - R), y = v => H - B - v / 100 * (H - T - B);
+      const s = svg(host, W, H, 'Predicted versus true remaining life');
+      for (let v = 0; v <= 100; v += 25) {
+        el('line', { class: 'gridl', x1: x(v), x2: x(v), y1: T, y2: H - B }, s);
+        el('line', { class: 'gridl', x1: L, x2: W - R, y1: y(v), y2: y(v) }, s);
+        el('text', { class: 'lbl', x: x(v), y: H - B + 18, 'text-anchor': 'middle' }, s, v);
+        el('text', { class: 'lbl', x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, s, v);
+      }
+      el('text', { class: 'lbl', x: (L + W - R) / 2, y: H - 2, 'text-anchor': 'middle' }, s, 'true remaining life (cycles)');
+      el('text', { class: 'lbl', x: 12, y: (T + H - B) / 2, 'text-anchor': 'middle', transform: `rotate(-90 12 ${(T + H - B) / 2})` }, s, 'predicted');
+      el('path', { d: `M${x(0)},${y(mae)} L${x(100 - mae)},${y(100)} L${x(100)},${y(100)} L${x(100)},${y(100 - mae)} L${x(mae)},${y(0)} L${x(0)},${y(0)} Z`, fill: 'var(--s1)', opacity: 0.08 }, s);
+      el('line', { x1: x(0), y1: y(0), x2: x(100), y2: y(100), stroke: 'var(--ink-3)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4' }, s);
+      pts.forEach(([t, p]) => el('circle', { cx: x(t), cy: y(Math.min(100, p)), r: 3.2, fill: 'var(--s1)', 'fill-opacity': 0.55, stroke: 'var(--surface)', 'stroke-width': 1 }, s));
+      const hit = el('rect', { class: 'hit', x: L, y: T, width: W - L - R, height: H - T - B }, s);
+      hit.addEventListener('pointermove', e => {
+        const r = s.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H;
+        let best = null, bd = 1e9;
+        pts.forEach(pt => { const d = (x(pt[0]) - sx) ** 2 + (y(Math.min(100, pt[1])) - sy) ** 2; if (d < bd) { bd = d; best = pt; } });
+        if (best && bd < 400) {
+          tip.innerHTML = `True <b>${fmt(best[0])}</b> · predicted <b>${fmt(best[1])}</b><br>error ${best[1] - best[0] >= 0 ? '+' : ''}${fmt(best[1] - best[0])} cycles`;
+          tip.classList.add('on');
+          tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+        } else tip.classList.remove('on');
+      });
+      hit.addEventListener('pointerleave', () => tip.classList.remove('on'));
+    }
+
+    function lines(host, xs, series, yLabel) {
+      const W = 470, H = 270, L = 40, R = 118, T = 12, B = 36;
+      const ax = niceAxis(Math.max(...series.flatMap(s => s.values)));
+      const max = ax.max;
+      const x = i => L + i / (xs.length - 1) * (W - L - R), y = v => H - B - v / max * (H - T - B);
+      const s = svg(host, W, H, yLabel);
+      for (let v = 0; v <= max + 1e-9; v += ax.step) {
+        el('line', { class: 'gridl', x1: L, x2: W - R, y1: y(v), y2: y(v) }, s);
+        el('text', { class: 'lbl', x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, s, fmt(v, 0));
+      }
+      xs.forEach((v, i) => el('text', { class: 'lbl', x: x(i), y: H - B + 18, 'text-anchor': 'middle' }, s, `${v}×`));
+      el('text', { class: 'lbl', x: (L + W - R) / 2, y: H - 2, 'text-anchor': 'middle' }, s, 'breakdown repair time');
+      series.forEach(se => {
+        el('path', { d: se.values.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(''), fill: 'none', stroke: se.color, 'stroke-width': 2, 'stroke-linejoin': 'round' }, s);
+        se.values.forEach((v, i) => el('circle', { cx: x(i), cy: y(v), r: 4, fill: se.color, stroke: 'var(--surface)', 'stroke-width': 2 }, s));
+        const last = se.values[se.values.length - 1];
+        el('text', { class: 'val', x: x(xs.length - 1) + 10, y: y(last) + 4 }, s, `${se.name} ${fmt(last)} h`);
+      });
+      const guide = el('line', { x1: 0, x2: 0, y1: T, y2: H - B, stroke: 'var(--ink-3)', 'stroke-width': 1, opacity: 0 }, s);
+      const hit = el('rect', { class: 'hit', x: L - 10, y: T, width: W - L - R + 20, height: H - T - B }, s);
+      hit.addEventListener('pointermove', e => {
+        const r = s.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W;
+        const i = Math.max(0, Math.min(xs.length - 1, Math.round((sx - L) / (W - L - R) * (xs.length - 1))));
+        guide.setAttribute('x1', x(i)); guide.setAttribute('x2', x(i)); guide.setAttribute('opacity', 0.5);
+        tip.innerHTML = `<b>Repair takes ${xs[i]}×</b><br>` + series.map(se => `${se.name}: ${fmt(se.values[i], 2)} h`).join('<br>');
+        tip.classList.add('on');
+        tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+      });
+      hit.addEventListener('pointerleave', () => { tip.classList.remove('on'); guide.setAttribute('opacity', 0); });
+    }
+
+    function engines(host, curve) {
+      const W = 470, H = 270, L = 40, R = 10, T = 10, B = 36, n = curve.length;
+      const max = 140;
+      const x = i => L + i / (n - 1) * (W - L - R), y = v => H - B - v / max * (H - T - B);
+      const s = svg(host, W, H, 'Test engines: true and predicted remaining life');
+      for (let v = 0; v <= max; v += 35) {
+        el('line', { class: 'gridl', x1: L, x2: W - R, y1: y(v), y2: y(v) }, s);
+        el('text', { class: 'lbl', x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, s, v);
+      }
+      el('text', { class: 'lbl', x: (L + W - R) / 2, y: H - 6, 'text-anchor': 'middle' }, s, `${n} test engines, sorted by true remaining life`);
+      el('path', { d: curve.map((c, i) => `${i ? 'L' : 'M'}${x(i)},${y(c[1])}`).join(''), fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 2 }, s);
+      curve.forEach((c, i) => el('circle', { cx: x(i), cy: y(c[2]), r: 3, fill: 'var(--s1)', 'fill-opacity': 0.8 }, s));
+      const hit = el('rect', { class: 'hit', x: L, y: T, width: W - L - R, height: H - T - B }, s);
+      hit.addEventListener('pointermove', e => {
+        const r = s.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W;
+        const i = Math.max(0, Math.min(n - 1, Math.round((sx - L) / (W - L - R) * (n - 1))));
+        tip.innerHTML = `Engine ${i + 1} of ${n}<br>true <b>${fmt(curve[i][1], 0)}</b> · predicted <b>${fmt(curve[i][2], 0)}</b>`;
+        tip.classList.add('on');
+        tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+      });
+      hit.addEventListener('pointerleave', () => tip.classList.remove('on'));
+    }
+
+    function render(d) {
+      const pol = d.policy.policies;
+      const names = Object.keys(pol);
+      const rtf = pol['Run to failure'];
+      const fixedName = names.find(n => n.startsWith('Fixed schedule'));
+      const cop = pol['Copilot (TCN)'];
+      const perfect = pol['Copilot (perfect model, upper bound)'];
+      const tcn = d.rul.table[0];
+      const iforest = d.anomaly.models['Isolation Forest (deployed)'];
+      const iso = d.anomaly.models['ISO 10816 zone C threshold'];
+      const cut = 1 - cop.downtime_h.mean / rtf.downtime_h.mean;
+      const cm = d.cmapss;
+      const cmOurs = cm && cm.results[0];
+
+      $('kpis').innerHTML = [
+        [`±${fmt(tcn.mae)}`, 'cycles: remaining-life error', `TCN on ${d.rul.test_plants.length} unseen plants`],
+        [fmt(iforest.median_lead_cycles, 0), 'cycles of warning before failure', `vs ${fmt(iso.median_lead_cycles, 0)} for an ISO threshold`],
+        [`${Math.round(cut * 100)}%`, 'less downtime than run to failure', `${fmt(cop.breakdowns.mean)} vs ${fmt(rtf.breakdowns.mean)} breakdowns per shift`],
+        cm ? [fmt(cmOurs.rmse.mean, 1), `RMSE on NASA C-MAPSS ${cm.subset}`, `${cm.test_engines} official test engines`]
+           : [`±${fmt(d.rul.band.p90_abs_error)}`, 'cycles: 90% of remaining-life errors', 'the band that holds nine in ten'],
+      ].map(k => `<div class="kpi"><b>${k[0]}</b><span>${k[1]}</span><small>${k[2]}</small></div>`).join('');
+      $('stamp').textContent = `Generated ${new Date(d.generated_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} · ${d.training.run_to_failure_lives} training lives · ${d.rul.windows.toLocaleString('en-US')} test readings`;
+
+      // 1. RUL
+      $('rul-intro').textContent = `${d.rul.windows.toLocaleString('en-US')} readings in the wear phase (true remaining life under 100 cycles) from ${d.rul.test_plants.length} plants with seeds the models never saw.`;
+      hbars('ch-rul', d.rul.table.map((r, i) => ({ name: r.model.replace(' (deployed)', '').replace(' (one reading)', '').replace(' (no sensors)', ''), value: r.mae, hl: i === 0,
+        tip: `<b>${r.model}</b><br>MAE ${fmt(r.mae, 2)} · RMSE ${fmt(r.rmse, 2)} cycles<br>PHM08 score per reading ${fmt(r.nasa_score_per_window, 3)}` })), 'c', 'Mean absolute error by model');
+      table('tb-rul', ['Model', 'MAE', 'RMSE', 'PHM08 score / reading'], d.rul.table.map(r => [r.model, fmt(r.mae, 2), fmt(r.rmse, 2), fmt(r.nasa_score_per_window, 3)]), 0);
+      scatter('ch-scatter', d.rul.scatter, d.rul.band.mae);
+      table('tb-buckets', ['True RUL', 'MAE', 'Bias', 'Readings'], d.rul.tcn_by_true_rul.map(b => [b.range, fmt(b.mae, 2), (b.bias >= 0 ? '+' : '') + fmt(b.bias, 2), b.n]));
+      const b = d.rul.band, gb = d.rul.table[1], avg = d.rul.table[2];
+      $('rul-note').innerHTML = `<b>Reading it:</b> the TCN is ${Math.round((1 - tcn.mae / avg.mae) * 100)}% more accurate than knowing only the part's age, and ${Math.round((1 - tcn.mae / gb.mae) * 100)}% better than a model that sees one reading at a time, so the reading history matters. Errors shrink as failure approaches (${fmt(d.rul.tcn_by_true_rul[0].mae)} cycles in the last 25). ${Math.round(b.late_share * 100)}% of predictions are late; the scheduler's 15% margin exists for exactly those. The ± band shown in the app holds the true value ${Math.round(b.coverage_of_pm_mae * 100)}% of the time; 90% of errors are within ±${fmt(b.p90_abs_error)} cycles.`;
+
+      // 2. Anomaly
+      hbars('ch-lead', [
+        { name: 'Isolation Forest', value: iforest.median_lead_cycles, hl: true, tip: `<b>Isolation Forest</b><br>median ${fmt(iforest.median_lead_cycles, 0)} cycles of warning over ${iforest.lives} lives` },
+        { name: 'ISO zone C threshold', value: iso.median_lead_cycles, tip: `<b>ISO 10816-3 zone C</b><br>median ${fmt(iso.median_lead_cycles, 0)} cycles of warning over ${iso.lives} lives` },
+      ], 'c', 'Warning before failure');
+      table('tb-anomaly', ['Detector', 'Precision', 'Recall', 'F1', 'False alarms (healthy)'], [
+        ['Isolation Forest', fmt(iforest.precision, 3), fmt(iforest.recall, 3), fmt(iforest.f1, 3), `${fmt(iforest.false_alarm_rate_healthy * 100, 1)}%`],
+        ['ISO zone C threshold', fmt(iso.precision, 3), fmt(iso.recall, 3), fmt(iso.f1, 3), `${fmt(iso.false_alarm_rate_healthy * 100, 1)}%`],
+      ], 0);
+      $('anomaly-note').innerHTML = `<b>Reading it:</b> the threshold never raises a false alarm, but it only fires once vibration reaches zone C, late in a part's life. The detector learns what healthy looks like right after a service and flags the first departure from it, giving about ${fmt(iforest.median_lead_cycles / iso.median_lead_cycles, 1)}× the warning. The price is ${fmt(iforest.false_alarm_rate_healthy * 100, 1)}% false alarms on healthy readings (wear below 0.25). An earlier version fitted on all data, including worn machines, caught under 10% of worn readings; fitting on the healthy envelope fixed that.`;
+
+      // 3. Policy
+      $('policy-intro').textContent = `${d.policy.seeds.length} simulated plants, each run for one ${d.policy.horizon_h}-hour shift under every policy with the same random wear. Each plant starts with machines at random wear (0-75%).`;
+      const order = ['Run to failure', fixedName, 'Copilot (TCN)', 'Copilot (perfect model, upper bound)'];
+      hbars('ch-policy', order.map(n => ({ name: n === fixedName ? 'Best fixed schedule' : n.replace(' (perfect model, upper bound)', ' (perfect model)'),
+        value: pol[n].downtime_h.mean, sd: pol[n].downtime_h.sd, hl: n === 'Copilot (TCN)', outline: n.includes('perfect'),
+        tip: `<b>${n}</b><br>${fmt(pol[n].downtime_h.mean, 2)} ± ${fmt(pol[n].downtime_h.sd, 2)} h downtime<br>${fmt(pol[n].breakdowns.mean)} breakdowns · ${fmt(pol[n].planned_services.mean)} planned services` })), 'h', 'Downtime per shift by policy', 980);
+      table('tb-policy', ['Policy', 'Breakdowns', 'Planned services', 'Downtime (h)', 'Parts made', 'Part life used'], order.map(n => {
+        const p = pol[n];
+        return [n, `${fmt(p.breakdowns.mean)} ± ${fmt(p.breakdowns.sd)}`, fmt(p.planned_services.mean), `${fmt(p.downtime_h.mean, 2)} ± ${fmt(p.downtime_h.sd, 2)}`,
+          Math.round(p.parts.mean).toLocaleString('en-US'), p.life_used ? `${Math.round(p.life_used.mean * 100)}%` : '100% (breaks)'];
+      }), 2);
+      const sens = d.policy.repair_time_sensitivity;
+      lines('ch-sens', sens.map(r => r.multiplier), [
+        { name: 'Run to failure', color: 'var(--s2)', values: sens.map(r => r.run_to_failure_h) },
+        { name: 'Copilot', color: 'var(--s1)', values: sens.map(r => r.copilot_h) },
+      ], 'Downtime as breakdown repair time grows');
+      table('tb-sens', ['Repair time', 'Run to failure (h)', 'Copilot (h)'], sens.map(r => [`${r.multiplier}×`, fmt(r.run_to_failure_h, 2), fmt(r.copilot_h, 2)]));
+      table('tb-sweep', ['k (share of average life)', 'Downtime (h)', 'Breakdowns'], d.policy.fixed_interval_sweep.map(r => [`${Math.round(r.k * 100)}%`, fmt(r.downtime_h, 2), fmt(r.breakdowns)]));
+      const fx = pol[fixedName];
+      const vsFixed = 1 - cop.downtime_h.mean / fx.downtime_h.mean;
+      const gap = fx.downtime_h.mean - cop.downtime_h.mean;
+      const cliff = d.policy.fixed_interval_sweep.find(r => r.breakdowns > 0) || d.policy.fixed_interval_sweep[d.policy.fixed_interval_sweep.length - 1];
+      const vsSchedule = gap >= 0
+        ? `The copilot still loses ${fmt(gap, 2)} h less per shift than the best schedule (${Math.round(vsFixed * 100)}%), because it services each part when it is actually worn: ${Math.round(cop.life_used.mean * 100)}% of its life used, against ${Math.round(fx.life_used.mean * 100)}% on the schedule.`
+        : `On this simulator the best schedule edges it, by ${fmt(-gap, 2)} h per shift. But look at the sweep: that schedule sits next to a cliff. Service at ${Math.round(cliff.k * 100)}% of average life instead and it collapses to ${fmt(cliff.breakdowns)} breakdowns and ${fmt(cliff.downtime_h, 1)} h. Finding the safe edge took tuning on the test plants themselves, using their true average life.`;
+      $('policy-note').innerHTML = `<b>Reading it:</b> against doing nothing, the copilot cuts downtime by ${Math.round(cut * 100)}% and breakdowns from ${fmt(rtf.breakdowns.mean)} to ${fmt(cop.breakdowns.mean)} per shift. The honest comparison is the fixed schedule, and it is close: simulated parts wear predictably, so a schedule tuned on these very plants avoids breakdowns too. ${vsSchedule} The copilot needed no such tuning: it reads each machine's condition, and with the real TCN it comes within ${fmt(Math.abs(cop.downtime_h.mean - perfect.downtime_h.mean), 2)} h of a perfect model. In a real plant, where wear varies with load and material, a fixed schedule has to be set more cautiously; we expect the gap to grow there, but this simulator does not test it.`;
+
+      // 4. C-MAPSS
+      if (cm) {
+        $('cm-title').textContent = `NASA C-MAPSS ${cm.subset}: real benchmark data`;
+        $('cm-intro').textContent = `The same TCN architecture, trained on the public turbofan dataset (${cm.sensors.length} informative sensors, ${cm.train_windows.toLocaleString('en-US')} training windows) and scored on the ${cm.test_engines} official test engines. RUL capped at 125, windows of 30 cycles, mean ± sd over ${cmOurs.rmse.n} training seeds. Nothing was tuned on the test set.`;
+        const rows = cm.results.map((r, i) => ({ name: r.model.replace(' (this project, same architecture)', ' (ours)').replace(' (window summary)', ''), value: r.rmse.mean, sd: r.rmse.n > 1 ? r.rmse.sd : 0, hl: i === 0,
+          tip: `<b>${r.model}</b><br>RMSE ${fmt(r.rmse.mean, 2)}${r.rmse.n > 1 ? ' ± ' + fmt(r.rmse.sd, 2) : ''}<br>PHM08 score ${fmt(r.score.mean, 0)}` }))
+          .concat(cm.literature.map(l => ({ name: l.model, value: l.rmse, outline: true, tip: `<b>${l.model}</b><br>RMSE ${fmt(l.rmse, 2)} (reported)` })));
+        hbars('ch-cm', rows, 'c', 'C-MAPSS test RMSE');
+        table('tb-cm', ['Model', 'RMSE', 'PHM08 score'], cm.results.map(r => [r.model, `${fmt(r.rmse.mean, 2)}${r.rmse.n > 1 ? ' ± ' + fmt(r.rmse.sd, 2) : ''}`, fmt(r.score.mean, 0)])
+          .concat(cm.literature.map(l => [l.model + ' (reported)', fmt(l.rmse, 2), '–'])), 0);
+        engines('ch-engines', cm.test_curve);
+        const rf = cm.results.find(r => r.model.startsWith('Random forest'));
+        const beatsRF = cmOurs.rmse.mean <= rf.rmse.mean;
+        $('cm-note').innerHTML = `<b>Reading it:</b> on real engine data the TCN reaches an RMSE of ${fmt(cmOurs.rmse.mean, 1)} cycles, in the range of published deep models. ${beatsRF ? 'It also beats both classical baselines.' : `A random forest on simple window statistics does better here (${fmt(rf.rmse.mean, 1)}). That is a known result on C-MAPSS: with clean, low-dimensional sensors, good features and a classical model are hard to beat, and the deep models' advantage shows on harder, multi-condition data. We report it rather than hide it, and the system keeps a gradient-boosting model as a fallback for the same reason.`}`;
+      } else {
+        $('cm-title').textContent = 'NASA C-MAPSS: the real-data check';
+        $('cm-intro').innerHTML = 'The twin is our own simulator, so the suite also includes a benchmark on NASA\'s public C-MAPSS turbofan data: the same TCN architecture, trained on FD003 and scored on the official 100 test engines against ridge regression, a random forest and published results. It takes about 30 minutes on a laptop CPU, so it is not part of the default run: <code>python -m evaluation.run_all --cmapss-only</code>, then reload this page.';
+        document.querySelectorAll('#cmapss .grid2c, #cm-note').forEach(n => { n.hidden = true; });
+        document.querySelector('.hero .lead').innerHTML = 'Every number on this page comes from <code>python -m evaluation.run_all</code>, scored on simulated plants the models never saw. Where something does not win, this page says so.';
+      }
+    }
+
+    fetch('/data/results.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(render).catch(() => {
+      $('kpis').innerHTML = '<div class="empty" style="grid-column: 1 / -1">No results yet. Run <code>python -m evaluation.run_all</code>, then reload.</div>';
+    });
+
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.06 }) : null;
+    document.querySelectorAll('.reveal').forEach(n => io ? io.observe(n) : n.classList.add('in'));
+  })();
+  </script>
+</body>
+</html>

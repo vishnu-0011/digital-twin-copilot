@@ -32,6 +32,30 @@ const dustCount = 200;
 let factoryFloor;
 let factoryBuilding = null;
 let townEnvironment = null;
+let skyDome = null;
+
+/** Gradient sky: the horizon matches the fog colour, so ground and sky meet seamlessly. */
+function buildSkyDome() {
+  const geo = new THREE.SphereGeometry(450, 48, 24);
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 3), 3));
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false });
+  const dome = new THREE.Mesh(geo, mat);
+  dome.renderOrder = -1;
+  return dome;
+}
+
+function paintSky(topHex, horizonHex) {
+  if (!skyDome) return;
+  const pos = skyDome.geometry.attributes.position;
+  const col = skyDome.geometry.attributes.color;
+  const top = new THREE.Color(topHex), hor = new THREE.Color(horizonHex), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const k = Math.pow(Math.max(0, pos.getY(i) / 450), 0.55);
+    c.copy(hor).lerp(top, k);
+    col.setXYZ(i, c.r, c.g, c.b);
+  }
+  col.needsUpdate = true;
+}
 let isInteriorMode = false;
 const machines = new Map(); // id -> THREE.Group
 
@@ -164,6 +188,17 @@ export function initScene(container) {
   // Build Surrounding Town & Campus (Roads, Vehicles, Parking, Pedestrian Corridor, Skyline)
   townEnvironment = createTownEnvironment();
   scene.add(townEnvironment.townGroup);
+
+  // Ground that runs to the horizon and dissolves into the fog, so the campus
+  // sits in a landscape instead of on a slab floating in a void.
+  const lawn = townEnvironment.townGroup.children[0].material;
+  const horizonGround = new THREE.Mesh(new THREE.CircleGeometry(440, 72), lawn);
+  horizonGround.rotation.x = -Math.PI / 2;
+  horizonGround.position.y = -0.41;
+  horizonGround.receiveShadow = true;
+  townEnvironment.townGroup.add(horizonGround);
+  skyDome = buildSkyDome();
+  scene.add(skyDome);
 
   // Build Factory Architectural Building Shell (Walls, Entrance Canopy, Dollhouse Roof)
   factoryBuilding = createFactoryBuildingShell();
@@ -312,6 +347,7 @@ export function setSceneTheme(themeName) {
   if (isLight) {
     scene.background.setHex(0xf1f5f9);
     scene.fog.color.setHex(0xf1f5f9);
+    paintSky(0xbfd6ec, 0xf1f5f9);
     ambientLight.color.setHex(0xffffff);
     ambientLight.intensity = 0.75;
     if (hemiLight) {
@@ -327,8 +363,9 @@ export function setSceneTheme(themeName) {
     if (radarMesh) radarMesh.material.color.setHex(0x0284c7);
   } else {
     // AUTHENTIC CYBERPUNK STRATEGY DARK THEME
-    scene.background.setHex(0x090c12);
-    scene.fog.color.setHex(0x090c12);
+    scene.background.setHex(0x0b1019);
+    scene.fog.color.setHex(0x0b1019);
+    paintSky(0x02040a, 0x0b1019);
     ambientLight.color.setHex(0x182436);
     ambientLight.intensity = 1.4;
     if (hemiLight) {
@@ -934,6 +971,15 @@ export function getMachines() {
 export const updateMachineStates = updateFleetTelemetry;
 export const triggerRadarScan = triggerRadarSweep;
 export function focusOnMachine(machineId, immediate = false) { setCameraPreset(machineId, immediate); }
+/** Opening shot: start high and far out over the campus, then let the next
+ *  camera preset ease in (the roofless building reveals the live floor). */
+export function startFlyIn() {
+  if (!camera) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  camera.position.set(210, 150, 250);
+  if (controls) controls.target.set(0, 0, 0);
+}
+
 export function resetCamera() { setCameraPreset(isInteriorMode ? 'global' : 'campus'); }
 
 /* ==========================================================================

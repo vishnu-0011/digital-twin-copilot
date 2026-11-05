@@ -106,7 +106,7 @@ export const BEATS = [
     ch: 'data', title: 'From spindle to screen',
     camera: 'global', mood: 'thinking', diagram: 'dataflow', ribbon: 'close',
     say: `Now, how does data move? {1} The physics twin advances every machine on each cycle.
-      {2} Each one emits *vibration*, *temperature* and *cycle count*. Its true wear stays *hidden*, because no real sensor can see inside a spindle.
+      {2} Each one emits *vibration*, *temperature* and the *age of its part* since the last service. Its true wear stays *hidden*, because no real sensor can see inside a spindle.
       {3} We compute rates of change and rolling averages, {4} feed them to two machine learning models, {5} and hand the results to the agents.
       {6} The FastAPI server *pushes* a fresh snapshot to your browser twice a second over a WebSocket, {7} and Three.js redraws the twin.`,
   },
@@ -131,10 +131,10 @@ export const BEATS = [
     ch: 'detect', title: 'The anomaly scan',
     camera: 'global', focus: 'CNC-01', mood: 'thinking', diagram: 'iforest', sound: 'scan',
     action: async (ctx) => { ctx.radar(); await ctx.dispatch('scan'); },
-    say: `With a plant-wide scan. {1} Every machine's latest reading lands in a cloud of normal history.
+    say: `With a plant-wide scan. {1} Every machine's latest reading lands in a cloud of *healthy* readings, recorded just after each service.
       {2} An *Isolation Forest* of two hundred random trees keeps slicing that space with random cuts.
       {3} CNC-01's reading gets cut off alone in just *three cuts*. {4} A normal reading hides in the crowd and needs around nine.
-      *Short path means anomaly*, and no labelled failure data is needed.`,
+      *Short path means anomaly*, and no labelled failure data is needed. On test plants it warns several times earlier than a fixed vibration limit.`,
   },
   {
     ch: 'detect', title: 'The copilot takes over',
@@ -189,8 +189,8 @@ export const BEATS = [
     camera: 'CNC-01', focus: 'CNC-01', mood: 'proud', diagram: 'scheduler', celebrate: true, sound: 'repair',
     drawer: { machine: 'CNC-01', tab: 'telemetry' },
     action: async (ctx) => { await ctx.wait(5200); await ctx.dispatch('repair', { machine_id: 'CNC-01' }); },
-    say: `{1} So CNC-01 arrives with high urgency: zone C vibration on a critical machine. {2} The rules say: high. {3} High means *schedule now*, medium waits for the next shift, low is just logged.
-      {4} And a human is always in charge: the supervisor approves, and the work order runs. Watch the wear bar: bearing serviced, wear back to zero, CNC-01 is healthy again!`,
+    say: `{1} So CNC-01 arrives with high urgency: zone C vibration on a critical machine. {2} The rules say: high. {3} High means *draft a work order now*, medium waits for the next shift, low is just logged.
+      {4} The copilot never stops a machine on its own: the supervisor approves, and the work order runs. Watch the wear bar: bearing serviced, wear back to zero, CNC-01 is healthy again!`,
   },
 
   /* ---------------- 6b · FORECAST ---------------- */

@@ -17,7 +17,7 @@ Run standalone:
 from __future__ import annotations
 
 from dotenv import load_dotenv
-load_dotenv()  # reads .env in the project root and sets ANTHROPIC_API_KEY etc.
+load_dotenv()  # optional .env settings (see .env.example); no API keys are needed
 
 from langgraph.graph import StateGraph, END
 

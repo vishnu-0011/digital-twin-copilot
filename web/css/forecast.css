@@ -357,3 +357,4 @@ body.tour-mode .forecast-dock.beside-drawer {
   animation: none;
 }
 body.tour-mode .fc-foot { display: none; }
+.fc-foot a { color: inherit; font-weight: 600; text-underline-offset: 2px; }

@@ -1,27 +1,30 @@
-# SOP-PRESS-022: Hydraulic Press Wear & Thermal Response
+# SOP-PRESS-022: Hydraulic Press Ram Seal Degradation
 
-**Applies to:** HYDRAULIC_PRESS class machines (e.g. PRESS-01)
-**Severity levels:** DEGRADING, WARNING, CRITICAL
+**Applies to:** HYDRAULIC_PRESS class machines (PRESS-01, PRESS-02)
+**Planned service:** about 12-15 minutes (seal replacement, fluid check)
+**Signals used:** vibration RMS, oil temperature, predicted remaining life (RUL)
 
-## Symptom: High vibration RMS combined with high temperature
-Hydraulic presses showing both elevated vibration AND elevated temperature
-simultaneously usually indicate seal degradation, not bearing wear (unlike
-CNC mills). Seal degradation causes internal fluid bypass, which raises
-operating temperature, which in turn accelerates further seal wear — this
-is a compounding failure mode and escalates faster than linear wear models
-suggest.
+## Symptom: Vibration and temperature rising together
+When vibration and temperature climb at the same time, the usual cause is
+ram seal wear, not bearings. A worn seal lets fluid bypass internally, which
+heats the oil, which wears the seal faster: a compounding failure that
+escalates faster than a mill's bearing wear.
 
 **Recommended action:**
-1. WARNING (wear_level 0.6-0.85): schedule maintenance within 1 shift, not
-   2 — presses degrade faster than CNC equipment once past this threshold.
-2. CRITICAL (wear_level > 0.85): treat as urgent. Unscheduled failure risk
-   is significantly higher for presses than for mills at equivalent wear
-   levels because of the compounding thermal effect above.
-3. Standard maintenance duration is 900 seconds. If failure has already
-   occurred (wear_level >= 1.0), re-estimate downtime at 1.5x standard —
-   seal replacement after failure typically requires additional cleanup.
+1. Service soon (safety-adjusted RUL under 60 cycles): plan the seal change
+   within 1 shift, not 2. Presses degrade faster than mills past this point.
+2. Service now (safety-adjusted RUL under 30 cycles, or zone D): treat as
+   urgent; a pressure drop mid-stroke can damage the die.
+3. After a breakdown, expect extra cleanup: allow about 1.5x the planned time.
+
+## Procedure
+1. Retract the ram, block the platen, lock out and bleed pressure.
+2. Replace ram seals and wipers; inspect the rod for scoring.
+3. Check fluid level and temperature; replace the filter if the bypass
+   indicator is up.
+4. Cycle under no load, then under load; confirm pressure holds and vibration
+   is back in zone A.
 
 ## Cross-reference
-Do not apply CNC mill vibration thresholds to presses — the failure
-mechanics differ (bearing wear vs. seal degradation) even though both
-surface as elevated vibration_rms in telemetry.
+Do not apply mill vibration rules to presses: the failure mechanism differs
+(seal bypass versus bearing wear) even though both show as vibration.

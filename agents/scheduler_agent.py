@@ -1,32 +1,38 @@
 """
 Scheduler Agent
 ================
-Takes the Diagnosis Agent's urgency ratings and decides what to actually do:
-  - "high" urgency  -> schedule maintenance immediately (calls the twin's
-    schedule_maintenance tool, which really does interrupt the machine)
-  - "medium" urgency -> log a recommendation for the next planning cycle,
-    don't interrupt production yet
-  - "low" urgency    -> log only, no action
+Takes the Diagnosis Agent's urgency ratings and decides what to do:
+  - "high" urgency   -> draft a work order for a supervisor to approve
+  - "medium" urgency -> recommend it for the next planning cycle
+  - "low" urgency    -> log only
 
-Deliberately rule-based rather than another LLM call: scheduling logic
-should be deterministic and auditable, not subject to prompt-dependent
-variation. This is also where you'd plug in production-schedule awareness
-(e.g. don't pull a machine mid-batch) in a real deployment.
+Human in the loop by default: the copilot never stops a machine on its own.
+The supervisor approves the drafted work order in the UI (POST /work-orders).
+A lights-out cell can opt into autonomy with COPILOT_AUTONOMY=1, in which case
+high-urgency work orders are executed immediately.
+
+Urgency is escalated to "high" when the safety-adjusted remaining life
+(0.85 x predicted RUL) drops below 30 cycles. The 15% margin is there
+because a late prediction (failure before the service) costs far more than
+an early one; the evaluation suite measures how often predictions are late.
+
+Deliberately rule-based: scheduling should be deterministic and auditable.
 """
 from __future__ import annotations
+
+import os
 
 from digital_twin.simulator import FactoryTwin
 from agents.state import CopilotState
 from agents.tools import schedule_maintenance
 
 URGENCY_ACTION_MAP = {
-    "high": "schedule_now",
+    "high": "draft_work_order",
     "medium": "recommend_next_cycle",
     "low": "log_only",
 }
 
-# 2021 Competition Winning Strategy: Asymmetric Industrial Risk Margin
-# Overestimating RUL causes catastrophic tooling crashes. We apply a 15% safety buffer.
+# Asymmetric risk margin: over-estimating remaining life is the dangerous error.
 ASYMMETRIC_SAFETY_FACTOR = 0.85
 CRITICAL_RUL_THRESHOLD = 30.0
 
@@ -56,7 +62,7 @@ def build_scheduler_node(twin: FactoryTwin):
             action = URGENCY_ACTION_MAP.get(urgency, "recommend_next_cycle")
 
             scheduled = False
-            if action == "schedule_now":
+            if action == "draft_work_order" and os.environ.get("COPILOT_AUTONOMY") == "1":
                 result = schedule_maintenance(
                     twin, machine_id, reason=diagnosis.get("likely_cause", "")
                 )
@@ -66,6 +72,7 @@ def build_scheduler_node(twin: FactoryTwin):
                 "machine_id": machine_id,
                 "action": action,
                 "scheduled": scheduled,
+                "awaiting_approval": action == "draft_work_order" and not scheduled,
                 "urgency": urgency,
                 "safe_rul_cycles": round(safe_rul, 1),
                 "reason": diagnosis.get("likely_cause", ""),

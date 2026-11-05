@@ -13,6 +13,7 @@ import {
   focusOnMachine,
   resetCamera,
   setCameraPreset,
+  startFlyIn,
   setSceneTheme,
   setInteriorMode,
   getInteriorMode,
@@ -93,16 +94,16 @@ function updateWsBadge(status) {
   badge.className = 'ws-badge';
   if (status === 'live') {
     badge.classList.add('ws-live');
-    badge.textContent = 'WS: LIVE';
-    badge.title = 'Real-Time WebSocket Telemetry Stream (Active)';
+    badge.textContent = 'Live';
+    badge.title = 'Receiving live readings from the plant (WebSocket)';
   } else if (status === 'connecting') {
     badge.classList.add('ws-connecting');
-    badge.textContent = 'WS: CONNECTING';
-    badge.title = 'Connecting to WebSocket Telemetry Stream...';
+    badge.textContent = 'Connecting';
+    badge.title = 'Connecting to the live stream';
   } else {
     badge.classList.add('ws-fallback');
-    badge.textContent = 'WS: HTTP FALLBACK';
-    badge.title = 'WebSocket Disconnected — Operating via HTTP Polling';
+    badge.textContent = 'Polling';
+    badge.title = 'Live stream unavailable: refreshing every few seconds instead';
   }
 }
 
@@ -150,12 +151,23 @@ function applyTelemetryData(machinesList, pipelineData, plant = null, log = null
 }
 
 function processScanOutcome(res) {
-  if (res && res.status === 'SUCCESS' && res.anomalies_detected > 0) {
-    playAlarm();
-    addLogMessage(`⚠️ Anomaly detected: ${res.anomalies_detected} unit(s) requiring attention!`, "ALERT");
-  } else {
-    addLogMessage("Radar sweep complete: All units within normal vibration parameters.", "NOMINAL");
+  // `res` is the agent graph's final state (Monitor -> Diagnosis -> Scheduler).
+  const flagged = (res && res.flagged_machine_ids) || [];
+  const decisions = (res && res.maintenance_decisions) || [];
+  const drafted = decisions.filter(d => d.awaiting_approval).map(d => d.machine_id);
+  const started = decisions.filter(d => d.scheduled).map(d => d.machine_id);
+  const total = fleetCache.length || 8;
+  if (!flagged.length) {
+    addLogMessage(`Copilot checked ${total} machines: nothing needs attention.`, "NOMINAL");
+    toast(`Checked ${total} machines. Nothing needs attention.`, 'ok');
+    return;
   }
+  playAlarm();
+  const parts = [`Checked ${total} machines. <b>${flagged.length}</b> flagged`];
+  if (drafted.length) parts.push(`work orders drafted for <b>${drafted.join(', ')}</b>, waiting for your approval`);
+  if (started.length) parts.push(`service started on <b>${started.join(', ')}</b> (autonomy mode)`);
+  addLogMessage(parts.join('; ').replace(/<\/?b>/g, ''), "ALERT");
+  toast(parts.join('; ') + '.', drafted.length || started.length ? 'alert' : 'info');
 }
 
 function initWebSocketClient() {
@@ -577,6 +589,7 @@ function setupControls(canvasContainer) {
       directorButtons.forEach(b => b.classList.remove('active'));
       targetBtn.classList.add('active');
     }
+    if (!isSnap && initialView === 'global' && !initialMachine) startFlyIn();
     setCameraPreset(initialView, isSnap);
   }
   if (initialMachine) {

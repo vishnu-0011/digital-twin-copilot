@@ -465,29 +465,15 @@ export function populateDrawer(machineData) {
   // SOP Diagnosis Card
   const sopBox = document.getElementById('drawer-sop-content');
   if (sopBox) {
-    const isDegraded = ['warning', 'critical', 'failed'].includes(rawStatus) || zone === 'C' || zone === 'D';
-    if (isDegraded) {
-      sopBox.innerHTML = `
-        <div class="sop-title">⚠️ SOP-AERO-04: High-Harmonic Vibration Mitigation</div>
-        <div class="sop-cause">Vibration ${vib.toFixed(2)} mm/s is in ISO 10816-3 zone ${zone} (${zoneInfo.label}). Bearing defect bands are rising.</div>
-        <ul class="sop-actions">
-          <li><input type="checkbox" checked disabled> 30% feed-rate derate applied</li>
-          <li><input type="checkbox" checked disabled> Coolant / lubrication supply verified: ${spec.coolant}</li>
-          <li><input type="checkbox"> Inspect spindle runout with dial gauge (&lt; 0.003 mm)</li>
-          <li><input type="checkbox"> Replace bearing set and reset wear</li>
-        </ul>
-      `;
-    } else {
-      sopBox.innerHTML = `
-        <div class="sop-title" style="color: var(--color-emerald)">✓ SOP-AERO-01: Standard Operating Protocol</div>
-        <div class="sop-cause">Vibration ${vib.toFixed(2)} mm/s is in ISO 10816-3 zone ${zone} (${zoneInfo.label}). No action needed.</div>
-        <ul class="sop-actions">
-          <li><input type="checkbox" checked disabled> Telemetry stream live</li>
-          <li><input type="checkbox" checked disabled> Vibration and temperature inside limits</li>
-          <li><input type="checkbox"> Visual inspection at shift changeover</li>
-        </ul>
-      `;
-    }
+    // The machine type's procedure (same ID and steps as rag/documents/).
+    const cause = plan.cause || {};
+    const steps = cause.steps || [];
+    const acting = ['soon', 'now', 'down'].includes(plan.key);
+    sopBox.innerHTML = `
+      <div class="sop-title" style="color: ${acting ? plan.color : 'var(--color-emerald)'}">${cause.sop || 'Procedure'} · ${cause.fix || 'Inspect and service'}</div>
+      <div class="sop-cause">Vibration ${vib.toFixed(2)} mm/s, ISO 10816-3 zone ${zone} (${zoneInfo.label}). ${acting ? `Likely worn: ${cause.part}.` : 'No action needed yet; this is the procedure to follow when it is.'}</div>
+      <ol class="sop-actions sop-steps">${steps.map(t => `<li>${t}</li>`).join('')}</ol>
+    `;
   }
 
   // Open drawer
@@ -498,12 +484,14 @@ export function populateDrawer(machineData) {
 
 function verdictText(m, p) {
   const part = p.cause.part;
+  const plural = /s$/.test(part) && !/ss$/.test(part);   // "ram seals are", "spindle bearing is"
+  const is = plural ? 'are' : 'is';
   const at = (ms) => `${fmtDay(ms)}${wallClock(ms)}`;
   switch (p.key) {
     case 'down': return `Broken down: the ${part} failed and the line behind it is waiting. Repair it now.`;
     case 'service': return `Being serviced (${p.cause.fix.toLowerCase()}).${p.untilWall ? ` Back in production around ${wallClock(p.untilWall)}.` : ''}`;
-    case 'now': return `The ${part} is close to failing. Service it${p.deadlineWall ? ` before ${at(p.deadlineWall)}` : ' now'} to avoid a breakdown.`;
-    case 'soon': return `The ${part} is wearing out. Plan a service this shift${p.deadlineWall ? `, before ${at(p.deadlineWall)}` : ''}.`;
+    case 'now': return `The ${part} ${is} close to failing. Service it${p.deadlineWall ? ` before ${at(p.deadlineWall)}` : ' now'} to avoid a breakdown.`;
+    case 'soon': return `The ${part} ${is} wearing out. Plan a service this shift${p.deadlineWall ? `, before ${at(p.deadlineWall)}` : ''}.`;
     case 'watch': return `Early wear on the ${part}. Nothing to do yet; the copilot will flag it when a service is due.`;
     default: return 'Running normally. No wear trend, so there is nothing to plan.';
   }

@@ -43,13 +43,11 @@ _twin_cache: dict = {}
 
 def _get_twin_data(warmup_s: float = 20000):
     if "history" not in _twin_cache:
-        from digital_twin.simulator import FactoryTwin
         from ml_pipeline.rul_predictor import label_rul
+        from ml_pipeline.training_data import operating_rows, simulate_history
 
-        twin = FactoryTwin()
-        twin.run(duration_s=warmup_s)
-        history = twin.history_dataframe()
-        _twin_cache["history"] = history
+        history = simulate_history(seed=42, duration_s=warmup_s)
+        _twin_cache["history"] = operating_rows(history)
         _twin_cache["labeled"] = label_rul(history)
     return _twin_cache["history"], _twin_cache["labeled"]
 

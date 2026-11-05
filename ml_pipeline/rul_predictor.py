@@ -1,15 +1,14 @@
 """
 Remaining Useful Life (RUL) Prediction
 =======================================
-Implements the 2021 PHM Competition Winning Strategy:
-- Dilated 1D Temporal Convolutional Network (TCN)
-- Variable-Length Historical Sequences
-- Degradation-Aware Sampling
-- Piecewise Linear Target Transformation (label_rul_piecewise)
-- Zero Feature Leakage (Observable sensors only: vibration, temperature, dynamics)
+- Dilated 1D Temporal Convolutional Network (TCN), after Lövberg (PHM 2021)
+- Variable-length input windows, degradation-aware sampling
+- Piecewise-linear target capped at 100 cycles (label_rul_piecewise)
+- Observable inputs only: vibration, temperature, their trends, and the age
+  of the current part (cycles since service). Wear level is never an input.
 
-Includes an automatic fallback to gradient boosting (XGBoost/HistGradientBoosting)
-for maximum deployment portability.
+A gradient-boosting model (XGBoost, or scikit-learn's HistGradientBoosting
+if XGBoost is missing) is trained alongside as a fallback and as a baseline.
 """
 from __future__ import annotations
 
@@ -88,8 +87,8 @@ class RULPredictor:
         if self.use_tcn and self.tcn_model and self.tcn_model.is_fitted:
             # Format rows as sequence slices per machine
             sequences = []
-            for _, g in inp.groupby("machine_id", sort=False):
-                g_sorted = g.sort_values("cycle_count")
+            for _, g in inp.groupby(["machine_id", "life"], sort=False):
+                g_sorted = g.sort_values("cycles_since_service")
                 feat = g_sorted[FEATURE_COLUMNS].values.astype(np.float32)
                 sequences.append(torch.tensor(feat, dtype=torch.float32))
 
@@ -120,7 +119,13 @@ class RULPredictor:
             sequences = []
             for state in latest_states:
                 mid = state["machine_id"]
-                m_hist = feat_hist[feat_hist["machine_id"] == mid].sort_values("cycle_count")
+                m_hist = feat_hist[feat_hist["machine_id"] == mid]
+                # Only the current life: readings before the last service
+                # describe a part that has since been replaced.
+                if not m_hist.empty:
+                    m_hist = m_hist[m_hist["life"] == m_hist["life"].max()]
+                    if "status" in m_hist.columns:
+                        m_hist = m_hist[m_hist["status"] != "in_maintenance"]
                 # Take the most recent window up to max_history_window
                 window = m_hist.tail(max_history_window)
                 if len(window) > 0:

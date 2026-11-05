@@ -13,8 +13,16 @@ the same random seed so both futures see identical wear:
                   times as long as a planned service.
   copilot         The scheduler's own rule: service a machine as soon as its
                   safety-adjusted remaining life (0.85 x RUL) drops below 30
-                  cycles. The forecast uses the twin's wear trend as the RUL
-                  estimate, standing in for the TCN.
+                  cycles. By default the RUL estimate is the twin's true wear
+                  trend, i.e. a perfect model (an upper bound). Pass
+                  `rul_estimator` to drive the rule with a real model instead.
+  fixed_interval  Preventive maintenance on a schedule: service every machine
+                  after a fixed number of cycles since its last service
+                  (`interval_cycles`). The usual alternative to prediction.
+
+The evaluation suite (evaluation/policy_eval.py) runs all of these over many
+seeds with the trained TCN; the live forecast in the UI uses the fast
+perfect-model version and says so.
 
 The result is sampled on a fixed time grid for the UI's time slider, plus a
 summary of breakdowns, downtime and parts for each policy.
@@ -54,6 +62,7 @@ def _clone_fleet(live: FactoryTwin, seed: int) -> FactoryTwin:
         dst.on_state = sandbox._record_state
         dst.wear_level = src.wear_level
         dst.cycle_count = src.cycle_count
+        dst.life_cycles = src.life_cycles
         dst.throughput_units = src.throughput_units
         dst.status = (
             MachineStatus.FAILED if src.wear_level >= src.config.failure_wear_threshold
@@ -63,10 +72,44 @@ def _clone_fleet(live: FactoryTwin, seed: int) -> FactoryTwin:
     return sandbox
 
 
-def _simulate(live: FactoryTwin, horizon_s: float, samples: int, policy: str, seed: int) -> dict:
+def _true_rul(m: MachineTwin) -> float:
+    return (m.config.failure_wear_threshold - m.wear_level) / m.config.wear_rate_mean
+
+
+def _simulate(
+    live: FactoryTwin,
+    horizon_s: float,
+    samples: int,
+    policy: str,
+    seed: int,
+    rul_estimator=None,
+    interval_cycles: dict | None = None,
+    repair_multiplier: float = UNPLANNED_REPAIR_MULTIPLIER,
+) -> dict:
+    """`rul_estimator(machines, readings) -> {machine_id: rul}` replaces the
+    perfect wear-based estimate for the copilot policy. `readings` holds the
+    recent readings of each machine's current life."""
     sandbox = _clone_fleet(live, seed)
     env: simpy.Environment = sandbox.env
     machines = sandbox.machines
+    readings: dict[str, list] = {mid: [] for mid in machines}
+    if rul_estimator is not None:
+        def record(state, _sb=sandbox):
+            _sb.latest_state[state.machine_id] = state
+            buf = readings[state.machine_id]
+            if buf and state.cycles_since_service < buf[-1].cycles_since_service:
+                buf.clear()  # a service started a new life
+            if state.status.value != "in_maintenance":
+                buf.append(state)
+                if len(buf) > 40:
+                    del buf[:-40]
+        for m in machines.values():
+            m.on_state = record
+        # Seed each buffer with the live plant's recent readings of this life.
+        for mid in machines:
+            src = list(live.recent.get(mid, []))
+            life = [r for r in src if r.cycles_since_service <= live.machines[mid].life_cycles]
+            readings[mid].extend(r for r in life[-40:] if r.status.value != "in_maintenance")
     busy_until = {mid: -1.0 for mid in machines}
     events: list[dict] = []
     downtime_s = {mid: 0.0 for mid in machines}
@@ -78,11 +121,17 @@ def _simulate(live: FactoryTwin, horizon_s: float, samples: int, policy: str, se
             return
         planned = m.config.maintenance_duration_s
         busy_until[mid] = env.now + planned + 1.0
-        events.append({"t": round(env.now, 1), "machine_id": mid, "type": kind, "duration_s": planned})
+        events.append({"t": round(env.now, 1), "machine_id": mid, "type": kind, "duration_s": planned,
+                       "wear": round(m.wear_level, 3)})
         m.action.interrupt(kind)
 
     def policy_loop():
         while True:
+            estimates = None
+            if policy == "copilot" and rul_estimator is not None:
+                running = {mid: m for mid, m in machines.items()
+                           if env.now >= busy_until[mid] and m.status != MachineStatus.FAILED}
+                estimates = rul_estimator(running, readings) if running else {}
             for mid, m in machines.items():
                 if env.now < busy_until[mid]:
                     continue
@@ -92,13 +141,16 @@ def _simulate(live: FactoryTwin, horizon_s: float, samples: int, policy: str, se
                         events.append({"t": round(env.now, 1), "machine_id": mid, "type": "breakdown"})
                     # Reactive repair: the extra waiting time before the
                     # actual repair work (diagnosis, parts, sign-off).
-                    wait = (UNPLANNED_REPAIR_MULTIPLIER - 1) * m.config.maintenance_duration_s
+                    wait = (repair_multiplier - 1) * m.config.maintenance_duration_s
                     if env.now - failed_since[mid] >= wait:
                         failed_since.pop(mid, None)
                         service(mid, "repair")
                 elif policy == "copilot":
-                    rul = (m.config.failure_wear_threshold - m.wear_level) / m.config.wear_rate_mean
-                    if SAFETY_FACTOR * rul < CRITICAL_RUL_CYCLES:
+                    rul = estimates.get(mid) if estimates is not None else _true_rul(m)
+                    if rul is not None and SAFETY_FACTOR * rul < CRITICAL_RUL_CYCLES:
+                        service(mid, "service")
+                elif policy == "fixed_interval" and interval_cycles:
+                    if m.life_cycles >= interval_cycles.get(mid, float("inf")):
                         service(mid, "service")
             yield env.timeout(POLICY_CHECK_S)
 
@@ -160,6 +212,7 @@ def _simulate(live: FactoryTwin, horizon_s: float, samples: int, policy: str, se
         }
 
     breakdowns = sum(1 for e in events if e["type"] == "breakdown")
+    planned = [e for e in events if e["type"] == "service"]
     return {
         "machines": out_machines,
         "events": sorted(events, key=lambda e: e["t"]),
@@ -168,6 +221,8 @@ def _simulate(live: FactoryTwin, horizon_s: float, samples: int, policy: str, se
             "planned_services": sum(1 for e in events if e["type"] == "service"),
             "parts": sum(v["parts_made"] for v in out_machines.values()),
             "downtime_h": round(sum(downtime_s.values()) / 3600.0, 2),
+            # How much of each part's life a planned service used (1.0 = all of it).
+            "mean_wear_at_service": round(sum(e["wear"] for e in planned) / len(planned), 3) if planned else None,
         },
     }
 
@@ -193,7 +248,7 @@ def forecast_fleet(live: FactoryTwin, horizon_s: float = 8 * 3600, samples: int 
         "assumptions": {
             "unplanned_repair_multiplier": UNPLANNED_REPAIR_MULTIPLIER,
             "copilot_rule": f"service when {SAFETY_FACTOR} x RUL < {CRITICAL_RUL_CYCLES:.0f} cycles",
-            "rul_estimate": "wear trend (stand-in for the TCN)",
+            "rul_estimate": "perfect model (true wear trend): an upper bound. Measured results with the real TCN are on the Results page.",
             "seed": seed,
         },
     }

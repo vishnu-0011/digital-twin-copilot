@@ -10,230 +10,22 @@
     // Follow the theme chosen in the app (same storage key).
     try { document.documentElement.dataset.theme = localStorage.getItem('titan_theme') || 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
   </script>
-  <style>
-    :root {
-      --bg: #f6f7f9;
-      --surface: #ffffff;
-      --surface-2: #f1f3f6;
-      --ink: #0f172a;
-      --ink-2: #334155;
-      --ink-3: #64748b;
-      --hair: rgba(15, 23, 42, 0.09);
-      --hair-2: rgba(15, 23, 42, 0.16);
-      --accent: #0284c7;
-      --bad: #e11d48;
-      --warn: #d97706;
-      --good: #059669;
-      --think: #7c3aed;
-      --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 40px -24px rgba(15, 23, 42, 0.25);
-      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-    :root[data-theme="dark"] {
-      --bg: #080b12;
-      --surface: #0e1420;
-      --surface-2: #121a28;
-      --ink: #f1f5f9;
-      --ink-2: #cbd5e1;
-      --ink-3: #8391a7;
-      --hair: rgba(255, 255, 255, 0.08);
-      --hair-2: rgba(255, 255, 255, 0.16);
-      --accent: #38bdf8;
-      --bad: #fb7185;
-      --warn: #fbbf24;
-      --good: #34d399;
-      --think: #a78bfa;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 24px 50px -24px rgba(0, 0, 0, 0.8);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      background: var(--bg);
-      color: var(--ink);
-      font: 16px/1.6 var(--sans);
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: inherit; }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
-
-    /* ---------- top bar ---------- */
-    .bar {
-      position: sticky; top: 0; z-index: 10;
-      background: color-mix(in srgb, var(--bg) 82%, transparent);
-      backdrop-filter: blur(14px) saturate(1.3);
-      -webkit-backdrop-filter: blur(14px) saturate(1.3);
-      border-bottom: 1px solid var(--hair);
-    }
-    .bar .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
-    .logo {
-      width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
-      background: linear-gradient(135deg, #0ea5e9, #0369a1); color: #fff; font: 800 12px var(--sans);
-    }
-    .brand b { display: block; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
-    .brand span { display: block; font-size: 11.5px; color: var(--ink-3); }
-    .bar nav { margin-left: auto; display: flex; gap: 6px; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
-      border-radius: 999px; border: 1px solid var(--hair-2); text-decoration: none;
-      font: 600 13px var(--sans); color: var(--ink); background: transparent; cursor: pointer;
-      transition: background 0.15s ease, transform 0.15s ease;
-    }
-    .btn:hover { background: var(--surface-2); }
-    .btn-primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-    .btn-primary:hover { background: var(--ink); transform: translateY(-1px); }
-
-    /* ---------- type ---------- */
-    .eyebrow { font: 600 11px var(--sans); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 10px; }
-    .eyebrow::before { content: ""; width: 18px; height: 1px; background: currentColor; opacity: 0.6; }
-    h1 { font-size: clamp(36px, 5.4vw, 60px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 700; margin: 18px 0 20px; max-width: 15ch; }
-    h2 { font-size: clamp(26px, 3.4vw, 36px); line-height: 1.12; letter-spacing: -0.025em; font-weight: 700; margin: 14px 0 14px; max-width: 22ch; }
-    h3 { font-size: 17px; line-height: 1.3; letter-spacing: -0.01em; font-weight: 650; }
-    .lead { font-size: clamp(17px, 1.6vw, 20px); line-height: 1.55; color: var(--ink-2); max-width: 60ch; }
-    .muted { color: var(--ink-3); }
-    em.k { font-style: normal; color: var(--accent); font-weight: 600; }
-
-    section { padding: 88px 0; border-top: 1px solid var(--hair); }
-    section.hero { border-top: 0; padding: 72px 0 56px; }
-    .sec-head { margin-bottom: 36px; }
-    .sec-head p { max-width: 62ch; color: var(--ink-2); }
-
-    /* ---------- hero chart ---------- */
-    .chart-card {
-      margin-top: 44px; background: var(--surface); border: 1px solid var(--hair);
-      border-radius: 22px; box-shadow: var(--shadow); padding: 22px 24px 18px; overflow: hidden;
-    }
-    .chart-top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; justify-content: space-between; margin-bottom: 6px; }
-    .seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--hair); }
-    .seg button {
-      border: 0; background: transparent; color: var(--ink-3); font: 600 12.5px var(--sans);
-      padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: background 0.2s ease, color 0.2s ease;
-    }
-    .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
-    .seg button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    #pf { width: 100%; height: auto; display: block; }
-    #pf text { font-family: var(--sans); }
-    .ax { stroke: var(--hair-2); stroke-width: 1; }
-    .axl { fill: var(--ink-3); font-size: 12px; }
-    .curve { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
-    .curve-draw { stroke-dasharray: 1600; stroke-dashoffset: 1600; animation: draw 2.2s cubic-bezier(0.6, 0, 0.3, 1) 0.3s forwards; }
-    @keyframes draw { to { stroke-dashoffset: 0; } }
-    .pt { stroke: var(--surface); stroke-width: 3; }
-    .lbl { font-size: 12.5px; font-weight: 650; fill: var(--ink); }
-    .lbl-s { font-size: 11.5px; fill: var(--ink-3); }
-    .window { fill: var(--accent); opacity: 0.09; }
-    .window-edge { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
-    .strat { opacity: 0; transition: opacity 0.45s ease; }
-    .strat.on { opacity: 1; }
-    .cal { stroke: var(--warn); stroke-width: 1.6; stroke-dasharray: 5 5; }
-    .act-bad { fill: var(--bad); }
-    .act-good { fill: var(--accent); }
-    .chip-bg { fill: var(--surface); stroke: var(--hair-2); }
-    .chart-note { display: grid; grid-template-columns: 1fr; gap: 4px; min-height: 52px; margin-top: 6px; }
-    .chart-note b { font-size: 15px; }
-    .chart-note span { color: var(--ink-2); font-size: 14.5px; }
-
-    /* ---------- cards ---------- */
-    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-    .card {
-      background: var(--surface); border: 1px solid var(--hair); border-radius: 18px;
-      padding: 22px 22px 20px; box-shadow: var(--shadow);
-    }
-    .card p { color: var(--ink-2); font-size: 14.5px; margin-top: 8px; }
-    .ic {
-      width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 16px;
-      background: color-mix(in srgb, var(--tone, var(--accent)) 12%, transparent); color: var(--tone, var(--accent));
-    }
-    .ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .num { font: 600 11px var(--mono); color: var(--ink-3); letter-spacing: 0.04em; margin-bottom: 10px; display: block; }
-
-    .quote {
-      margin-top: 40px; padding: 28px 30px; border-radius: 18px; border: 1px solid var(--hair);
-      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface));
-      font-size: clamp(19px, 2.1vw, 24px); line-height: 1.45; letter-spacing: -0.012em; font-weight: 550;
-    }
-    .quote span { color: var(--ink-3); }
-
-    /* ---------- loop ---------- */
-    .loop { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; }
-    .step { padding: 0 16px 0 0; position: relative; }
-    .step-dot {
-      width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; z-index: 1;
-      background: var(--surface); border: 1.5px solid var(--tone); color: var(--tone); font: 700 12px var(--mono);
-    }
-    .step::before { content: ""; position: absolute; left: 34px; right: 0; top: 17px; height: 1.5px; background: var(--hair-2); }
-    .step:last-child::before { display: none; }
-    .step h3 { margin: 16px 0 6px; }
-    .step p { font-size: 14px; color: var(--ink-2); }
-    .step .tech { display: block; margin-top: 10px; font: 500 11.5px var(--mono); color: var(--ink-3); line-height: 1.5; }
-
-    /* ---------- live numbers ---------- */
-    .versus { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .vcol { border-radius: 18px; padding: 24px; border: 1px solid var(--hair); background: var(--surface); box-shadow: var(--shadow); }
-    .vcol.good { border-color: color-mix(in srgb, var(--good) 40%, var(--hair)); }
-    .vcol h3 { display: flex; align-items: center; gap: 8px; }
-    .vcol h3 i { width: 8px; height: 8px; border-radius: 50%; background: var(--tone); }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
-    .stat b { display: block; font-size: clamp(28px, 3.6vw, 40px); letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
-    .stat span { font-size: 12.5px; color: var(--ink-3); }
-    .fine { margin-top: 14px; font-size: 12.5px; color: var(--ink-3); max-width: 80ch; }
-    .industry { margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .industry .card b { font-size: 28px; letter-spacing: -0.02em; display: block; }
-
-    /* ---------- limits ---------- */
-    .limits { list-style: none; display: grid; gap: 10px; max-width: 760px; }
-    .limits li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; color: var(--ink-2); font-size: 15px; }
-    .limits li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); margin-top: 9px; margin-left: 6px; }
-
-    .cta { text-align: center; padding: 96px 0 110px; }
-    .cta h2 { margin: 12px auto 14px; }
-    .cta .lead { margin: 0 auto 28px; }
-    .cta .eyebrow { justify-content: center; }
-    .cta .eyebrow::before { display: none; }
-    .cta-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-    .btn-lg { height: 46px; padding: 0 22px; font-size: 14.5px; }
-    footer { border-top: 1px solid var(--hair); padding: 26px 0 40px; font-size: 12.5px; color: var(--ink-3); }
-
-    .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
-    .reveal.in { opacity: 1; transform: none; }
-
-    @media (max-width: 900px) {
-      .grid3, .grid4, .industry { grid-template-columns: 1fr 1fr; }
-      .loop { grid-template-columns: 1fr; gap: 22px; }
-      .step { padding: 0 0 0 50px; }
-      .step-dot { position: absolute; left: 0; top: 0; }
-      .step h3 { margin-top: 4px; }
-      .step::before { left: 16.5px; right: auto; top: 34px; bottom: -22px; width: 1.5px; height: auto; }
-    }
-    @media (max-width: 640px) {
-      .wrap { padding: 0 16px; }
-      .grid3, .grid4, .grid2, .versus, .industry { grid-template-columns: 1fr; }
-      section { padding: 64px 0; }
-      .bar .brand span { display: none; }
-      .bar nav .btn:not(.btn-primary) { display: none; }
-      .chart-card { padding: 16px 14px 14px; border-radius: 16px; }
-      .seg button { padding: 7px 10px; font-size: 12px; }
-      .stats { grid-template-columns: repeat(3, 1fr); }
-      .chart-scroll { overflow-x: auto; margin: 0 -14px; padding: 0 14px; }
-      #pf { min-width: 620px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .curve-draw { animation: none; stroke-dashoffset: 0; }
-      .reveal { opacity: 1; transform: none; transition: none; }
-      .strat { transition: none; }
-    }
-  </style>
+  <link rel="stylesheet" href="/css/site.css?v=1">
 </head>
 <body>
   <header class="bar">
     <div class="wrap">
-      <div class="logo">TA</div>
-      <div class="brand"><b>Titan Aerospace</b><span>Maintenance copilot · why it exists</span></div>
-      <nav>
-        <a class="btn" href="/?tour=quick">3-minute tour</a>
-        <a class="btn btn-primary" href="/?nowelcome">Open the live plant →</a>
+      <a class="logo" href="/?nowelcome" aria-label="Open the live plant">TA</a>
+      <div class="brand"><b>Titan Aerospace</b><span>Maintenance copilot</span></div>
+      <nav class="pages" aria-label="Project pages">
+        <a href="/why.html" aria-current="page">Why</a>
+        <a href="/method.html">How it works</a>
+        <a href="/results.html">Results</a>
       </nav>
+      <div class="actions">
+        <a class="btn" href="/?tour=quick">3-minute tour</a>
+        <a class="btn btn-primary" href="/?nowelcome">Open the live plant</a>
+      </div>
     </div>
   </header>
 
@@ -405,16 +197,22 @@
       <div class="wrap">
         <div class="sec-head reveal">
           <span class="eyebrow">What changes</span>
-          <h2>The same plant, run forward twice</h2>
-          <p id="impact-intro">Live from the twin: the next 8 plant hours, simulated from the plant's current state with the same random seed.</p>
+          <h2>The same plants, run under three policies</h2>
+          <p id="impact-intro">Measured by the evaluation suite: simulated plants the models never saw, one 8-hour shift each, identical random wear for every policy, with the real trained model making the predictions.</p>
         </div>
-        <div class="versus reveal">
+        <div class="versus versus3 reveal">
           <div class="vcol" style="--tone: var(--bad)">
             <h3><i></i>Run to failure</h3>
             <div class="stats">
               <div class="stat"><b id="rtf-b">–</b><span>breakdowns</span></div>
               <div class="stat"><b id="rtf-d">–</b><span>hours stopped</span></div>
-              <div class="stat"><b id="rtf-p">–</b><span>parts made</span></div>
+            </div>
+          </div>
+          <div class="vcol" style="--tone: var(--warn)">
+            <h3><i></i>Best fixed schedule</h3>
+            <div class="stats">
+              <div class="stat"><b id="fix-b">–</b><span>breakdowns</span></div>
+              <div class="stat"><b id="fix-d">–</b><span>hours stopped</span></div>
             </div>
           </div>
           <div class="vcol good" style="--tone: var(--good)">
@@ -422,11 +220,10 @@
             <div class="stats">
               <div class="stat"><b id="cop-b">–</b><span>breakdowns</span></div>
               <div class="stat"><b id="cop-d">–</b><span>hours stopped</span></div>
-              <div class="stat"><b id="cop-p">–</b><span>parts made</span></div>
             </div>
           </div>
         </div>
-        <p class="fine" id="impact-fine">Simulated plant, not a measured result. Assumes a breakdown repair takes 3× as long as a planned service. The copilot services a machine when 85% of its predicted remaining life drops below 30 cycles.</p>
+        <p class="fine" id="impact-fine">Per 8-hour shift, mean over simulated plants; downtime summed over 8 machines. Assumes a breakdown repair takes 3× a planned service. <a href="/results.html#policy">Full results, spread and sensitivity →</a></p>
 
         <div class="industry">
           <div class="card reveal"><b>up to 70–75%</b><p>fewer breakdowns</p></div>
@@ -460,7 +257,7 @@
         <p class="lead">The tour wears down a real spindle in the twin, shows the warning, approves the fix, and fast-forwards the shift.</p>
         <div class="cta-row">
           <a class="btn btn-primary btn-lg" href="/?tour=quick">Take the 3-minute tour</a>
-          <a class="btn btn-lg" href="/?nowelcome">Explore the plant</a>
+          <a class="btn btn-lg" href="/method.html">How it works</a>
         </div>
       </div>
     </section>
@@ -560,22 +357,19 @@
     buttons.forEach(b => b.addEventListener('click', () => show(b.dataset.s)));
     show('pdm');
 
-    /* ---------- live forecast numbers ---------- */
-    const fmt = n => Number(n).toLocaleString('en-US');
-    fetch('/forecast?samples=2').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(d => {
-      const a = d.policies.run_to_failure.summary, c = d.policies.copilot.summary;
-      document.getElementById('rtf-b').textContent = fmt(a.breakdowns);
-      document.getElementById('rtf-d').textContent = a.downtime_h.toFixed(1);
-      document.getElementById('rtf-p').textContent = fmt(a.parts);
-      document.getElementById('cop-b').textContent = fmt(c.breakdowns);
-      document.getElementById('cop-d').textContent = c.downtime_h.toFixed(1);
-      document.getElementById('cop-p').textContent = fmt(c.parts);
-      const h = Math.round((d.horizon_s || 28800) / 3600);
+    /* ---------- measured numbers (evaluation suite) ---------- */
+    const f1 = n => Number(n).toLocaleString('en-US', { maximumFractionDigits: 1 });
+    fetch('/data/results.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(d => {
+      const pol = d.policy.policies;
+      const fixed = pol[Object.keys(pol).find(k => k.startsWith('Fixed schedule'))];
+      const set = (id, v) => { document.getElementById(id).textContent = v; };
+      set('rtf-b', f1(pol['Run to failure'].breakdowns.mean)); set('rtf-d', f1(pol['Run to failure'].downtime_h.mean));
+      set('fix-b', f1(fixed.breakdowns.mean)); set('fix-d', f1(fixed.downtime_h.mean));
+      set('cop-b', f1(pol['Copilot (TCN)'].breakdowns.mean)); set('cop-d', f1(pol['Copilot (TCN)'].downtime_h.mean));
       document.getElementById('impact-intro').textContent =
-        `Live from the twin: the next ${h} plant hours, simulated from the plant's current state with the same random seed. Downtime is summed across all 8 machines.`;
+        `Measured by the evaluation suite on ${d.policy.seeds.length} simulated plants the models never saw: one ${d.policy.horizon_h}-hour shift each, identical random wear for every policy, with the real trained model making the predictions.`;
     }).catch(() => {
-      document.getElementById('impact-intro').textContent =
-        'These numbers come live from the twin. Start the server (uvicorn api.main:app) and reload to see them.';
+      document.getElementById('impact-intro').textContent = 'Run python -m evaluation.run_all to produce these numbers, then reload.';
     });
 
     /* ---------- reveal on scroll ---------- */

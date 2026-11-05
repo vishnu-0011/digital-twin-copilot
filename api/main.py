@@ -167,11 +167,17 @@ def act_repair(machine_id: str, by: str = "Supervisor") -> bool:
 
 
 def act_reset():
+    """A fresh shift: every machine gets a new part (age 0) and runs its first
+    few cycles, so the models see a consistent new life, not a reset wear
+    value on an old part."""
     twin: FactoryTwin = app_state["twin"]
     for m in twin.machines.values():
-        m.wear_level = 0.05
+        if m.status == MachineStatus.IN_MAINTENANCE:
+            continue  # the running service finishes with a new part anyway
+        m.wear_level = 0.0
+        m.life_cycles = 0
         m.status = MachineStatus.HEALTHY
-        m._emit_state()
+        m.age_to(0.05)
     log_event("reset", None, "Demo", "Plant reset to a fresh shift")
 
 
@@ -516,8 +522,8 @@ def health():
     predictor = app_state.get("predictor")
     return {
         "status": "ok",
-        "mode": "100% Pure ML (Zero API Keys)",
-        "rul_backend": predictor.backend if predictor else "tcn_2021",
+        "mode": "offline (local models, no external APIs)",
+        "rul_backend": predictor.backend if predictor else "tcn",
         "models": app_state.get("model_source", "unknown"),
         "rul_holdout": getattr(predictor, "holdout_metrics", None) if predictor else None,
     }
@@ -634,7 +640,7 @@ def machine_history(machine_id: str, n: int = 60):
     return {
         "machine_id": machine_id,
         "readings": [
-            {k: r[k] for k in ("sim_time_s", "cycle_count", "vibration_rms", "temperature_c", "wear_level", "status")}
+            {k: r[k] for k in ("sim_time_s", "cycle_count", "cycles_since_service", "vibration_rms", "temperature_c", "wear_level", "status")}
             for r in rows
         ],
     }

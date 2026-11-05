@@ -19,7 +19,7 @@ class TestApiWeb(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["status"], "ok")
-        self.assertEqual(data["mode"], "100% Pure ML (Zero API Keys)")
+        self.assertEqual(data["mode"], "offline (local models, no external APIs)")
         self.assertIn("rul_backend", data)
 
     def test_fleet_endpoint(self):

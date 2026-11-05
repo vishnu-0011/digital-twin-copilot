@@ -38,7 +38,10 @@ COLLECTION_NAME = "maintenance_sops"
 SOP_FILENAME_TO_MACHINE_TYPE = {
     "cnc_mill_sop.md": "CNC_MILL",
     "hydraulic_press_sop.md": "HYDRAULIC_PRESS",
+    "furnace_sop.md": "FURNACE",
+    "robot_arm_sop.md": "ROBOT_ARM",
     "conveyor_sop.md": "CONVEYOR",
+    "metrology_sop.md": "METROLOGY",
 }
 
 

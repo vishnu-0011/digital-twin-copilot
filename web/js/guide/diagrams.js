@@ -7,7 +7,7 @@
  * script. Diagrams can also react to cues in code (e.g. the ISO gauge needle).
  *
  * The numbers drawn here come from the codebase itself:
- *   simulator.py (signal formulas), anomaly_detector.py (200 trees, 5%),
+ *   simulator.py (signal formulas), anomaly_detector.py (200 trees, healthy envelope),
  *   tcn_model.py (dilations 1-2-4-8, kernel 3, Chomp1d), scheduler_agent.py
  *   (0.85 safety factor, RUL < 30 escalation), knowledge_base.py (filter →
  *   TF-IDF → cosine), api/main.py (2 Hz WebSocket push), app.js (1.8 s HTTP
@@ -310,7 +310,7 @@ DIAGRAMS.iso = {
 /* 7 · Isolation Forest ------------------------------------------------ */
 DIAGRAMS.iforest = {
   title: 'How we find the odd one out',
-  caption: 'Isolation Forest · 200 random trees · 5% contamination',
+  caption: 'Isolation Forest · 200 random trees · trained on healthy readings',
   build() {
     const r = rng(42);
     let pts = '';
@@ -434,7 +434,7 @@ DIAGRAMS.rul = {
       <g class="cue tone-amber" data-c="3"><path class="dg-curve dg-dashed" d="${path(pred, v => v * 0.85)}"/>
         <text class="dg-s dg-strong" x="${px(112)}" y="${py(50)}">safe = 0.85 × prediction</text></g>
       <g class="cue tone-rose" data-c="4"><line class="dg-thresh" x1="50" y1="${py(30)}" x2="385" y2="${py(30)}"/>
-        <text class="dg-s dg-strong" x="56" y="${py(30) - 6}">safe RUL &lt; 30 → schedule now</text>
+        <text class="dg-s dg-strong" x="56" y="${py(30) - 6}">safe RUL &lt; 30 → draft work order</text>
         <circle class="dg-fillc" cx="${px(cross)}" cy="${py(30)}" r="5"/>
         <text class="dg-s" x="${px(cross) - 6}" y="${py(30) + 18}" text-anchor="end">alarm fires ~5 cycles sooner</text></g>`);
   }
@@ -493,7 +493,7 @@ DIAGRAMS.scheduler = {
         <text class="dg-s dg-strong" x="187" y="88" text-anchor="middle">⇒ HIGH</text></g>
       ${edge('M118,57 H132', { c: 2 })}
       <g class="cue" data-c="3">
-        ${lane(14, 'high', 'schedule_now', 'tone-rose')}
+        ${lane(14, 'high', 'draft work order', 'tone-rose')}
         ${lane(62, 'medium', 'recommend_next_cycle', 'tone-amber')}
         ${lane(110, 'low', 'log_only', 'tone-dim')}
         <path id="${u}-t" class="dg-edge dg-flow tone-rose" d="M240,57 C250,57 248,34 254,34" marker-end="url(#ARROW)"/>

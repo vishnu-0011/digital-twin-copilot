@@ -1,22 +1,24 @@
-# SOP-CONV-007: Conveyor System Wear Response
+# SOP-CONV-007: Conveyor Drive Belt and Roller Wear
 
-**Applies to:** CONVEYOR class machines (e.g. CONV-01)
-**Severity levels:** DEGRADING, WARNING, CRITICAL
+**Applies to:** CONVEYOR class machines (CONV-01)
+**Planned service:** about 5 minutes, the shortest in the plant
+**Signals used:** drive vibration, motor temperature, predicted remaining life (RUL)
 
-## Symptom: Gradual vibration increase, low absolute magnitude
-Conveyors show much lower absolute vibration values than CNC mills or
-presses even at high wear — a vibration_rms of 2.0 on a conveyor is
-proportionally more significant than the same value on a CNC mill. Use
-wear_level as the primary signal for conveyors, not raw vibration magnitude.
+## Symptom: Gradual vibration rise at low absolute levels
+Conveyors vibrate far less than mills or presses even when worn, so judge
+them by the trend and the predicted remaining life rather than by raw
+vibration magnitude. Belt slip and worn rollers degrade slowly and
+predictably.
 
 **Recommended action:**
-1. WARNING (wear_level 0.6-0.85): schedule maintenance within 3 shifts.
-   Conveyors have the most operational slack of the three machine types
-   since belt wear degrades gradually and predictably.
-2. CRITICAL (wear_level > 0.85): schedule within 1 shift. Belt slippage
-   risk increases sharply above this threshold and can cause secondary
-   quality defects on downstream machines even before outright failure.
-3. Standard maintenance duration is 300 seconds — shortest of the fleet.
-   Conveyors are the cheapest and fastest machine class to service, so
-   when scheduling is contested, deprioritize conveyors relative to
-   presses and mills unless conveyor wear_level is CRITICAL.
+1. Service soon (safety-adjusted RUL under 60 cycles): plan within 3 shifts.
+2. Service now (safety-adjusted RUL under 30 cycles): within 1 shift. Belt
+   slip starves the downstream stations.
+3. When several services compete for the same technicians, conveyors can
+   usually wait for mills and presses, unless the conveyor is at Service now.
+
+## Procedure
+1. Stop the line at a part gap; lock out the drive.
+2. Re-tension the belt to specification; replace it if cracked or glazed.
+3. Spin each roller by hand; replace rollers that grind or stick.
+4. Run empty, then loaded; confirm tracking and vibration.

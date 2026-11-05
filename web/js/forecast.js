@@ -225,7 +225,7 @@ function renderSummary() {
   $('fc-gain-parts').textContent = `${gain >= 0 ? '+' : ''}${fmt(gain)}`;
   $('fc-gain-down').textContent = `${pct >= 0 ? '+' : ''}${pct}% output · ${(r.downtime_h - c.downtime_h).toFixed(1)} h less downtime`;
   const a = data.assumptions || {};
-  $('fc-foot').textContent = `Simulated from the live plant state (seed ${a.seed}). Copilot rule: ${a.copilot_rule}. A breakdown is assumed to take ${a.unplanned_repair_multiplier}× as long to fix as a planned service.`;
+  $('fc-foot').innerHTML = `Simulated from the live plant state (seed ${a.seed}). Copilot rule: ${a.copilot_rule}; this preview assumes its remaining-life estimate is exact. A breakdown takes ${a.unplanned_repair_multiplier}× a planned service. <a href="/results.html#policy" target="_blank" rel="noopener">Measured with the real model →</a>`;
 }
 
 function renderEventTicks() {

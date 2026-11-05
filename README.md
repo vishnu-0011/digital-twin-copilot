@@ -1,356 +1,150 @@
-# 🏭 Titan Aerospace — Smart Manufacturing Digital Twin Copilot
+# Titan Aerospace Maintenance Copilot
 
-> **"What if managing an entire aerospace mega-factory felt like playing an RTS strategy game?"**  
-> An autonomous agentic predictive-maintenance operations center for precision aerospace manufacturing —  
-> **100% Pure Local Machine Learning &bull; 100% Offline &bull; ZERO API Keys &bull; Zero Node/NPM Build Overhead**.
+**A digital twin of an aerospace machine shop, with models that predict which machine will fail and when, and a copilot that drafts the work order for a supervisor to approve.** Runs offline on one laptop.
 
-[![Tests](https://img.shields.io/badge/tests-23%20passed-10b981?style=for-the-badge&logo=pytest)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/tests)
-[![Guided Demo](https://img.shields.io/badge/Demo-Narrated%20Guided%20Tour-8b5cf6?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/tour.js)
-[![Telemetry](https://img.shields.io/badge/Telemetry-Real--Time%20WebSocket%20(/ws/telemetry)-00f3ff?style=for-the-badge&logo=fastapi)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/api/main.py)
-[![Fleet](https://img.shields.io/badge/Fleet-8%20Aerospace%20Workcells%20%2B%202%20AMRs-0284c7?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/digital_twin/simulator.py)
-[![ML Backend](https://img.shields.io/badge/Prognostics-Dilated%20TCN%20(PHM%202021)-00f3ff?style=for-the-badge&logo=pytorch)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/ml_pipeline/tcn_model.py)
-[![Architecture](https://img.shields.io/badge/Agent%20Graph-LangGraph%20Closed--Loop-8b5cf6?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/agents/orchestrator.py)
-[![Theme](https://img.shields.io/badge/UI%20Theme-Executive%20Cleanroom%20(Light%20%26%20Dark)-facc15?style=for-the-badge)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web)
-[![Onboarding Guide](https://img.shields.io/badge/Documentation-About.md%20(Team%20Primer)-10b981?style=for-the-badge&logo=markdown)](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/About.md)
+![The operations view: what needs attention, by when, and what to do](docs/screenshots/app-home.png)
 
-> [!IMPORTANT]
-> **New to the project or looking for an onboarding primer?**  
-> 📖 Check out [**`About.md`**](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/About.md) for a comprehensive, beginner-friendly guide written specifically for teammates with zero prior knowledge of this codebase. It covers:
-> - **The 60-Second Plain-English Pitch & Real-World Problem** ($22k/hr downtime & SCADA alarm fatigue)
-> - **How Data Is Collected From Machines** (SimPy per-cycle simulation & the strict zero-feature-leakage rule)
-> - **How the ML Models Identify What Is Wrong** (dilated TCN, Isolation Forest, ISO 10816-3 zones, SOP checklists)
-> - **Answers to Most Frequently Asked Business Questions** (ROI, air-gapped security, legacy retrofitting)
-> - **Step-by-Step Local Setup & Viva/Presentation Speaking Guide**
+| | |
+|---|---|
+| **Problem** | Machines warn before they break, but plants act too late (run to failure) or on the wrong date (fixed schedules). |
+| **Approach** | Simulated plant → anomaly detector + remaining-life model → rule-based agents → human approval → the twin is serviced. |
+| **Measured** | ±3.7 cycles remaining-life error on unseen plants · 484 cycles of warning before failure (2.8× a fixed vibration limit) · 55% less downtime than run to failure |
+| **Stack** | Python, SimPy, PyTorch, scikit-learn, LangGraph, ChromaDB, FastAPI, Three.js · 48 automated tests · no API keys |
+
+While the server runs, three project pages tell the whole story:
+[**Why**](web/why.html) (`/why.html`) · [**How it works**](web/method.html) (`/method.html`) · [**Results**](web/results.html) (`/results.html`).
 
 ---
 
-## 🎥 Live Motion Demonstration (3-Second Cleanroom Tour)
+## 1. The problem
 
-> **Continuous 60 FPS WebGL simulation loop:** Autonomous AMRs patrolling corridors, robotic deburring arm in motion, and live 10-stage WIP line flow.
+A worn spindle bearing does not fail out of nowhere: vibration rises for hours or days first. Between the point where wear becomes detectable (P) and the breakdown (F) there is a window in which a repair can be planned. Plants usually miss it in one of two ways:
 
-![Titan Aerospace Operations Tour](docs/videos/factory_tour.gif)
+* **Run to failure.** Act after the breakdown: a long unplanned stop, and possibly a scrapped part.
+* **Fixed schedule.** Service every N hours: healthy parts get replaced, and a fast-wearing machine can still break between visits.
 
-*Native 720p 60 FPS recording available in [`docs/videos/factory_tour.webm`](docs/videos/factory_tour.webm).*
+The data to do better often exists, but it arrives as numbers ("3.1 mm/s, RUL 47 cycles") that nobody has time to turn into a decision. This project closes that gap: **which machine, what to fix, and by when**, with a person in charge.
 
----
+## 2. What we built
 
-## 📸 Visual Showcase: Titan Aerospace Campus & Cleanroom Mega-Factory
+| Step | What happens | Where |
+|---|---|---|
+| Sense | A SimPy twin of 8 machines emits a reading every cycle: vibration, temperature, part age. Streamed at 2 Hz over a WebSocket. | `digital_twin/`, `api/main.py` |
+| Detect | An Isolation Forest learns the healthy envelope (first 80 cycles after each service) and flags the first departure from it. | `ml_pipeline/anomaly_detector.py` |
+| Predict | A dilated temporal convolutional network reads the last 20 readings of the current part's life and estimates remaining life (RUL). | `ml_pipeline/tcn_model.py` |
+| Decide | A LangGraph graph of rule-based agents: Monitor → Diagnosis (retrieves and cites the procedure) → Scheduler (0.85 × RUL < 30 cycles → draft a work order) → Report. | `agents/`, `rag/` |
+| Fix | A supervisor approves the work order; the machine is serviced in the twin and returns to normal. Autonomy is opt-in (`COPILOT_AUTONOMY=1`). | `web/js/ops.js`, `POST /work-orders` |
 
-Below are live screenshots of the hardware-accelerated 3D operations center captured directly from the running WebGL simulation across multiple camera angles, environmental modes, and operational states:
+The models only see what a real plant could measure. The simulator's wear level is never an input.
 
-### 1. 🏢 Titan Aerospace City Campus & Bustling Town Exterior
-*Full town campus overview featuring the exterior architectural factory building covered with realistic walls, ribbon windows, rooftop HVAC chillers, solar arrays, and illuminated rooftop company branding. Surrounding the facility is an active town environment: two-lane asphalt roads with continuous animated traffic (cars, delivery vans, cargo trucks), marked employee parking with EV charging pedestals, security guardhouse with barrier arm, covered pedestrian walkway canopy, sidewalks, street trees, streetlamps, and an open, uncluttered vista.*
-![Titan Aerospace City Campus Overview](docs/screenshots/01_town_campus_overview.png)
+## 3. Results
 
----
+Measured by `python -m evaluation.run_all` on plants the models never saw. Full tables: [`docs/RESULTS.md`](docs/RESULTS.md); charts: `/results.html`.
 
-### 2. 🌐 Dollhouse Cutaway: Cleanroom Interior (`8 Workcells Active`)
-*Clicking the building exterior or selecting `🏭 Interior` smoothly glides the camera inside while the procedural roof slab and upper walls disappear in a dollhouse cutaway. Reveals an expanded 64m × 48m polished white epoxy cleanroom floor, unobstructed open vista, 8 specialized workcells across 4 zoned bays, floating screen-space telemetry badges, and live 10-stage process pipeline.*
-![Cleanroom Mega-Factory Interior](docs/screenshots/01_cleanroom_mega_factory_overview.png)
+**Remaining life** (3,000 test readings in the wear phase)
 
----
+| Model | MAE (cycles) | RMSE |
+|---|---:|---:|
+| TCN (deployed) | 3.68 | 4.63 |
+| Gradient boosting (one reading) | 4.10 | 5.41 |
+| Fleet-average life (no sensors) | 7.12 | 8.89 |
 
-### 3. ⚙️ Bay 1: CNC Machining Centers (`CNC-01` & `CNC-02`)
-*Machining Bay dedicated to turbine blades and aero airfoils. Left: `CNC-01` 5-Axis Heavy Roughing Mill (DMG MORI style enclosure, sliding glass doors, 6-tool carousel magazine, chip auger chute & bin). Right: `CNC-02` 5-Axis High-Speed Airfoil Finishing Center (granite portal bridge, tilting trunnion table, roof mist extraction filtration unit, Siemens 840D console).*
-![Bay 1 CNC Machining Centers](docs/screenshots/02_bay1_cnc_machining_centers.png)
+**Anomaly detection** (positive = wear has started)
 
----
+| Detector | Precision | Recall | Median warning before failure |
+|---|---:|---:|---:|
+| Isolation Forest (deployed) | 0.952 | 0.995 | 484 cycles |
+| ISO 10816 zone C threshold | 1.000 | 0.278 | 172 cycles |
 
-### 4. 🔨 Bay 2: Heavy Forming & Thermal Treatment (`PRESS-01`, `PRESS-02`, `FURN-01`)
-*Heavy forming and heat treatment wing. Features `PRESS-01` (1000-Ton vertical hydraulic bulkhead forging press with tie-rod columns, nitrogen accumulators, fluid reservoir, ruby safety light curtains, and hot titanium billet), `PRESS-02` (500-Ton horizontal hydraulic extrusion press with runoff roller table carrying titanium spar extrusions), and `FURN-01` (Vacuum Carburizing Furnace with heavy clamping vacuum door, glowing radiant orange quartz heat port, pumping skid, and 980°C controller).*
-![Bay 2 Forming & Heat Treatment](docs/screenshots/03_bay2_forming_vacuum_furnace.png)
+**Maintenance policy** (10 plants × one 8-hour shift, same random wear for every policy)
 
----
+| Policy | Breakdowns | Downtime (machine-hours) | Part life used |
+|---|---:|---:|---:|
+| Run to failure | 30.9 ± 0.7 | 14.23 ± 0.23 | 100% (breaks) |
+| Fixed schedule (best: 95% of average life) | 0.0 ± 0.0 | 6.38 ± 0.14 | 95% |
+| Copilot (TCN) | 0.0 ± 0.0 | 6.43 ± 0.13 | 94% |
+| Copilot (perfect model, upper bound) | 0.0 ± 0.0 | 6.42 ± 0.13 | 95% |
 
-### 5. 🤖 Bay 3: Robotics & Quality Control (`ROBOT-01` & `LASER-01`)
-*Automated deburring and sub-micron metrology wing. Left: `ROBOT-01` 6-DOF industrial articulated robotic arm inside a yellow perimeter safety fence with clear polycarbonate panels performing root-radius deburring on turbine blades. Right: `LASER-01` Dual Laser Triangulation QC Arch on a black granite surface plate with sweeping cyan planar laser sheet and micrometer readout tower.*
-![Bay 3 Robotics & Metrology](docs/screenshots/04_bay3_robotics_laser_metrology.png)
+**Real-data benchmark.** `evaluation/cmapss_benchmark.py` trains the same TCN architecture on NASA's public C-MAPSS FD003 turbofan data and scores it on the official 100 test engines against ridge regression, a random forest and published results. It is not part of the default run (about 30 minutes on a laptop CPU): `python -m evaluation.run_all --cmapss-only`.
 
----
+What these say, honestly:
 
-### 6. 📦 Bay 4: Avionics Assembly Line (`CONV-01`)
-*Automated avionics and blade integration conveyor with emergency red E-stop pull cords. Features an enclosed Laser QC Inspection Tunnel arch with an active vertical cyan laser triangulation scanning plane, overhead digital tolerance HUD (`TOLERANCE ±0.002mm • LASER TRIANGULATION ACTIVE`), and moving aerospace pallet fixtures.*
-![Bay 4 Avionics Assembly Line](docs/screenshots/05_bay4_avionics_assembly_line.png)
+* The TCN beats a single-reading model and a no-sensor baseline on the twin, so the reading history matters.
+* The copilot removes the breakdowns that running to failure causes (55% less downtime).
+* A fixed schedule tuned on the test plants themselves matches it (marginally better, by 0.05 h per shift), because simulated parts wear predictably. But its optimum sits next to a cliff (100% of average life gives 19.8 breakdowns per shift), and finding it needed knowledge a real plant does not have. The copilot gets there without tuning. Whether it pulls ahead where wear varies more is untested here.
 
----
-
-### 7. 🚚 Autonomous Logistics Fleet (`AGV-01` & `AGV-02` AMRs)
-*Live follow-cam tracking the autonomous mobile robot (AMR) navigating factory transit corridors. Features industrial mecanum wheels, rotating 3D LiDAR puck with forward-projecting scan cone, forward driving spotlights casting dynamic illumination onto the floor, flashing amber safety strobe beacon, and secured payload pallet.*
-![AGV Autonomous Logistics](docs/screenshots/06_agv_autonomous_logistics.png)
-
----
-
-### 8. 🅿️ Company Parking Area & Covered Pedestrian Corridor
-*Dedicated employee and visitor parking lot featuring marked stalls, parked employee vehicles, dual EV charging stations, security guardhouse with motorized barrier gate, and an architecturally covered steel/glass walkway canopy that directly connects the parking area to the factory cleanroom airlock entrance.*
-![Company Parking Area & Walkway Corridor](docs/screenshots/08_company_parking_corridor.png)
-
----
-
-### 9. 📊 Holographic SCADA Inspection Drawer
-*Slide-out SCADA diagnostic drawer opened by clicking any machine or floating badge. Features real-time physical wear progression, dual-channel 60 FPS oscilloscope spectrum (Ch1: Vibration RMS, Ch2: Core Thermal gradient), 2021 TCN Prognostics hero metric with 15% asymmetric safety margin breakdown, ISO 10816 vibration classification (Zone A to Zone D), Titan Aerospace standard operating procedures (SOP), and one-click closed-loop maintenance execution.*
-![SCADA Drawer Diagnostics](docs/screenshots/07_cleanroom_scada_diagnostics.png)
-
----
-
-### 10. 🏭 10-Stage End-to-End Process Pipeline Ribbon
-*Bottom process pipeline docked along the screen edge displaying all 10 physical manufacturing stages: Raw Ingot Ingestion &rarr; Heavy Roughing Milling &rarr; High-Speed Airfoil Finishing &rarr; 1000T Bulkhead Forging &rarr; 500T Hydraulic Extrusion &rarr; Vacuum Carburizing Heat Treat &rarr; 6-DOF Robotic Deburring &rarr; Laser Triangulation QC Gate &rarr; Avionics Assembly Line &rarr; Autonomous AMR Cleanroom Transit. Clicking any stage instantly focuses the camera and opens the machine diagnostics.*
-![10-Stage Process Pipeline](docs/screenshots/08_end_to_end_10stage_pipeline.png)
-
----
-
-### 11. 🌙 Cyberpunk Strategy Theme (Instant Toggle)
-*Instant toggle via the `☀️ Light / 🌙 Dark` HUD button switches to the authentic dark cyberpunk strategy environment: deep obsidian reflective epoxy slab, electric neon cyan floor grid (`0x00f3ff`), atmospheric floating dust motes, cyan AGV driving headlights & LiDAR cones, illuminated vehicle headlights, streetlamps, and high-contrast dark SCADA telemetry.*
-![Dark Mode Cyberpunk View](docs/screenshots/09_dark_mode_cyberpunk_view.png)
-
----
-
-### 12. 🚪 Executive Cleanroom Entrance Portal & "TITAN AEROSPACE" Branding
-*South perimeter cleanroom airlock entrance featuring illuminated dual-sided company signage (**"▲ TITAN AEROSPACE"**), automated sliding glass airlock doors with stainless steel handles, emerald green positive-pressure status beacon, security RFID card pedestals, contamination control tacky floor runner, and covered pedestrian canopy connection.*
-![Titan Aerospace Entrance Portal](docs/screenshots/10_titan_aerospace_entrance_portal.png)
-
----
-
-## 📖 Teammate Master Guide & Architectural Deep-Dive (`About.md`)
-
-For teammates, reviewers, and stakeholders with **zero prior knowledge of this codebase**, we have prepared a comprehensive onboarding primer: [**`About.md`**](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/About.md).
-
-| Section | What You Will Learn | Direct Link |
-| :--- | :--- | :--- |
-| **1. The 60-Second Elevator Pitch** | Plain-English summary: SimCity meets NASA rocket factory diagnostic AI | [`About.md #1`](About.md#1--the-60-second-elevator-pitch-what-is-this) |
-| **2. The Real-World Problem** | Why unplanned downtime costs $22k/hr & how alarms overwhelm operators | [`About.md #2`](About.md#2--the-real-world-problem-we-are-solving) |
-| **3. What is a "Digital Twin"?** | Decoupling physical factory hardware from virtual mathematical models | [`About.md #3`](About.md#3--core-concept-what-is-a-digital-twin) |
-| **4. End-to-End System Pipeline** | Visual diagram showing data flow from physics simulation to 3D WebGL screen | [`About.md #4`](About.md#4--the-end-to-end-system-pipeline) |
-| **5. Machine Telemetry Ingestion** | How sensors collect vibration, temperature, cycle counts, and the Zero-Feature-Leakage rule | [`About.md #5`](About.md#5--how-we-collect-data-from-the-machines) |
-| **6. Machine Learning Diagnostics** | Dilated TCN, Isolation Forest, ISO 10816-3 zones, and SOP checklists | [`About.md #6`](About.md#6--how-our-ml-models-detect--diagnose-problems) |
-| **7. Common Executive Questions** | Executive FAQ: ROI evidence, 100% offline ITAR security, legacy retrofits, and alarm fatigue | [`About.md #7`](About.md#7--the-most-frequently-asked-business--executive-questions) |
-| **8. Codebase Directory Tour** | File-by-file guide explaining the purpose of every folder and module in the repo | [`About.md #8`](About.md#8--repository-tour-where-everything-lives) |
-| **9. Teammate Local Setup Guide** | 2-minute setup, verification tests, and interactive demo walkthrough | [`About.md #9`](About.md#9--teammate-setup-how-to-run-and-demo-it-locally) |
-| **10. How to Present This Project** | A 4-step speaking script ready for project presentations, reviews, or vivas | [`About.md #10`](About.md#10--how-to-present--pitch-this-in-a-presentation-or-viva) |
-
----
-
-## 🎯 Core Purpose & What We Are Doing Here
-
-### The Problem
-Traditional SCADA software and manufacturing dashboards (Siemens WinCC, Wonderware, Ignition) are built like 1990s desktop spreadsheets: static 2D tables, disconnected time-series charts, and threshold alarm lists that cause cognitive overload. When a critical spindle bearing begins to degrade, operators are inundated with raw threshold alarms without predictive remaining life estimates, root-cause standard operating procedures, or automated remediation.
-
-### The Solution: Digital Twin Copilot
-This project demonstrates how next-generation smart factories should operate by fusing three key disciplines into a single cohesive platform:
-
-1. **Physics-Driven Discrete-Event Digital Twin (SimPy)**:
-   A high-fidelity physical factory simulation running via **SimPy**. Rather than using static mock CSVs, the physics engine generates continuous mechanical wear accumulation, thermal dissipation, vibration and temperature that rise non-linearly with wear, and cycle times that stretch as machines degrade, across **8 distinct aerospace workcells**:
-   - `CNC-01`: 5-Axis Heavy Roughing Mill (Inconel 718 Billets)
-   - `CNC-02`: 5-Axis High-Speed Airfoil Finishing Center (Airfoil Profiles)
-   - `PRESS-01`: 1000-Ton Hydraulic Forging Press (Airframe Bulkhead Ribs)
-   - `PRESS-02`: 500-Ton Hydraulic Extrusion Press (Titanium Spar Extrusions)
-   - `FURN-01`: Vacuum Carburizing Heat Treatment Furnace (Thermal Case Hardening)
-   - `ROBOT-01`: 6-DOF Robotic Deburring & Polishing Workcell (Root Radius Finishing)
-   - `LASER-01`: Dual Laser Triangulation QC Metrology Arch (Sub-Micron Profile Verification)
-   - `CONV-01`: Modular Dual-Rail Avionics Assembly Line (Avionics Integration)
-   - `AGV-01` & `AGV-02`: Coordinated Autonomous Mobile Robots (Cleanroom Transport)
-
-2. **100% Pure Local Machine Learning (Zero API Keys & Zero Cost)**:
-   - **Prognostics modelled on a top 2021 PHM Data Challenge entry** (Lövberg, *RUL prediction of aircraft engines with variable length input sequences*, PHM 2021):
-     - **Dilated 1D Causal Temporal Convolutional Networks (TCN)** with exponentially growing receptive fields ($d = 1, 2, 4, 8$) capturing long-term wear trends without recurrent vanishing-gradient bottlenecks.
-     - **Variable-Length Sequence Processing**: Evaluates degradation over rolling time windows rather than instantaneous point snapshots.
-     - **Piecewise Linear RUL Target**: Caps early healthy cycles at a maximum ceiling ($RUL_{\text{max}}$) to stabilize training dynamics.
-     - **Zero Feature Leakage**: Unlike naive tutorials that cheat by passing `wear_level` into model features, our pipeline uses strictly observable sensors (`vibration_rms`, `temperature_c`, $\Delta\text{vibration}$, $\Delta\text{temperature}$, rolling dynamics).
-     - **15% Asymmetric Industrial Safety Buffer**: Overestimating tool life leads to catastrophic spindle tool collisions. The scheduler applies $\text{RUL}_{\text{safe}} = 0.85 \times \text{RUL}_{\text{pred}}$ to guarantee zero in-cut failures.
-   - **Isolation Forest Anomaly Gate**: Multivariant unsupervised anomaly detector screening sensor streams for early micro-chatter and bearing pitting.
-   - **Offline Local SOP Matching**: Local TF-IDF cosine similarity search over plant maintenance Standard Operating Procedures (SOPs) stored in **ChromaDB**. Eliminates all external LLM API dependencies (no OpenAI, no Groq, no Anthropic, zero latency, zero tokens, zero monthly bills).
-
-3. **Autonomous Closed-Loop LangGraph Copilot**:
-   A deterministic multi-agent state graph orchestrating the maintenance lifecycle:
-   $$\text{Physical Twin} \xrightarrow{\text{Telemetry}} \text{Monitor Agent} \xrightarrow{\text{Anomaly}} \text{Diagnosis Agent} \xrightarrow{\text{SOP Match}} \text{Scheduler Agent} \xrightarrow{\text{Dispatch}} \text{Closed-Loop Twin Interruption}$$
-   The copilot autonomously pauses degraded machines, schedules work orders, dispatches robotic maintenance, and resets tool wear back to nominal condition in the live physical simulation.
-
-4. **Executive Cleanroom 3D Strategy Operations Center**:
-   Built with **Three.js** and WebGL, inspired by modern aerospace cleanroom facilities (Porsche, Apple, Siemens) and tactical strategy game aesthetics:
-   - Real-time hardware-accelerated 3D factory floor with clean polished epoxy slab, perimeter I-beams, and high-bay warehouse pallet storage racks.
-   - Overhead yellow industrial gantry crane dynamically traversing across the facility bay carrying turbofan casing components.
-   - 8 procedural machinery workcells across 4 zoned production bays.
-   - Floating 3D holographic badges projected from world space to screen space.
-   - Floating Camera Director Bar with one-click presets (`Overview`, `Machining Bay`, `Forming & Heat`, `Robotics & QC`, `Assembly Line`, `AGV-01`, `AGV-02`).
-   - Collapsible bottom Process Pipeline Ribbon displaying 10 manufacturing stages and the 6-step AI reasoning trace.
-   - Procedural Web Audio API synthesizer generating tactical SFX without external audio files.
-
----
-
-## 🏛️ System Architecture
-
-```
-+-------------------------------------------------------------------------------------------------------------------------------+
-|                                                PHYSICAL DIGITAL TWIN (SimPy)                                                  |
-|                                                                                                                               |
-|   Ingot Feeder ──► CNC-01/02 (Milling) ──► PRESS-01/02 (Forming) ──► FURN-01 (Furnace) ──► ROBOT-01 (Deburr)                  |
-|                                         ──► LASER-01 (Metrology) ──► CONV-01 (Assembly) ──► AGV-01/02 (Cleanroom Transit)    |
-|                                                                                                                               |
-|                         Vibration RMS • Core Temperature °C • WIP Throughput • Line Balance • ISO 10816 Bands                 |
-+---------------------------------------------------------------+---------------------------------------------------------------+
-                                                                |
-                                                                v
-+-------------------------------------------------------------------------------------------------------------------------------+
-|                                          LOCAL ML PROGNOSTICS PIPELINE (100% Offline)                                         |
-|                                                                                                                               |
-|  • Feature Engineering: Zero leakage (observable sensors & rolling dynamics only)                                              |
-|  • Anomaly Detection: Isolation Forest contamination filter                                                                   |
-|  • RUL Prognostics: Dilated 1D TCN (d = 1, 2, 4, 8) + Piecewise Linear Target                                                  |
-|  • Fallback Engine: Scikit-Learn HistGradientBoostingRegressor                                                                |
-+---------------------------------------------------------------+---------------------------------------------------------------+
-                                                                |
-                                                                v
-+-------------------------------------------------------------------------------------------------------------------------------+
-|                                            CLOSED-LOOP AGENT GRAPH (LangGraph)                                                |
-|                                                                                                                               |
-|  [Monitor Agent]      ──► Identifies statistical & ML anomaly spikes across all 8 machines                                    |
-|  [Diagnosis Agent]    ──► Local TF-IDF cosine matching against ChromaDB plant SOPs (ISO 10816 Zones A-D)                      |
-|  [Scheduler Agent]    ──► Applies 15% Asymmetric Safety Buffer (RUL_safe = 0.85 * RUL_pred)                                   |
-|  [Closed-Loop Action] ──► Interrupts physical SimPy twin, triggers maintenance, resets wear                                   |
-+---------------------------------------------------------------+---------------------------------------------------------------+
-                                                                |
-                                                                v
-+-------------------------------------------------------------------------------------------------------------------------------+
-|                                    3D STRATEGY OPERATIONS CENTER (FastAPI + Three.js)                                         |
-|                                                                                                                               |
-|  • WebGL 60 FPS Viewport  • 4 Production Bays  • Camera Director Bar  • 3D Floating Badges  • SCADA Drawer Oscilloscope       |
-|  • 10-Stage Process Pipeline Ribbon  • Laser Radar Sweep  • Executive Cleanroom Light Mode & Cyberpunk Dark Mode Toggle       |
-+-------------------------------------------------------------------------------------------------------------------------------+
-```
-
----
-
-## 📁 Repository Structure
-
-```
-digital-twin-copilot/
-├── digital_twin/
-│   ├── models.py              # Physical machine states, configs & maintenance events
-│   ├── simulator.py           # SimPy discrete-event physical twin engine (8-machine fleet)
-│   ├── forecast.py            # Fast-forwards a copy of the live plant: run-to-failure vs copilot
-│   └── standards.py           # ISO 10816-3 vibration zones (mirrored in web/js/standards.js)
-├── ml_pipeline/
-│   ├── features.py            # Observable sensor feature extraction & piecewise clipping
-│   ├── tcn_model.py           # 1D dilated Temporal Convolutional Network
-│   ├── anomaly_detector.py    # Isolation Forest multivariant detector
-│   ├── rul_predictor.py       # Sequence-based TCN predictor + GBDT fallback
-│   └── model_cache.py         # Trains once, caches to .model_cache/, holdout sanity check
-├── rag/
-│   ├── documents/             # ISO 10816 SOP maintenance manuals (CNC, Press, Furnace, Robot, QC)
-│   └── knowledge_base.py      # ChromaDB vector store + TF-IDF cosine similarity search
-├── agents/
-│   ├── state.py               # Shared LangGraph agent state dictionary
-│   ├── tools.py               # Closed-loop tools (what-if simulator, repair execution)
-│   ├── monitor_agent.py       # Statistical and ML telemetry scanner
-│   ├── diagnosis_agent.py     # Local NLP SOP root-cause diagnosis matcher
-│   ├── scheduler_agent.py     # 15% asymmetric safety-margin maintenance scheduler
-│   └── orchestrator.py        # LangGraph wiring and simulation execution graph
-├── api/
-│   └── main.py                # FastAPI backend serving endpoints, 10-stage flow & static 3D webapp
-├── web/
-│   ├── index.html             # Cleanroom strategy HUD & WebGL canvas container
-│   ├── css/
-│   │   ├── style.css          # Executive cleanroom light theme (default) & dark mode CSS
-│   │   ├── guide.css          # Guided tour: mascot stage, subtitles, diagrams
-│   │   ├── forecast.css       # Forecast dock and time slider
-│   │   └── ops.css            # Operations panel, verdict, menus, responsive layout
-│   ├── js/
-│   │   ├── app.js             # Main application orchestrator & live polling loop
-│   │   ├── scene.js           # Three.js scene engine, 8 machines, 2 AMRs, daylight illumination
-│   │   ├── models.js          # Procedural 3D machinery (ASRS racks, crane, 8 workcells, AMRs)
-│   │   ├── hud.js             # Top KPIs, floating badges, oscilloscope & 10-stage pipeline ribbon
-│   │   ├── audio.js           # Procedural Web Audio API sound synthesizer
-│   │   ├── standards.js       # ISO zones + RUL display rules shared by the HUD and tour
-│   │   ├── forecast.js        # Forecast dock: scrub the plant into the future
-│   │   ├── plan.js            # One status ladder + clock-time deadlines
-│   │   ├── ops.js             # Needs attention, shift plan, log, impact card, views
-│   │   ├── chrome.js          # Header menus and first-visit welcome
-│   │   ├── history.js         # Recent readings for the drawer's trend chart
-│   │   ├── tour.js            # Narrated guided tour engine
-│   │   └── guide/             # Rivet guide orb, narrator, diagrams, tour script
-│   └── vendor/
-│       ├── three.min.js       # Vendored Three.js core (offline zero-build)
-│       └── OrbitControls.js   # Vendored camera orbit controls
-├── docs/
-│   └── screenshots/           # High-resolution screenshots of the 3D operations center
-├── tests/
-│   ├── test_digital_twin.py   # Physical simulation tests
-│   ├── test_ml_pipeline.py    # TCN & anomaly detector tests
-│   ├── test_agents.py         # Multi-agent LangGraph workflow tests
-│   └── test_api_web.py        # FastAPI endpoints & 10-stage pipeline flow tests
-├── capture_screenshots.py     # Playwright multi-angle screenshot capture script
-├── requirements.txt
-└── README.md
-```
-
----
-
-## ⚡ Quickstart
-
-### 1. Prerequisites & Installation
-
-Requires **Python 3.10+**. Zero external API keys, zero node/npm build dependencies:
+## 4. Run it
 
 ```bash
-# Clone the repository and switch to the active feature branch
-git clone https://github.com/vishnu-0011/digital-twin-copilot.git
-cd digital-twin-copilot
-git checkout feat/3d-strategy-game-ui
-
-# Create and activate virtual environment
-# macOS / Linux:
-python3 -m venv venv
-source venv/bin/activate
-
-# Windows (Command Prompt / PowerShell):
-# python -m venv venv
-# .\venv\Scripts\activate
-
-# Install dependencies
+python3 -m venv venv && source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+uvicorn api.main:app --port 8000                      # open http://localhost:8000
 ```
 
-### 2. Run Automated Verification Tests
+The first start trains both models (about 2 minutes on a laptop CPU) and caches them in `.model_cache/`; later starts take a few seconds. Changing training code retrains automatically, and `TWIN_RETRAIN=1` forces it. Optional settings are listed in `.env.example`; no API keys are needed.
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py"
-```
-*(33 unit, integration, and WebSocket tests).*
-
-### 3. Launch the 3D Operations Center
-
-```bash
-uvicorn api.main:app --port 8000
+python -m unittest discover -s tests -p "test_*.py"   # 48 tests
+python -m evaluation.run_all --quick                  # about 8 min; --cmapss-only adds C-MAPSS
 ```
 
-The first start trains the models (about 90 seconds) and caches them in `.model_cache/`. After that the server starts in about 3 seconds. Changing the simulator or model code retrains automatically; `TWIN_RETRAIN=1` forces it.
+## 5. Using the app
 
-Open your browser to:
-👉 **`http://localhost:8000/`**
+* **Needs attention** (left): the copilot's to-do list, ranked, each with a plain reason, the fix, and a deadline in clock time. **Approve work order** puts the machine into service; **Snooze** hides it until the next shift change.
+* **One status ladder everywhere**: Healthy → Watch → Service soon → Service now → Down (+ In service).
+* **Click a machine**: the drawer answers first (verdict and deadline), then shows the vibration trend over the ISO 10816-3 zones, the prediction with its error range, and the procedure steps.
+* **Forecast**: run the plant 8 hours ahead with and without the copilot and scrub through it.
+* **Check plant now**: runs the agent graph; flagged machines get draft work orders.
+* **Views**: Supervisor, Manager (impact and shift plan), Technician (jobs and procedures).
+* **Tour**: a narrated 3-minute or 9-minute guided tour; it also links the Why, How it works and Results pages.
+* **Demo**: controls that exist only because the plant is simulated (fast-forward, wear out a machine, reset).
 
----
+| | |
+|---|---|
+| ![Drawer](docs/screenshots/app-drawer.png) | ![Forecast](docs/screenshots/app-forecast.png) |
+| ![Guided tour](docs/screenshots/app-tour.png) | ![Results page](docs/screenshots/page-results.png) |
 
-## 🎮 How to Interact with the Operations Center
+## 6. Repository
 
-The home screen is built for the person who has to act: **what needs attention, by when, and what to do about it**.
+```
+digital_twin/   SimPy plant, forecast (run the plant forward), ISO 10816-3 zones
+ml_pipeline/    features, anomaly detector, TCN, training data, model cache, dataset loaders
+agents/         LangGraph graph: monitor, diagnosis, scheduler, report
+rag/            procedure documents (one per machine type) and the ChromaDB knowledge base
+api/            FastAPI: REST, WebSocket stream, static web app
+web/            3D operations view (Three.js), project pages, results data
+evaluation/     metrics, twin evaluation, policy evaluation, C-MAPSS benchmark
+tests/          48 unit and integration tests
+data/CMaps/     NASA C-MAPSS turbofan data (public), used by the benchmark
+docs/           RESULTS.md, VIVA.md, screenshots, project history
+scripts/        screenshot and video capture helpers
+dashboard/      optional Streamlit dashboard (older, simpler front end)
+```
 
-- **One status ladder everywhere**: *Healthy → Watch → Service soon → Service now → Down* (plus *In service*). Badges, 3D rings, KPIs, lists and the drawer all use it. Deadlines are in clock time ("service by 15:40"), computed from the predicted remaining life, the scheduler's 15% safety margin and the machine's current cycle time. Cycles, ISO zones and wear % stay on the detail tabs. Code: `web/js/plan.js`.
-- **Needs attention panel (left)**: the copilot's to-do list, ranked by urgency, with a plain reason, the fix, and the stop time. **Approve work order** puts the machine into service for its planned duration (`POST /work-orders`, real plant time) and logs who approved it. **Snooze** hides an item until the next shift changeover (06:00 / 14:00 / 22:00), and it comes back early if it gets worse. A machine that newly needs service now raises one alarm and a toast. *Highlight only problems in 3D* quiets healthy machines. Code: `web/js/ops.js`.
-- **Views**: *Supervisor* (act on the list), *Manager* (impact and shift plan first, no action buttons), *Technician* (my jobs in progress and up next; the drawer opens on the procedure).
-- **Shift plan tab**: the next 8 hours of planned services from the forecast, as a timeline per machine with shift changeovers, plus how many breakdowns would happen if nobody acted.
-- **Log tab**: an audit trail of approvals, copilot-scheduled services, breakdowns and returns to service (`GET /maintenance/log`).
-- **This shift card**: failures prevented, downtime avoided (assumes a breakdown takes 3× as long as a planned service) and parts made, with the forecast's 8-hour comparison.
-- **Machine drawer, answer first**: a one-line verdict with the deadline, the vibration trend over the ISO 10816-3 zone bands (`GET /machines/{id}/history`), the prediction **with its uncertainty** (± the model's error on held-out data, and a likely failure window), the fix and SOP, and the approve/snooze buttons. Detail tabs: *Signals*, *Prediction*, *Procedure*.
-- **Forecast (`Forecast`)**: Fast-forwards a copy of the live plant 8 hours (`GET /forecast`) and lets you drag a time slider through the future. The 3D status rings, badges, KPIs and drawer all show the future state. Toggle **Do nothing** (machines run until they break; a breakdown takes 3× as long to fix as a planned service) against **With copilot** (the scheduler's rule: service when 0.85 × RUL < 30 cycles). Both futures share the same random seed, so the difference comes from the policy alone. Red ticks mark breakdowns, green ticks planned services, and *Show me* jumps to the next one. Deep link: `?forecast=1`. Code: `digital_twin/forecast.py`, `web/js/forecast.js`.
-- **Why this project (`/why.html`)**: a one-page read on the core problem (the P-F warning window, why run-to-failure and fixed schedules both miss it), why the setting is an aerospace machine shop, why we built it, the loop we built, live with/without-copilot numbers from `/forecast`, and honest limits. Linked from the Tour menu, ⚙ and the welcome card.
-- **Tours (`Tour ▾`)**: a **3-minute tour** (7 beats: a live fault, the to-do list, the fix, the forecast) or the **full 9-minute tour** (25 beats in 9 chapters) hosted by *Rivet*, a small 3D guide orb that narrates (Web Speech API, silent fallback) while the camera, a 3D beacon and animated diagrams follow the words. Live backend actions run on cue. Controls: ◀ ▶ / arrow keys, Space, V for voice, speed, chapter rail, Esc. Deep links: `?tour=quick`, `?tour=1` (or `?tour=<beat>`). First-time visitors get a short welcome with both options (`?nowelcome` skips it).
-- **Check plant now**: runs the LangGraph copilot (anomaly scan → diagnosis → scheduling) across all machines.
-- **Demo ▾**: controls that only exist because the plant is simulated: fast-forward 30 minutes, wear out a chosen machine, reset the plant. The header always shows a **Simulated plant** tag.
-- **Live plant clock**: the twin runs in real time (set `TWIN_SPEED=10` to run it 10× faster), streamed at 2 Hz over `/ws/telemetry` with HTTP fallback.
-- **⚙ Settings**: light/dark theme, sound, and the welcome card.
-- **Responsive**: on tablets and phones the header wraps, the panel becomes a bottom sheet, and the drawer goes full screen.
+Team primer: [`About.md`](About.md). Likely examiner questions, with answers: [`docs/VIVA.md`](docs/VIVA.md).
 
----
+## 7. Limitations
 
-## 📄 License
+* The plant is simulated, with hand-chosen degradation curves; no real machine has been connected.
+* Models trained on the simulator are not validated on real machines. A benchmark of the architecture on NASA C-MAPSS data is included (`--cmapss-only`) but not yet in this report.
+* A breakdown is assumed to take 3× a planned service to repair; the Results page shows the sensitivity to that assumption.
+* The live forecast in the UI assumes a perfect remaining-life estimate, for speed. The measured version, with the real model, is in Results.
+* Industry savings figures (US DOE FEMP, 2010) describe predictive maintenance in general, not this project.
 
-MIT License. Designed with highest-effort engineering for smart manufacturing digital twin operations.
+## 8. References
+
+1. A. Saxena, K. Goebel, D. Simon, N. Eklund. Damage propagation modeling for aircraft engine run-to-failure simulation. PHM08, 2008.
+2. S. Bai, J. Z. Kolter, V. Koltun. An empirical evaluation of generic convolutional and recurrent networks for sequence modeling. arXiv:1803.01271, 2018.
+3. A. Lövberg. Remaining useful life prediction of aircraft engines with variable length input sequences. Annual Conference of the PHM Society, 2021.
+4. F. T. Liu, K. M. Ting, Z.-H. Zhou. Isolation forest. IEEE ICDM, 2008.
+5. ISO 10816-3:2009. Mechanical vibration: evaluation of machine vibration by measurements on non-rotating parts, part 3.
+6. F. O. Heimes. Recurrent neural networks for remaining useful life estimation. PHM08, 2008.
+7. G. S. Babu, P. Zhao, X.-L. Li. Deep convolutional neural network based regression approach for estimation of remaining useful life. DASFAA, 2016.
+8. S. Zheng, K. Ristovski, A. Farahat, C. Gupta. Long short-term memory network for remaining useful life estimation. IEEE ICPHM, 2017.
+9. X. Li, Q. Ding, J.-Q. Sun. Remaining useful life estimation in prognostics using deep convolution neural networks. Reliability Engineering & System Safety 172, 2018.
+10. J. Moubray. Reliability-centered Maintenance, 2nd ed., 1997.
+11. US DOE FEMP. Operations & Maintenance Best Practices Guide, Release 3.0, 2010.
+
+## License
+
+MIT.

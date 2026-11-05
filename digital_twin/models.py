@@ -43,6 +43,10 @@ class MachineState:
     cycle_count: int
     status: MachineStatus
     throughput_units: int
+    # Cycles since the last service. Unlike cycle_count (a lifetime counter),
+    # this resets when a part is replaced, and a real plant knows it from its
+    # maintenance log, so it is a fair model input.
+    cycles_since_service: int = 0
 
     def to_dict(self) -> dict:
         d = asdict(self)

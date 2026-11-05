@@ -29,12 +29,25 @@ export const PLAN = {
 
 /** What usually wears out, per machine type (mirrors the diagnosis agent's SOP mapping). */
 export const LIKELY_CAUSE = {
-  CNC_MILL: { part: 'spindle bearing', fix: 'Replace spindle bearing set', sop: 'SOP-AERO-04' },
-  HYDRAULIC_PRESS: { part: 'hydraulic seals', fix: 'Replace ram seals and check fluid', sop: 'SOP-HYD-02' },
-  FURNACE: { part: 'heating elements', fix: 'Inspect elements and thermocouples', sop: 'SOP-FRN-01' },
-  ROBOT_ARM: { part: 'joint gearbox', fix: 'Re-grease joints, check backlash', sop: 'SOP-ROB-03' },
-  CONVEYOR: { part: 'drive belt and rollers', fix: 'Re-tension belt, replace worn rollers', sop: 'SOP-CNV-01' },
-  METROLOGY: { part: 'scan head optics', fix: 'Clean optics and recalibrate', sop: 'SOP-QC-02' },
+  // IDs and steps match the procedure documents in rag/documents/.
+  CNC_MILL: { part: 'spindle bearing', fix: 'Service the spindle bearings', sop: 'SOP-CNC-014',
+    steps: ['Finish the current part, park the spindle, lock out', 'Check spindle runout with a dial indicator (limit 0.003 mm)',
+      'Inspect and re-grease bearings; replace the set if out of limit', 'Warm-up cycle: confirm vibration back in zone A'] },
+  HYDRAULIC_PRESS: { part: 'ram seals', fix: 'Replace ram seals and check the fluid', sop: 'SOP-PRESS-022',
+    steps: ['Retract the ram, block the platen, bleed pressure', 'Replace ram seals and wipers; inspect the rod',
+      'Check fluid level and temperature; change the filter if needed', 'Cycle under load: pressure holds, vibration in zone A'] },
+  FURNACE: { part: 'heating elements', fix: 'Service elements and thermocouples', sop: 'SOP-FRN-003',
+    steps: ['Let the batch finish; cool under vacuum; lock out', 'Inspect elements; measure their resistance',
+      'Check thermocouples against a reference probe', 'Run a uniformity survey before release'] },
+  ROBOT_ARM: { part: 'joint gearbox', fix: 'Re-grease joints and check backlash', sop: 'SOP-ROB-005',
+    steps: ['Move to the service pose; lock out the cell', 'Purge and re-grease each joint gearbox',
+      'Measure backlash on axes 1-3', 'Recalibrate; confirm repeatability'] },
+  CONVEYOR: { part: 'drive belt and rollers', fix: 'Re-tension the belt, replace worn rollers', sop: 'SOP-CONV-007',
+    steps: ['Stop at a part gap; lock out the drive', 'Re-tension the belt; replace it if cracked',
+      'Spin each roller; replace any that grind', 'Run empty, then loaded; check tracking'] },
+  METROLOGY: { part: 'scan head optics', fix: 'Clean the optics and recalibrate', sop: 'SOP-QC-002',
+    steps: ['Park the stage; cap the laser; lock out', 'Clean the scan head window and mirrors',
+      'Check stage bearings; lubricate guides', 'Measure the reference artefact; re-check recent parts'] },
 };
 
 /**
@@ -77,7 +90,7 @@ export function planStatus(m, ctx = {}) {
       out.failHigh = toWall((rul + mae) * cycleTime);
     }
   }
-  out.cause = LIKELY_CAUSE[m.machine_type] || { part: 'wear parts', fix: 'Inspect and service', sop: 'SOP-GEN-01' };
+  out.cause = LIKELY_CAUSE[m.machine_type] || { part: 'wear parts', fix: 'Inspect and service', sop: 'General procedure', steps: [] };
   return out;
 }
 

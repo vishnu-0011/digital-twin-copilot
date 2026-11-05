@@ -30,6 +30,17 @@ class TestOperationsApi(unittest.TestCase):
         log = self.client.get("/maintenance/log").json()["entries"]
         self.assertTrue(any(e["kind"] == "work_order" and e["by"] == "Test Supervisor" for e in log))
 
+    def test_reset_gives_every_machine_a_new_part(self):
+        self.client.post("/fault/inject", json={"machine_id": "PRESS-01", "wear_level": 0.9})
+        self.client.post("/fleet/reset")
+        for m in self.client.get("/fleet").json()["machines"]:
+            if m["status"] == "in_maintenance":
+                continue
+            self.assertLess(m["wear_level"], 0.1)
+            self.assertLess(m["cycles_since_service"], 100, m["machine_id"])  # 5% wear on the slowest machine is ~71 cycles
+            # A fresh part must not be flagged for service.
+            self.assertGreater(m["predicted_rul_cycles"], 60, m["machine_id"])
+
     def test_machine_history(self):
         data = self.client.get("/machines/CNC-01/history?n=25").json()
         self.assertEqual(len(data["readings"]), 25)

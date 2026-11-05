@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How Titan Copilot Works</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Architecture, data, models, decision rules and design decisions of the Titan Aerospace maintenance copilot.">
+  <script>
+    try { document.documentElement.dataset.theme = localStorage.getItem('titan_theme') || 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
+  </script>
+  <link rel="stylesheet" href="/css/site.css?v=1">
+  <style>
+    .arch { width: 100%; height: auto; display: block; font-family: var(--sans); }
+    .arch .box { fill: var(--surface); stroke: var(--hair-2); stroke-width: 1.2; }
+    .arch .box.key { stroke: var(--accent); stroke-width: 1.6; }
+    .arch .box.human { stroke: var(--good); stroke-width: 1.6; }
+    .arch .t { fill: var(--ink); font-size: 14px; font-weight: 650; }
+    .arch .s { fill: var(--ink-3); font-size: 11.5px; }
+    .arch .m { fill: var(--ink-3); font-size: 10.5px; font-family: var(--mono); }
+    .arch .lane { fill: var(--surface-2); }
+    .arch .lane-t { fill: var(--ink-3); font-size: 10.5px; font-weight: 650; letter-spacing: 0.14em; text-transform: uppercase; }
+    .arch .edge { fill: none; stroke: var(--ink-3); stroke-width: 1.4; }
+    .arch .edge.loop { stroke: var(--good); stroke-dasharray: 5 5; }
+    .arch .ah { fill: var(--ink-3); }
+    .arch .ah.g { fill: var(--good); }
+    .eq { font-family: var(--mono); font-size: 14px; background: var(--surface-2); border: 1px solid var(--hair); border-radius: 12px; padding: 14px 16px; line-height: 1.9; overflow-x: auto; }
+    .eq .c { color: var(--ink-3); }
+    .spec { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .spec .card h3 { margin-bottom: 10px; }
+    .spec dl { display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px; font-size: 14px; }
+    .spec dt { color: var(--ink-3); }
+    .spec dd { color: var(--ink); }
+    .rule { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--hair); border-radius: 14px; overflow: hidden; background: var(--surface); }
+    .rule div { padding: 16px; border-right: 1px solid var(--hair); }
+    .rule div:last-child { border-right: 0; }
+    .rule b { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .rule b i { width: 8px; height: 8px; border-radius: 50%; background: var(--tone); }
+    .rule span { display: block; font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+    .refs { list-style: none; counter-reset: r; display: grid; gap: 10px; max-width: 900px; }
+    .refs li { counter-increment: r; display: grid; grid-template-columns: 34px 1fr; font-size: 14px; color: var(--ink-2); }
+    .refs li::before { content: "[" counter(r) "]"; font: 600 12px var(--mono); color: var(--ink-3); padding-top: 2px; }
+    .stack { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stack span { font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--hair-2); color: var(--ink-2); background: var(--surface); }
+    @media (max-width: 900px) { .spec { grid-template-columns: 1fr; } .rule { grid-template-columns: 1fr 1fr; } .rule div:nth-child(2) { border-right: 0; } .rule div:nth-child(-n+2) { border-bottom: 1px solid var(--hair); } }
+    @media (max-width: 640px) { .spec dl { grid-template-columns: 1fr; } .spec dt { margin-top: 6px; } .arch-wrap { overflow-x: auto; } .arch { min-width: 760px; } }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="wrap">
+      <a class="logo" href="/?nowelcome" aria-label="Open the live plant">TA</a>
+      <div class="brand"><b>Titan Aerospace</b><span>Maintenance copilot</span></div>
+      <nav class="pages" aria-label="Project pages">
+        <a href="/why.html">Why</a>
+        <a href="/method.html" aria-current="page">How it works</a>
+        <a href="/results.html">Results</a>
+      </nav>
+      <div class="actions">
+        <a class="btn" href="/?tour=quick">3-minute tour</a>
+        <a class="btn btn-primary" href="/?nowelcome">Open the live plant</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <span class="eyebrow">How it works</span>
+        <h1>From a vibration reading to a signed-off repair</h1>
+        <p class="lead">A simulated plant streams sensor readings. Two models turn them into "is something wrong?" and "how long is left?". Rule-based agents turn that into a dated work order with a cited procedure, and a supervisor approves it. Every step below links to the code that does it.</p>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">Architecture</span>
+          <h2>Five layers, one loop</h2>
+          <p>The loop closes in the twin: an approved work order interrupts the simulated machine, it is serviced, and its readings return to normal. The forecast and the evaluation suite reuse the same twin to test policies offline.</p>
+        </div>
+        <div class="fig reveal arch-wrap">
+          <svg class="arch" viewBox="0 0 1000 470" role="img" aria-label="Architecture: digital twin, telemetry, models, agents and the supervisor, with the approval loop back into the twin.">
+            <defs>
+              <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+              <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah g" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <rect class="lane" x="0" y="0" width="1000" height="96" rx="12"/>
+            <text class="lane-t" x="16" y="22">Plant</text>
+            <rect class="box key" x="16" y="32" width="300" height="52" rx="10"/>
+            <text class="t" x="32" y="54">Digital twin</text><text class="m" x="32" y="72">SimPy · 8 machines · digital_twin/</text>
+            <rect class="box" x="350" y="32" width="300" height="52" rx="10"/>
+            <text class="t" x="366" y="54">Telemetry stream</text><text class="m" x="366" y="72">FastAPI · WebSocket 2 Hz</text>
+            <rect class="box" x="684" y="32" width="300" height="52" rx="10"/>
+            <text class="t" x="700" y="54">Forecast and evaluation</text><text class="m" x="700" y="72">same twin, run forward</text>
+
+            <rect class="lane" x="0" y="112" width="1000" height="96" rx="12"/>
+            <text class="lane-t" x="16" y="134">Models</text>
+            <rect class="box key" x="16" y="144" width="470" height="52" rx="10"/>
+            <text class="t" x="32" y="166">Anomaly detector: has wear started?</text><text class="m" x="32" y="184">Isolation Forest · anomaly_detector.py</text>
+            <rect class="box key" x="514" y="144" width="470" height="52" rx="10"/>
+            <text class="t" x="530" y="166">Remaining-life model: how long is left?</text><text class="m" x="530" y="184">Dilated TCN · tcn_model.py</text>
+
+            <rect class="lane" x="0" y="224" width="1000" height="112" rx="12"/>
+            <text class="lane-t" x="16" y="246">Agents (LangGraph, rule-based)</text>
+            <rect class="box" x="16" y="256" width="226" height="66" rx="10"/>
+            <text class="t" x="32" y="278">Monitor</text><text class="s" x="32" y="296">flags anomalies and</text><text class="s" x="32" y="311">low remaining life</text>
+            <rect class="box" x="268" y="256" width="226" height="66" rx="10"/>
+            <text class="t" x="284" y="278">Diagnosis</text><text class="s" x="284" y="296">likely cause + the cited</text><text class="s" x="284" y="311">procedure (SOP search)</text>
+            <rect class="box" x="520" y="256" width="226" height="66" rx="10"/>
+            <text class="t" x="536" y="278">Scheduler</text><text class="s" x="536" y="296">0.85 × RUL &lt; 30 → draft</text><text class="s" x="536" y="311">a work order, with deadline</text>
+            <rect class="box" x="772" y="256" width="212" height="66" rx="10"/>
+            <text class="t" x="788" y="278">Report</text><text class="s" x="788" y="296">plain-language summary</text><text class="s" x="788" y="311">for the operations panel</text>
+
+            <rect class="lane" x="0" y="352" width="1000" height="104" rx="12"/>
+            <text class="lane-t" x="16" y="374">People</text>
+            <rect class="box human" x="16" y="384" width="470" height="58" rx="10"/>
+            <text class="t" x="32" y="407">Supervisor approves the work order</text><text class="m" x="32" y="426">Needs attention · POST /work-orders</text>
+            <rect class="box" x="514" y="384" width="470" height="58" rx="10"/>
+            <text class="t" x="530" y="407">Technician follows the procedure</text><text class="m" x="530" y="426">Procedure tab · rag/documents/</text>
+
+            <path class="edge" d="M316,58 H350" marker-end="url(#a)"/>
+            <path class="edge" d="M500,84 V120 H251 V144" marker-end="url(#a)"/>
+            <path class="edge" d="M500,84 V120 H749 V144" marker-end="url(#a)"/>
+            <path class="edge" d="M251,196 V226 H129 V256" marker-end="url(#a)"/>
+            <path class="edge" d="M749,196 V226 H129 V256" marker-end="url(#a)"/>
+            <path class="edge" d="M242,289 H268" marker-end="url(#a)"/>
+            <path class="edge" d="M494,289 H520" marker-end="url(#a)"/>
+            <path class="edge" d="M746,289 H772" marker-end="url(#a)"/>
+            <path class="edge" d="M633,322 V352 H251 V384" marker-end="url(#a)"/>
+            <path class="edge" d="M486,413 H514" marker-end="url(#a)"/>
+            <path class="edge loop" d="M8,413 H-2 Q-12,413 -12,403 V68 Q-12,58 -2,58 H16" marker-end="url(#ag)"/>
+            <text class="s" x="-18" y="236" transform="rotate(-90 -18 236)" text-anchor="middle" style="fill: var(--good); font-weight: 600">approved → machine serviced</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="twin">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">The data</span>
+          <h2>A plant we can break safely</h2>
+          <p>We have no real plant to run machines to failure in, so the project simulates one. Each machine wears a little every cycle; its sensors respond to that wear with noise; and when wear reaches 1.0 it breaks. The models never see the wear itself, only the sensors.</p>
+        </div>
+        <div class="eq reveal">
+          wear<sub>t+1</sub> = wear<sub>t</sub> + 𝒩(μ, σ)  <span class="c">· per-cycle wear, μ and σ per machine</span><br>
+          vibration = 0.5 + 4·wear<sup>1.8</sup> + 𝒩(0, 0.08) mm/s  <span class="c">· crosses ISO zone C (2.8) near wear 0.64</span><br>
+          temperature = 38 + 35·wear<sup>1.5</sup> + 1.5·sin(t/300) + 𝒩(0, 0.6) °C<br>
+          cycle time = nominal × (1 + 0.4·wear)  <span class="c">· a worn machine is slower</span><br>
+          failure when wear ≥ 1.0 → repair takes 3× a planned service (an assumption, tested in Results)
+        </div>
+        <p class="fine reveal">The curves are hand-chosen, not fitted to a real machine: monotonic and accelerating, like the exponential degradation used to generate NASA's C-MAPSS data [1], and scaled so vibration moves through the ISO 10816-3 zones [5] over a part's life. That is why the suite also includes a benchmark on C-MAPSS itself (<code>evaluation/cmapss_benchmark.py</code>).</p>
+        <div class="table-wrap reveal" style="margin-top: 22px">
+          <table class="tbl">
+            <thead><tr><th>Machine</th><th>Type</th><th class="n">Cycle time</th><th class="n">Average life</th><th class="n">Planned service</th></tr></thead>
+            <tbody id="fleet-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="models">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">The models</span>
+          <h2>Two questions, two models</h2>
+          <p>Both use only what a real plant could measure: vibration, temperature and the age of the part since its last service. Training uses one simulated plant; every score in Results comes from other plants the models never saw.</p>
+        </div>
+        <div class="spec">
+          <article class="card reveal">
+            <span class="num">Has wear started?</span>
+            <h3>Anomaly detector</h3>
+            <dl>
+              <dt>Method</dt><dd>Isolation Forest [4], 200 trees</dd>
+              <dt>Learns</dt><dd>the healthy envelope: readings from the first 80 cycles after each service</dd>
+              <dt>Inputs</dt><dd>vibration, temperature</dd>
+              <dt>Flags</dt><dd>anything outside it (contamination 0.5%)</dd>
+              <dt>Compared with</dt><dd>a fixed ISO 10816-3 zone C threshold</dd>
+              <dt>Code</dt><dd><code>ml_pipeline/anomaly_detector.py</code></dd>
+            </dl>
+          </article>
+          <article class="card reveal">
+            <span class="num">How long is left?</span>
+            <h3>Remaining-life model (TCN)</h3>
+            <dl>
+              <dt>Method</dt><dd>Temporal convolutional network [2], after Lövberg [3]</dd>
+              <dt>Shape</dt><dd>4 residual blocks, dilation 1-2-4-8, kernel 3, <span id="tcn-params">62k</span> parameters</dd>
+              <dt>Inputs</dt><dd>last 3-30 readings: vibration, temperature, their changes, rolling mean and spread, part age</dd>
+              <dt>Target</dt><dd>cycles to failure, capped at 100 (piecewise-linear [6])</dd>
+              <dt>Training</dt><dd><span id="lives">31</span> run-to-failure lives, Huber loss, AdamW, 15 epochs, about 2 minutes on a laptop CPU</dd>
+              <dt>Code</dt><dd><code>ml_pipeline/tcn_model.py</code></dd>
+            </dl>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="decide">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">The decision rule</span>
+          <h2>Remaining life becomes a clock time</h2>
+          <p>A prediction that is too late is far worse than one that is too early, so the scheduler only trusts 85% of it: <code>safe = 0.85 × predicted RUL</code>. The safe life, multiplied by the machine's current cycle time, becomes a deadline in clock time.</p>
+        </div>
+        <div class="rule reveal">
+          <div style="--tone: var(--warn)"><b><i></i>Watch</b><span>predicted RUL below 90 cycles: wear is under way</span></div>
+          <div style="--tone: var(--warn)"><b><i></i>Service soon</b><span>safe RUL below 60 cycles: plan it into the shift</span></div>
+          <div style="--tone: var(--bad)"><b><i></i>Service now</b><span>safe RUL below 30 cycles: a work order is drafted for approval</span></div>
+          <div style="--tone: var(--bad)"><b><i></i>Down</b><span>the machine broke; repair takes about 3× a planned service</span></div>
+        </div>
+        <p class="fine reveal">The agents are a LangGraph state graph of rule-based steps: Monitor → Diagnosis (retrieves the machine type's procedure from a ChromaDB store and cites it) → Scheduler → Report. No language model is involved, so every decision can be traced and unit-tested. By default the copilot only drafts work orders; a supervisor approves them. <code>COPILOT_AUTONOMY=1</code> lets it act alone, for a lights-out cell.</p>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">Design decisions</span>
+          <h2>What we chose, and what we chose against</h2>
+        </div>
+        <div class="table-wrap reveal">
+          <table class="tbl">
+            <thead><tr><th style="width: 22%">Decision</th><th style="width: 26%">Alternatives considered</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Simulated plant (SimPy)</td><td>A public dataset only</td><td>Datasets are recordings: you cannot act on them. A twin lets the copilot schedule a service and see the effect, and lets us compare policies on identical futures. Real data is still used, for the C-MAPSS benchmark.</td></tr>
+              <tr><td>TCN for remaining life</td><td>LSTM, gradient boosting</td><td>Trains in parallel, stable gradients, a 61-reading receptive field from 4 layers. Gradient boosting is kept as a fallback and as a baseline, so the TCN always has something simpler to beat.</td></tr>
+              <tr><td>Age since service as an input, not the lifetime counter</td><td>Cycle count</td><td>The lifetime count keeps rising after a part is replaced, so the model would think a fresh part is old. Part age is known from the maintenance log.</td></tr>
+              <tr><td>Never use wear as an input</td><td>Feed the simulator's wear</td><td>Wear is invisible in a real plant. Using it would make the scores meaningless (label leakage).</td></tr>
+              <tr><td>Isolation Forest on the healthy envelope</td><td>Fit on all data; a fixed threshold; an autoencoder</td><td>Needs no failure labels. Fitted on all data it learned that wear is normal and missed most worn readings; fitted on fresh-after-service data it detects the onset of wear early.</td></tr>
+              <tr><td>RUL capped at 100 cycles</td><td>Raw cycles to failure</td><td>A healthy machine at 300 or 280 cycles left looks identical. Capping is standard practice on C-MAPSS [6].</td></tr>
+              <tr><td>15% safety margin</td><td>Act on the raw prediction</td><td>Late predictions cause breakdowns; early ones only waste some part life. Results reports how often predictions are late.</td></tr>
+              <tr><td>Rule-based agents, no language model</td><td>An LLM agent</td><td>Maintenance decisions must be repeatable and auditable, and aerospace plants often cannot send data to cloud services. Each rule is unit-tested.</td></tr>
+              <tr><td>Human approval by default</td><td>Fully autonomous scheduling</td><td>Stopping a machine has a cost; people need to trust the system first. Autonomy is one switch away.</td></tr>
+              <tr><td>TF-IDF retrieval filtered by machine type</td><td>Neural embeddings</td><td>Six short procedures; filtering by type is exact and needs no model download. Embeddings would matter for free-text search over many manuals.</td></tr>
+              <tr><td>Three.js without a build step</td><td>React, a game engine</td><td>Runs from the Python server alone, offline. The cost is large hand-written JavaScript files.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="stack">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">Built with</span>
+          <h2>Everything runs on one laptop, offline</h2>
+        </div>
+        <div class="stack reveal">
+          <span>Python 3</span><span>SimPy</span><span>PyTorch</span><span>scikit-learn</span><span>XGBoost</span><span>LangGraph</span><span>ChromaDB</span><span>FastAPI</span><span>WebSockets</span><span>Three.js</span><span>Web Speech API</span><span>unittest (48 tests)</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="references">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">References</span>
+          <h2>Sources</h2>
+        </div>
+        <ol class="refs reveal">
+          <li>A. Saxena, K. Goebel, D. Simon, N. Eklund. Damage propagation modeling for aircraft engine run-to-failure simulation. Int. Conf. on Prognostics and Health Management (PHM08), 2008.</li>
+          <li>S. Bai, J. Z. Kolter, V. Koltun. An empirical evaluation of generic convolutional and recurrent networks for sequence modeling. arXiv:1803.01271, 2018.</li>
+          <li>A. Lövberg. Remaining useful life prediction of aircraft engines with variable length input sequences. Annual Conference of the PHM Society 13(1), 2021.</li>
+          <li>F. T. Liu, K. M. Ting, Z.-H. Zhou. Isolation forest. IEEE Int. Conf. on Data Mining (ICDM), 2008.</li>
+          <li>ISO 10816-3:2009. Mechanical vibration: evaluation of machine vibration by measurements on non-rotating parts. Part 3: industrial machines above 15 kW.</li>
+          <li>F. O. Heimes. Recurrent neural networks for remaining useful life estimation. Int. Conf. on Prognostics and Health Management (PHM08), 2008.</li>
+          <li>G. S. Babu, P. Zhao, X.-L. Li. Deep convolutional neural network based regression approach for estimation of remaining useful life. DASFAA, 2016.</li>
+          <li>S. Zheng, K. Ristovski, A. Farahat, C. Gupta. Long short-term memory network for remaining useful life estimation. IEEE ICPHM, 2017.</li>
+          <li>X. Li, Q. Ding, J.-Q. Sun. Remaining useful life estimation in prognostics using deep convolution neural networks. Reliability Engineering &amp; System Safety 172, 2018.</li>
+          <li>J. Moubray. Reliability-centered Maintenance, 2nd ed. Industrial Press, 1997 (the P-F interval).</li>
+          <li>US Department of Energy, FEMP. Operations &amp; Maintenance Best Practices Guide, Release 3.0, 2010.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap">
+        <span class="eyebrow">Next</span>
+        <h2>Does it actually work?</h2>
+        <p class="lead">Every model and the maintenance rule, measured on plants they never saw, against simpler baselines.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg" href="/results.html">See the results</a>
+          <a class="btn btn-lg" href="/?nowelcome">Open the live plant</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Titan Aerospace is a fictional plant. Source: <code>digital_twin/</code>, <code>ml_pipeline/</code>, <code>agents/</code>, <code>evaluation/</code>.</div>
+  </footer>
+
+  <script>
+  (function () {
+    const FLEET = [
+      ['CNC-01', 'CNC mill (roughing)', 12, 556, 10], ['CNC-02', 'CNC mill (finishing)', 10, 667, 8.3],
+      ['PRESS-01', 'Hydraulic press', 8, 385, 15], ['PRESS-02', 'Hydraulic press', 6, 500, 12.5],
+      ['FURN-01', 'Vacuum furnace', 15, 833, 20], ['ROBOT-01', 'Robot arm', 7, 714, 7.5],
+      ['CONV-01', 'Conveyor', 3, 1111, 5], ['LASER-01', 'Laser metrology', 4, 1429, 4.2],
+    ];
+    document.getElementById('fleet-rows').innerHTML = FLEET.map(r =>
+      `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="n">${r[2]} s</td><td class="n">${r[3].toLocaleString('en-US')} cycles</td><td class="n">${r[4]} min</td></tr>`).join('');
+    fetch('/data/results.json').then(r => r.ok ? r.json() : null).then(d => {
+      if (!d || !d.training) return;
+      document.getElementById('tcn-params').textContent = `${Math.round(d.training.tcn_parameters / 1000)}k`;
+      document.getElementById('lives').textContent = d.training.run_to_failure_lives;
+    }).catch(() => {});
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 }) : null;
+    document.querySelectorAll('.reveal').forEach(n => io ? io.observe(n) : n.classList.add('in'));
+  })();
+  </script>
+</body>
+</html>

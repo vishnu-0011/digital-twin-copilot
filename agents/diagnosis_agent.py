@@ -1,12 +1,13 @@
 """
 Diagnosis Agent (Pure ML & Local NLP Matcher)
 ==============================================
-100% Pure Machine Learning & Local NLP — ZERO external API calls, ZERO LLM cost.
-Grounded in ChromaDB SOP retrieval via TF-IDF cosine similarity.
+Rule-based diagnosis grounded in the plant's procedures: the relevant SOP is
+retrieved from ChromaDB (TF-IDF similarity, filtered by machine type) and
+cited in the output. Runs offline; no external API or language model.
 
 Matches real-time telemetry anomalies against retrieved plant Standard Operating
 Procedures (SOPs), extracts root-cause diagnoses, operational actions, urgency
-ratings, and document citations deterministically without hallucinations.
+ratings and document citations deterministically.
 """
 from __future__ import annotations
 
@@ -90,6 +91,48 @@ def local_ml_diagnose(
             likely_cause = "Gradual belt wear and minor roller friction increase."
             recommended_action = "Schedule standard belt maintenance within next 3 shifts."
             urgency = "medium" if status == "warning" else "low"
+
+    elif machine_type == "FURNACE":
+        if status in ("critical", "failed") or predicted_rul < 30:
+            likely_cause = "Heating element ageing and thermocouple drift; circulation fan bearings wearing."
+            recommended_action = "Do not load a new batch. Service elements, thermocouples and fan before the next heat treatment."
+            urgency = "high"
+        elif status == "warning" or vibration >= zone_c_threshold():
+            likely_cause = "Temperature overshoot from ageing elements, with rising fan or pump vibration."
+            recommended_action = "Schedule the furnace service in the next gap between batches. Never interrupt a batch."
+            urgency = "medium"
+        else:
+            likely_cause = "Normal element ageing."
+            recommended_action = "Continue monitoring; check the uniformity survey at the next scheduled interval."
+            urgency = "low"
+
+    elif machine_type == "ROBOT_ARM":
+        if status in ("critical", "failed") or predicted_rul < 30:
+            likely_cause = "Joint gearbox backlash increasing; risk of a seized joint."
+            recommended_action = "Stop the cell. Re-grease joints, measure backlash on axes 1-3, recalibrate."
+            urgency = "high"
+        elif status == "warning" or vibration >= zone_c_threshold():
+            likely_cause = "Joint gearbox wear raising vibration at direction changes."
+            recommended_action = "Plan a joint re-grease and backlash check at the next shift change."
+            urgency = "medium"
+        else:
+            likely_cause = "Normal joint wear."
+            recommended_action = "Continue monitoring."
+            urgency = "low"
+
+    elif machine_type == "METROLOGY":
+        if status in ("critical", "failed") or predicted_rul < 30:
+            likely_cause = "Scan head contamination and stage bearing play: measurements no longer trustworthy."
+            recommended_action = "Hold the inspection queue. Clean optics, recalibrate, re-measure recent parts."
+            urgency = "high"
+        elif status == "warning":
+            likely_cause = "Rising stage vibration and head temperature degrading measurement noise."
+            recommended_action = "Clean optics and recalibrate at the next shift change."
+            urgency = "medium"
+        else:
+            likely_cause = "Normal optics contamination."
+            recommended_action = "Continue monitoring."
+            urgency = "low"
 
     else:
         # General machine diagnosis derived from SOP text

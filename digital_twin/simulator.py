@@ -125,6 +125,7 @@ class MachineTwin:
 
         self.wear_level = 0.0
         self.cycle_count = 0
+        self.life_cycles = 0          # cycles since the last service
         self.throughput_units = 0
         self.status = MachineStatus.HEALTHY
         self.under_maintenance_until: Optional[float] = None  # sim time a service ends
@@ -169,6 +170,7 @@ class MachineTwin:
             cycle_count=self.cycle_count,
             status=self.status,
             throughput_units=self.throughput_units,
+            cycles_since_service=self.life_cycles,
         )
         if self.on_state:
             self.on_state(state)
@@ -194,6 +196,7 @@ class MachineTwin:
             if self.wear_level >= target:
                 break
             self.cycle_count += 1
+            self.life_cycles += 1
             self.throughput_units += 1
             step = max(self.config.wear_rate_mean * 0.25,
                        self.rng.gauss(self.config.wear_rate_mean, self.config.wear_rate_std))
@@ -211,6 +214,7 @@ class MachineTwin:
         self._emit_state(keep_status=True)  # make "in service" visible right away
         yield self.env.timeout(self.config.maintenance_duration_s)
         self.wear_level = 0.0
+        self.life_cycles = 0
         self.status = MachineStatus.HEALTHY
         self.under_maintenance_until = None
 
@@ -238,6 +242,7 @@ class MachineTwin:
                 continue
 
             self.cycle_count += 1
+            self.life_cycles += 1
             self.throughput_units += 1
             wear_increment = max(
                 0.0, self.rng.gauss(self.config.wear_rate_mean, self.config.wear_rate_std)
@@ -300,6 +305,27 @@ class FactoryTwin:
 
     def run(self, duration_s: float):
         self.env.run(until=self.env.now + duration_s)
+
+    def enable_auto_repair(self, delay_factor: float = 3.0, check_s: float = 5.0):
+        """Repairs every failed machine after `delay_factor` x its planned
+        service time, so a long run produces many run-to-failure lives per
+        machine instead of one life followed by hours of a broken machine.
+        Used to generate training and evaluation data."""
+        failed_at: dict[str, float] = {}
+
+        def loop():
+            while True:
+                for mid, m in self.machines.items():
+                    if m.status == MachineStatus.FAILED:
+                        t0 = failed_at.setdefault(mid, self.env.now)
+                        wait = max(0.0, (delay_factor - 1.0) * m.config.maintenance_duration_s)
+                        if self.env.now - t0 >= wait:
+                            failed_at.pop(mid, None)
+                            m.action.interrupt("auto_repair")
+                yield self.env.timeout(check_s)
+
+        self.env.process(loop())
+        return self
 
     def get_latest_states(self) -> list[MachineState]:
         return list(self.latest_state.values())

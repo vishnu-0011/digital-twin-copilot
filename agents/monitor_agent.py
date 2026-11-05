@@ -1,11 +1,10 @@
 """
 Monitor Agent
 =============
-Purely mechanical, no LLM call needed here — it pulls the latest twin
-snapshot, runs it through the anomaly detector and RUL predictor, and
-flags any machine that needs attention. This keeps cost/latency down by
-reserving LLM calls for the Diagnosis and Orchestrator agents, where
-natural-language reasoning actually adds value.
+Pulls the latest twin snapshot, runs it through the anomaly detector and
+the RUL predictor, and flags any machine that needs attention. No language
+model is involved anywhere in the agent graph: every step is a trained ML
+model or an explicit rule, so each decision can be traced and tested.
 
 A flagged machine is one that is either:
   - statistically anomalous (Isolation Forest), or

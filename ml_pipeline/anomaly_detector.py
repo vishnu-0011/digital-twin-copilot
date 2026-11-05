@@ -1,12 +1,17 @@
 """
-Anomaly Detection
-==================
-Flags machine states that deviate from normal operating behavior using an
-Isolation Forest over (vibration_rms, temperature_c, wear_level). Trained on
-the digital twin's own history — in a real deployment you'd fit this on
-historical telemetry instead, but the model interface is identical either
-way (that's the point of using the twin as a stand-in data source).
+Anomaly Detection (novelty detection)
+=====================================
+An Isolation Forest learns what a HEALTHY machine looks like, then flags any
+reading outside that envelope: the moment wear becomes detectable (point P
+on the P-F curve).
 
+How "healthy" is chosen without peeking at the hidden wear level: readings
+from the first `reference_cycles` cycles after a service are presumed
+healthy, which is what a plant would do after replacing a part. Fitting on
+all data instead (including worn and broken machines) teaches the model that
+wear is normal; on the twin that version caught under 10% of worn readings.
+
+Inputs: vibration_rms and temperature_c only (wear is never observable).
 This is the model the Monitor Agent calls as a tool.
 """
 from __future__ import annotations
@@ -19,14 +24,22 @@ FEATURE_COLUMNS = ["vibration_rms", "temperature_c"]
 
 
 class AnomalyDetector:
-    def __init__(self, contamination: float = 0.05, random_state: int = 42):
+    def __init__(self, contamination: float = 0.005, random_state: int = 42, reference_cycles: int = 80):
         self.model = IsolationForest(
             contamination=contamination, random_state=random_state, n_estimators=200
         )
+        self.reference_cycles = reference_cycles
         self.is_fitted = False
 
     def fit(self, history_df: pd.DataFrame):
-        self.model.fit(history_df[FEATURE_COLUMNS])
+        ref = history_df
+        if "cycles_since_service" in ref.columns:
+            early = ref[ref["cycles_since_service"] <= self.reference_cycles]
+            if len(early) >= 50:
+                ref = early
+        if "status" in ref.columns:
+            ref = ref[~ref["status"].isin(("failed", "in_maintenance"))]
+        self.model.fit(ref[FEATURE_COLUMNS])
         self.is_fitted = True
         return self
 

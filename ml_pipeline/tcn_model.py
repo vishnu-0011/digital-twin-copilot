@@ -1,8 +1,9 @@
 """
-2021 Competition Winning Architecture: Temporal Convolutional Network (TCN)
-=============================================================================
-Based on the winning approach of the 2021 PHM Society Data Challenge
-(Team "IJoinedTooLate"):
+Remaining-life model: Temporal Convolutional Network (TCN)
+===========================================================
+Follows the approach described by Lövberg, "Remaining Useful Life Prediction
+of Aircraft Engines with Variable Length Input Sequences" (PHM Society 2021
+Data Challenge), on top of the generic TCN of Bai, Kolter & Koltun (2018):
 1. Dilated 1D Causal Convolutions:
    Exponentially increasing dilation factors (1, 2, 4, 8) provide large temporal
    receptive fields without parameter explosion or recurrent bottlenecks.
@@ -113,10 +114,7 @@ class TemporalConvNet(nn.Module):
 
 
 class TCNRemainingLifeModel(nn.Module):
-    """
-    Complete 2021 Prognostics Model:
-    Dilated TCN backbone + Adaptive Pooling + RUL Regression Head.
-    """
+    """Dilated TCN backbone + last-step summary + RUL regression head."""
     def __init__(
         self,
         in_features: int = len(OBSERVABLE_ENGINEERED_COLUMNS),
@@ -157,13 +155,15 @@ def create_variable_sequences(
 ) -> Tuple[List[torch.Tensor], List[float]]:
     """
     Extracts variable-length historical sequences and corresponding RUL targets.
-    Implements Degradation-Aware Sampling (Team IJoinedTooLate 2021).
+    Degradation-aware sampling (after Lövberg 2021): healthy-plateau windows
+    are sub-sampled so the model spends its capacity on the wear phase.
+    Windows never cross a service: each machine life is its own sequence.
     """
     df = add_engineered_features(labeled_df)
     sequences, targets = [], []
 
-    for _, g in df.groupby("machine_id"):
-        g = g.sort_values("cycle_count").reset_index(drop=True)
+    for _, g in df.groupby(["machine_id", "life"]):
+        g = g.sort_values("cycles_since_service").reset_index(drop=True)
         feat_matrix = g[feature_cols].values.astype(np.float32)
         rul_vals = g["rul_cycles"].values.astype(np.float32)
         n = len(g)
@@ -171,17 +171,18 @@ def create_variable_sequences(
         if n < min_seq_len:
             continue
 
-        for end_idx in range(min_seq_len, n):
+        for end_idx in range(min_seq_len - 1, n):
             # Degradation-aware sampling: give higher probability to abnormal/active wear stages
             current_rul = rul_vals[end_idx]
             if degradation_aware and current_rul > 80.0 and random.random() < 0.4:
                 # Sub-sample early healthy flat plateau to prevent over-representation
                 continue
 
-            # Variable length window up to max_seq_len
-            window_size = min(end_idx, random.randint(min_seq_len, max_seq_len))
-            start_idx = end_idx - window_size
-            seq_slice = feat_matrix[start_idx:end_idx]
+            # Variable-length window ending AT the labelled reading (inclusive),
+            # exactly like inference, which predicts from the latest reading.
+            window_size = min(end_idx + 1, random.randint(min_seq_len, max_seq_len))
+            start_idx = end_idx + 1 - window_size
+            seq_slice = feat_matrix[start_idx:end_idx + 1]
             sequences.append(torch.tensor(seq_slice, dtype=torch.float32))
             targets.append(current_rul)
 
@@ -203,7 +204,7 @@ class TCNPredictor:
         self.mean_ = None
         self.std_ = None
 
-    def fit(self, labeled_df: pd.DataFrame, epochs: int = 15, batch_size: int = 32):
+    def fit(self, labeled_df: pd.DataFrame, epochs: int = 15, batch_size: int = 128):
         sequences, targets = create_variable_sequences(labeled_df)
         if not sequences:
             raise ValueError("No valid sequences generated from training dataset.")
@@ -220,32 +221,34 @@ class TCNPredictor:
         optimizer = optim.AdamW(self.model.parameters(), lr=self.lr, weight_decay=1e-4)
         criterion = nn.SmoothL1Loss()  # Huber loss for robust gradient steps
 
+        # Bucket windows by length so every batch stacks into one tensor with
+        # no padding and no per-sample Python work (about 4x faster on CPU).
+        buckets: dict[int, list[int]] = {}
+        for i, seq in enumerate(norm_sequences):
+            buckets.setdefault(seq.size(0), []).append(i)
+        stacked = {L: torch.stack([norm_sequences[i] for i in idx]) for L, idx in buckets.items()}
+        bucket_targets = {L: target_tensors[idx] for L, idx in buckets.items()}
+
+        prev_threads = torch.get_num_threads()
+        torch.set_num_threads(1)  # small model: extra threads only add sync overhead (measured)
         self.model.train()
-        n_samples = len(norm_sequences)
-
-        for epoch in range(epochs):
-            indices = list(range(n_samples))
-            random.shuffle(indices)
-
-            for i in range(0, n_samples, batch_size):
-                batch_idx = indices[i : i + batch_size]
-                # Pad sequences within the batch to uniform length
-                max_len = max(norm_sequences[idx].size(0) for idx in batch_idx)
-                in_feat = norm_sequences[0].size(1)
-
-                padded = torch.zeros(len(batch_idx), max_len, in_feat, device=self.device)
-                for b_i, idx in enumerate(batch_idx):
-                    s = norm_sequences[idx].to(self.device)
-                    padded[b_i, -s.size(0):, :] = s  # Left-pad with zeros for causal alignment
-
-                batch_targets = target_tensors[batch_idx].to(self.device)
-
-                optimizer.zero_grad()
-                preds = self.model(padded)
-                loss = criterion(preds, batch_targets)
-                loss.backward()
-                nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                optimizer.step()
+        try:
+            for epoch in range(epochs):
+                batches = []
+                for L, X in stacked.items():
+                    order = torch.randperm(X.size(0))
+                    for i in range(0, X.size(0), batch_size):
+                        batches.append((L, order[i:i + batch_size]))
+                random.shuffle(batches)
+                for L, idx in batches:
+                    optimizer.zero_grad()
+                    preds = self.model(stacked[L][idx].to(self.device))
+                    loss = criterion(preds, bucket_targets[L][idx].to(self.device))
+                    loss.backward()
+                    nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    optimizer.step()
+        finally:
+            torch.set_num_threads(prev_threads)
 
         self.is_fitted = True
         return self
@@ -255,11 +258,12 @@ class TCNPredictor:
             raise RuntimeError("Model is not fitted. Call fit() first.")
 
         self.model.eval()
-        preds = []
+        preds = np.zeros(len(sequences), dtype=np.float64)
+        by_len: dict[int, list[int]] = {}
+        for i, seq in enumerate(sequences):
+            by_len.setdefault(seq.size(0), []).append(i)
         with torch.no_grad():
-            for seq in sequences:
-                norm_seq = (seq - self.mean_) / self.std_
-                x = norm_seq.unsqueeze(0).to(self.device)
-                pred = self.model(x).item()
-                preds.append(max(0.0, float(pred)))
-        return np.array(preds)
+            for idx in by_len.values():
+                x = (torch.stack([sequences[i] for i in idx]) - self.mean_) / self.std_
+                preds[idx] = self.model(x.to(self.device)).cpu().numpy()
+        return np.clip(preds, 0.0, None)
