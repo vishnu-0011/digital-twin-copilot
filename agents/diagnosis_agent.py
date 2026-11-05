@@ -14,6 +14,7 @@ import re
 from typing import Optional, Dict, Any, List
 
 from agents.tools import lookup_sop_guidance
+from digital_twin.standards import zone_c_threshold
 
 
 def _extract_sop_section(text: str, section_header: str) -> Optional[str]:
@@ -49,7 +50,7 @@ def local_ml_diagnose(
 
     # Domain-specific root cause mapping grounded in SOP text
     if machine_type == "CNC_MILL":
-        if vibration > 2.5:
+        if vibration >= zone_c_threshold():  # ISO 10816-3 zone C or worse
             likely_cause = "Spindle housing bearing wear causing elevated vibration harmonics."
             if status in ("critical", "failed") or predicted_rul < 30:
                 recommended_action = "Schedule maintenance immediately. Risk of workpiece chatter marks and spindle seizure."

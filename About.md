@@ -28,7 +28,7 @@
 
 ### Key Highlights You Should Know:
 - **Zero Cloud API Keys Required:** Runs 100% locally on your computer with PyTorch and Scikit-Learn. Zero monthly subscription costs and zero internet dependence.
-- **2021 PHM Competition Winning Architecture:** Uses a **Dilated 1D Temporal Convolutional Network (TCN)** to predict the exact remaining useful life of cutting tools.
+- **TCN modelled on a top 2021 PHM Data Challenge entry:** A **Dilated 1D Temporal Convolutional Network (TCN)**, following Lövberg (PHM 2021) with variable-length inputs and degradation-aware sampling, predicts the remaining useful life of each machine.
 - **Zero Node/NPM Build Overhead:** The interactive 3D strategy-game UI is built in vanilla Three.js and WebGL—no heavy frontend build steps, `npm install`, or bundlers needed.
 - **Closed-Loop AI Agent:** It doesn't just display warnings; an autonomous multi-agent state graph (LangGraph) matches symptoms to standard operating procedures (SOPs) and triggers simulated repairs.
 
@@ -39,7 +39,7 @@
 In aerospace manufacturing, machines carve complex structural components (like titanium jet turbine blades and rocket bulkheads) out of solid metal blocks called billets.
 
 Three massive pain points plague this industry:
-1. **Unplanned Downtime Is Exorbitantly Expensive:** When a heavy 5-axis CNC milling machine breaks down mid-shift, it costs aerospace plants **$22,000 to $30,000 per hour** in lost production.
+1. **Unplanned Downtime Is Exorbitantly Expensive:** When a heavy 5-axis CNC milling machine breaks down mid-shift, the line behind it stops too. A breakdown is also repaired reactively, so it takes far longer than a planned service (the app's forecast assumes 3×).
 2. **Catastrophic Tool Breakage Ruin Parts:** If a worn-out cutting tool snaps while machining an Inconel turbine blade, the entire part must be scrapped. A single ruined raw billet can cost **$15,000 to $20,000**.
 3. **Traditional SCADA Screens Suffer From "Alarm Fatigue":** Traditional factory monitoring screens look like 1990s spreadsheets. When a machine overheats, they blast dozens of cryptic red alarms (`ERR_4029: VIB_HIGH`). Plant operators get overwhelmed and often hit "mute", missing critical early warning signs.
 
@@ -77,7 +77,7 @@ Here is how data flows from the factory floor to the user's screen:
 
 ```
 [ Step 1: Physical Twin ]
-SimPy physics simulation models 8 machines at 60Hz.
+A SimPy discrete-event simulation models 8 machines and emits one reading per machine cycle.
 Computes non-linear bearing wear, friction slop, and heat.
           │
           ▼
@@ -166,8 +166,8 @@ The copilot then searches our local aerospace maintenance manuals (stored in **C
 When presenting to professors, managers, or external stakeholders, expect these questions:
 
 ### Q1: What is the financial return (ROI) of this platform?
-> **Answer:** In precision aerospace machining, unplanned downtime costs **$22,000 to $30,000 per hour**. Ruining a single raw titanium alloy billet during an unexpected tool snap costs **$15,000 to $20,000**.  
-> By predicting tool degradation 30–50 cycles in advance and scheduling maintenance during natural shift changeovers, this platform reduces unplanned stoppages by **40%**, cuts scrap rates by **18%**, and delivers full system payback within **4 to 6 months**.
+> **Answer:** It depends on the plant's own cost of a lost hour and of a scrapped part, so plug in your numbers. What the app *can* show is the operational difference: press **Forecast** and it simulates the next 8 hours from the live state twice, letting machines run to failure and following the copilot's service rule. On the default plant that comes out at 31 breakdowns vs 0, 13.9 h vs 6.2 h of downtime, and about 16% more parts. Those are simulated results, not field data.  
+> This project has not been measured in a real plant, so it makes no ROI claim of its own. The US DOE FEMP *O&M Best Practices Guide* (Release 3.0, 2010) cites predictive maintenance programs reaching up to 70–75% fewer breakdowns, 35–45% less downtime and 25–30% lower maintenance cost. Treat those as best-case industry figures. The app's **Forecast** slider shows what the copilot changes on the simulated plant: it runs the twin forward with and without the copilot and counts the breakdowns and parts.
 
 ### Q2: Can this run in a classified or air-gapped facility without internet?
 > **Answer:** **Yes, 100%.** Aerospace and defense contractors (ITAR, AS9100) are forbidden from sending factory telemetry to public cloud APIs. Our entire ML stack (PyTorch TCN, Scikit-Learn Isolation Forest, ChromaDB SOP matching) runs completely locally on CPU/edge hardware with zero external API calls and zero data egress.
@@ -197,14 +197,15 @@ Here is a map of the repository so you know exactly which file does what:
 | :--- | :--- | :--- |
 | [`digital_twin/simulator.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/digital_twin/simulator.py) | Discrete-event SimPy physics engine simulating 8 machines & 2 AMRs | Backend / Simulation |
 | [`digital_twin/models.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/digital_twin/models.py) | Data classes defining machine configurations and state schemas | Backend |
-| [`ml_pipeline/tcn_model.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/ml_pipeline/tcn_model.py) | 2021 PHM winner Dilated 1D Causal Temporal Convolutional Network | ML / Data Science |
+| [`ml_pipeline/tcn_model.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/ml_pipeline/tcn_model.py) | Dilated 1D causal Temporal Convolutional Network (after Lövberg, PHM 2021) | ML / Data Science |
 | [`ml_pipeline/anomaly_detector.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/ml_pipeline/anomaly_detector.py) | Unsupervised Isolation Forest anomaly detector | ML / Data Science |
 | [`ml_pipeline/features.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/ml_pipeline/features.py) | Zero-leakage observable feature engineering & piecewise RUL clipping | ML / Data Science |
 | [`agents/orchestrator.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/agents/orchestrator.py) | Multi-agent state graph orchestrating monitor, diagnosis, and scheduling | AI / Agentic Flow |
 | [`agents/diagnosis_agent.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/agents/diagnosis_agent.py) | Local NLP matcher mapping symptoms to plant SOPs & ISO 10816 standards | AI / Agentic Flow |
 | [`api/main.py`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/api/main.py) | FastAPI backend serving `/ws/telemetry` streaming, `/fleet`, `/pipeline/flow`, and static files | Backend / API |
-| [`web/js/app.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/app.js) | Main frontend orchestrator; manages WebSocket stream with HTTP fallback and 60Hz loop | Frontend |
-| [`web/js/tour.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/tour.js) | 1-Click Guided Presentation Tour engine orchestrating 7-beat automated demo | Frontend / Demo |
+| [`web/js/app.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/app.js) | Main frontend orchestrator; manages WebSocket stream (2 Hz push) with HTTP fallback | Frontend |
+| [`web/js/tour.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/tour.js) | Narrated guided-tour engine: sequences 25 beats (or the 7-beat quick tour), camera shots, 3D beacon + leader line, live backend actions | Frontend / Demo |
+| [`web/js/guide/`](web/js/guide) | Tour parts: `mascot.js` (3D Rivet guide), `voice.js` (speech + word timing), `diagrams.js` (synced SVG explainers), `script.js` (what Rivet says) | Frontend / Demo |
 | [`web/js/scene.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/scene.js) | Three.js WebGL lighting, cleanroom floors, camera orbits, and particles | 3D / Graphics |
 | [`web/js/models.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/models.js) | 3D procedural meshes: CNC mills, 1000T press, vacuum furnace, AMRs | 3D / Graphics |
 | [`web/js/hud.js`](file:///Users/ykanagaraj/Downloads/Personal%20Projects/digital-twin-copilot/web/js/hud.js) | UI overlays: Top KPIs, floating 3D labels, oscilloscope, and 10-stage ribbon | Frontend / UI |
@@ -241,12 +242,14 @@ Always make sure the tests pass before making any changes:
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
-*(You should see `Ran 16 tests in ... OK`)*.
+*(You should see `Ran 33 tests in ... OK`)*.
 
 ### Step 3: Launch the 3D Operations Center
 ```bash
 uvicorn api.main:app --port 8000
 ```
+
+The first start trains the models (about 90 seconds) and caches them in `.model_cache/`; every start after that takes about 3 seconds. Editing the simulator or model code retrains automatically, and `TWIN_RETRAIN=1` forces it.
 
 Now open your web browser and go to:  
 👉 **`http://localhost:8000/`**
@@ -263,14 +266,10 @@ Now open your web browser and go to:
    - Click the button to switch to **Cyberpunk Dark Mode** (reflective black floor, neon electric cyan grid, illuminated car headlights, streetlamps, and atmospheric dust particles).
 3. **Camera Director Bar**:  
    Click `⚙️ Machining Bay`, `🔨 Forming & Heat`, or `🚚 AGV-01` to show off the smooth cinematic camera transitions.
-4. **Inspect a Machine**:  
-   Click on `CNC-01` in the 3D scene. Watch the **Holographic SCADA Drawer** slide open from the right, showing:
-   - Live **dual-channel oscilloscope** waveforms (vibration & temperature).
-   - Predicted Remaining Useful Life with the 15% safety margin.
-   - ISO 10816 vibration classification (Zone A through D).
-   - Aerospace SOP maintenance checklist.
-5. **Trigger Closed-Loop Maintenance**:  
-   Inside the SCADA drawer, click **"🔧 Trigger Maintenance & Reset Wear"**. Watch the machine's wear immediately drop to 0% and its floating badge turn emerald green!
+4. **Read the Needs attention list**:  
+   Open **Demo ▾ → Wear out CNC-01**. Within a second CNC-01 appears at the top of the list on the left: *Service now · by 15:40*, with the reason ("spindle bearing close to failing") and the fix.
+5. **Open the machine and approve the fix**:  
+   Click the card (or the machine). The drawer opens on a verdict: what is wrong, the vibration trend over the ISO zones, the predicted remaining life *with its uncertainty*, and the fix. Click **Approve work order**. The machine goes *In service* for its planned stop, the Log records who approved it, and *This shift* counts a prevented failure.
 6. **Explore the 10-Stage Process Ribbon**:  
    Click the tabs along the bottom ribbon to toggle between **Manufacturing Line Flow** (parts transit across 10 physical stages) and **AI Reasoning Trace** (the 6-step ML diagnostic pipeline).
 
@@ -281,9 +280,9 @@ Now open your web browser and go to:
 If you are asked to explain this project to a professor, interviewer, or client, use this 4-step speaking framework:
 
 1. **The Hook:**  
-   *"Aerospace machining uses multi-million-dollar CNC equipment where a single spindle breakdown costs over $22,000 per hour and destroys $15,000 raw titanium parts. Existing factory software looks like 1990s spreadsheets and only beeps after damage is already done."*
+   *"Aerospace machining uses multi-million-dollar CNC equipment where a spindle breakdown stops the line and can scrap expensive titanium parts. Existing factory software looks like 1990s spreadsheets and only beeps after damage is already done."*
 2. **Our Innovation:**  
-   *"We built the Titan Aerospace Digital Twin Copilot. It combines a 60Hz SimPy discrete-event physical simulation of an 8-machine factory with 100% local, offline machine learning. It predicts tool failures up to 50 cycles in advance using the 2021 PHM Challenge winning Temporal Convolutional Network architecture."*
+   *"We built the Titan Aerospace Digital Twin Copilot. It combines a SimPy discrete-event simulation of an 8-machine factory with fully local, offline machine learning. A dilated Temporal Convolutional Network, modelled on a top 2021 PHM Data Challenge entry, predicts remaining useful life, and the twin can forecast the plant forward to show which machine breaks first."*
 3. **The User Experience:**  
    *"Instead of cognitive alarm fatigue, operators get an interactive 3D command center built in Three.js with real-time oscilloscopes, floating telemetry badges, and a 10-stage end-to-end production ribbon."*
 4. **The Engineering Rigor:**  

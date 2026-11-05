@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why Titan Copilot</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="The core problem behind the Titan Aerospace maintenance copilot, and why we built it.">
+  <script>
+    // Follow the theme chosen in the app (same storage key).
+    try { document.documentElement.dataset.theme = localStorage.getItem('titan_theme') || 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
+  </script>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-2: #f1f3f6;
+      --ink: #0f172a;
+      --ink-2: #334155;
+      --ink-3: #64748b;
+      --hair: rgba(15, 23, 42, 0.09);
+      --hair-2: rgba(15, 23, 42, 0.16);
+      --accent: #0284c7;
+      --bad: #e11d48;
+      --warn: #d97706;
+      --good: #059669;
+      --think: #7c3aed;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 40px -24px rgba(15, 23, 42, 0.25);
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    :root[data-theme="dark"] {
+      --bg: #080b12;
+      --surface: #0e1420;
+      --surface-2: #121a28;
+      --ink: #f1f5f9;
+      --ink-2: #cbd5e1;
+      --ink-3: #8391a7;
+      --hair: rgba(255, 255, 255, 0.08);
+      --hair-2: rgba(255, 255, 255, 0.16);
+      --accent: #38bdf8;
+      --bad: #fb7185;
+      --warn: #fbbf24;
+      --good: #34d399;
+      --think: #a78bfa;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 24px 50px -24px rgba(0, 0, 0, 0.8);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.6 var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+    /* ---------- top bar ---------- */
+    .bar {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: blur(14px) saturate(1.3);
+      -webkit-backdrop-filter: blur(14px) saturate(1.3);
+      border-bottom: 1px solid var(--hair);
+    }
+    .bar .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
+    .logo {
+      width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+      background: linear-gradient(135deg, #0ea5e9, #0369a1); color: #fff; font: 800 12px var(--sans);
+    }
+    .brand b { display: block; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .brand span { display: block; font-size: 11.5px; color: var(--ink-3); }
+    .bar nav { margin-left: auto; display: flex; gap: 6px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+      border-radius: 999px; border: 1px solid var(--hair-2); text-decoration: none;
+      font: 600 13px var(--sans); color: var(--ink); background: transparent; cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn-primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .btn-primary:hover { background: var(--ink); transform: translateY(-1px); }
+
+    /* ---------- type ---------- */
+    .eyebrow { font: 600 11px var(--sans); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 10px; }
+    .eyebrow::before { content: ""; width: 18px; height: 1px; background: currentColor; opacity: 0.6; }
+    h1 { font-size: clamp(36px, 5.4vw, 60px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 700; margin: 18px 0 20px; max-width: 15ch; }
+    h2 { font-size: clamp(26px, 3.4vw, 36px); line-height: 1.12; letter-spacing: -0.025em; font-weight: 700; margin: 14px 0 14px; max-width: 22ch; }
+    h3 { font-size: 17px; line-height: 1.3; letter-spacing: -0.01em; font-weight: 650; }
+    .lead { font-size: clamp(17px, 1.6vw, 20px); line-height: 1.55; color: var(--ink-2); max-width: 60ch; }
+    .muted { color: var(--ink-3); }
+    em.k { font-style: normal; color: var(--accent); font-weight: 600; }
+
+    section { padding: 88px 0; border-top: 1px solid var(--hair); }
+    section.hero { border-top: 0; padding: 72px 0 56px; }
+    .sec-head { margin-bottom: 36px; }
+    .sec-head p { max-width: 62ch; color: var(--ink-2); }
+
+    /* ---------- hero chart ---------- */
+    .chart-card {
+      margin-top: 44px; background: var(--surface); border: 1px solid var(--hair);
+      border-radius: 22px; box-shadow: var(--shadow); padding: 22px 24px 18px; overflow: hidden;
+    }
+    .chart-top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; justify-content: space-between; margin-bottom: 6px; }
+    .seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--hair); }
+    .seg button {
+      border: 0; background: transparent; color: var(--ink-3); font: 600 12.5px var(--sans);
+      padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: background 0.2s ease, color 0.2s ease;
+    }
+    .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+    .seg button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #pf { width: 100%; height: auto; display: block; }
+    #pf text { font-family: var(--sans); }
+    .ax { stroke: var(--hair-2); stroke-width: 1; }
+    .axl { fill: var(--ink-3); font-size: 12px; }
+    .curve { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
+    .curve-draw { stroke-dasharray: 1600; stroke-dashoffset: 1600; animation: draw 2.2s cubic-bezier(0.6, 0, 0.3, 1) 0.3s forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    .pt { stroke: var(--surface); stroke-width: 3; }
+    .lbl { font-size: 12.5px; font-weight: 650; fill: var(--ink); }
+    .lbl-s { font-size: 11.5px; fill: var(--ink-3); }
+    .window { fill: var(--accent); opacity: 0.09; }
+    .window-edge { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
+    .strat { opacity: 0; transition: opacity 0.45s ease; }
+    .strat.on { opacity: 1; }
+    .cal { stroke: var(--warn); stroke-width: 1.6; stroke-dasharray: 5 5; }
+    .act-bad { fill: var(--bad); }
+    .act-good { fill: var(--accent); }
+    .chip-bg { fill: var(--surface); stroke: var(--hair-2); }
+    .chart-note { display: grid; grid-template-columns: 1fr; gap: 4px; min-height: 52px; margin-top: 6px; }
+    .chart-note b { font-size: 15px; }
+    .chart-note span { color: var(--ink-2); font-size: 14.5px; }
+
+    /* ---------- cards ---------- */
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--hair); border-radius: 18px;
+      padding: 22px 22px 20px; box-shadow: var(--shadow);
+    }
+    .card p { color: var(--ink-2); font-size: 14.5px; margin-top: 8px; }
+    .ic {
+      width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 16px;
+      background: color-mix(in srgb, var(--tone, var(--accent)) 12%, transparent); color: var(--tone, var(--accent));
+    }
+    .ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .num { font: 600 11px var(--mono); color: var(--ink-3); letter-spacing: 0.04em; margin-bottom: 10px; display: block; }
+
+    .quote {
+      margin-top: 40px; padding: 28px 30px; border-radius: 18px; border: 1px solid var(--hair);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface));
+      font-size: clamp(19px, 2.1vw, 24px); line-height: 1.45; letter-spacing: -0.012em; font-weight: 550;
+    }
+    .quote span { color: var(--ink-3); }
+
+    /* ---------- loop ---------- */
+    .loop { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; }
+    .step { padding: 0 16px 0 0; position: relative; }
+    .step-dot {
+      width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; z-index: 1;
+      background: var(--surface); border: 1.5px solid var(--tone); color: var(--tone); font: 700 12px var(--mono);
+    }
+    .step::before { content: ""; position: absolute; left: 34px; right: 0; top: 17px; height: 1.5px; background: var(--hair-2); }
+    .step:last-child::before { display: none; }
+    .step h3 { margin: 16px 0 6px; }
+    .step p { font-size: 14px; color: var(--ink-2); }
+    .step .tech { display: block; margin-top: 10px; font: 500 11.5px var(--mono); color: var(--ink-3); line-height: 1.5; }
+
+    /* ---------- live numbers ---------- */
+    .versus { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .vcol { border-radius: 18px; padding: 24px; border: 1px solid var(--hair); background: var(--surface); box-shadow: var(--shadow); }
+    .vcol.good { border-color: color-mix(in srgb, var(--good) 40%, var(--hair)); }
+    .vcol h3 { display: flex; align-items: center; gap: 8px; }
+    .vcol h3 i { width: 8px; height: 8px; border-radius: 50%; background: var(--tone); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+    .stat b { display: block; font-size: clamp(28px, 3.6vw, 40px); letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .stat span { font-size: 12.5px; color: var(--ink-3); }
+    .fine { margin-top: 14px; font-size: 12.5px; color: var(--ink-3); max-width: 80ch; }
+    .industry { margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .industry .card b { font-size: 28px; letter-spacing: -0.02em; display: block; }
+
+    /* ---------- limits ---------- */
+    .limits { list-style: none; display: grid; gap: 10px; max-width: 760px; }
+    .limits li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; color: var(--ink-2); font-size: 15px; }
+    .limits li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); margin-top: 9px; margin-left: 6px; }
+
+    .cta { text-align: center; padding: 96px 0 110px; }
+    .cta h2 { margin: 12px auto 14px; }
+    .cta .lead { margin: 0 auto 28px; }
+    .cta .eyebrow { justify-content: center; }
+    .cta .eyebrow::before { display: none; }
+    .cta-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn-lg { height: 46px; padding: 0 22px; font-size: 14.5px; }
+    footer { border-top: 1px solid var(--hair); padding: 26px 0 40px; font-size: 12.5px; color: var(--ink-3); }
+
+    .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+    .reveal.in { opacity: 1; transform: none; }
+
+    @media (max-width: 900px) {
+      .grid3, .grid4, .industry { grid-template-columns: 1fr 1fr; }
+      .loop { grid-template-columns: 1fr; gap: 22px; }
+      .step { padding: 0 0 0 50px; }
+      .step-dot { position: absolute; left: 0; top: 0; }
+      .step h3 { margin-top: 4px; }
+      .step::before { left: 16.5px; right: auto; top: 34px; bottom: -22px; width: 1.5px; height: auto; }
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 0 16px; }
+      .grid3, .grid4, .grid2, .versus, .industry { grid-template-columns: 1fr; }
+      section { padding: 64px 0; }
+      .bar .brand span { display: none; }
+      .bar nav .btn:not(.btn-primary) { display: none; }
+      .chart-card { padding: 16px 14px 14px; border-radius: 16px; }
+      .seg button { padding: 7px 10px; font-size: 12px; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .chart-scroll { overflow-x: auto; margin: 0 -14px; padding: 0 14px; }
+      #pf { min-width: 620px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .curve-draw { animation: none; stroke-dashoffset: 0; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .strat { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="wrap">
+      <div class="logo">TA</div>
+      <div class="brand"><b>Titan Aerospace</b><span>Maintenance copilot · why it exists</span></div>
+      <nav>
+        <a class="btn" href="/?tour=quick">3-minute tour</a>
+        <a class="btn btn-primary" href="/?nowelcome">Open the live plant →</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="wrap">
+        <span class="eyebrow">Why this project exists</span>
+        <h1>Machines warn before they break. Most factories miss it.</h1>
+        <p class="lead">A worn spindle bearing doesn't fail out of nowhere. Its vibration creeps up for hours or days first. The signal is there. What's missing is someone, or something, turning it into a clear decision in time: <em class="k">which machine, what to fix, and by when</em>.</p>
+
+        <div class="chart-card reveal">
+          <div class="chart-top">
+            <span class="eyebrow">The warning window</span>
+            <div class="seg" role="group" aria-label="Maintenance strategy">
+              <button data-s="rtf" aria-pressed="false">Run to failure</button>
+              <button data-s="cal" aria-pressed="false">Fixed schedule</button>
+              <button data-s="pdm" aria-pressed="true">Predictive</button>
+            </div>
+          </div>
+          <div class="chart-scroll"><svg id="pf" viewBox="0 0 900 340" role="img" aria-label="Machine condition over time: a fault starts, becomes detectable at point P, and the machine breaks at point F."></svg></div>
+          <div class="chart-note" aria-live="polite"><b id="note-t"></b><span id="note-s"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CORE PROBLEM -->
+    <section id="problem">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">The core problem</span>
+          <h2>The gap between a sensor reading and a decision</h2>
+          <p>Plants usually choose between two bad options: fix things after they break, or service them on a calendar. Both ignore the condition of the actual machine. The data to do better often already exists, but it arrives as numbers nobody has time to interpret.</p>
+        </div>
+        <div class="grid3">
+          <article class="card reveal" style="--tone: var(--bad)">
+            <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l9.5 16.5h-19z"/><path d="M12 10v4M12 17.2v.1"/></svg></div>
+            <span class="num">01</span>
+            <h3>Breakdowns are found too late</h3>
+            <p>A machine that fails mid-shift stops its line, and the repair is unplanned: diagnose, find parts, call people in. That takes far longer than a planned service, and a failure mid-cut can scrap the part on the table.</p>
+          </article>
+          <article class="card reveal" style="--tone: var(--warn)">
+            <div class="ic"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></div>
+            <span class="num">02</span>
+            <h3>Calendars don't know the machine</h3>
+            <p>Servicing every N hours replaces healthy parts on machines running light work, and still misses the one wearing fast on hard material. Wear depends on load, material and luck, not the date.</p>
+          </article>
+          <article class="card reveal" style="--tone: var(--think)">
+            <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h3l2.5-6 4 12 2.5-6H21"/></svg></div>
+            <span class="num">03</span>
+            <h3>The data isn't a decision</h3>
+            <p>"Vibration 3.1 mm/s, RUL 47 cycles" means nothing to a busy supervisor. Classic monitoring screens flood people with alarms, so warnings get muted. People need the answer, not the reading.</p>
+          </article>
+        </div>
+        <p class="quote reveal">The hard part isn't predicting failure. It's getting the right person to act on it in time, <span>with enough trust to stop a running machine.</span></p>
+      </div>
+    </section>
+
+    <!-- WHY AEROSPACE -->
+    <section id="setting">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">Why an aerospace machine shop</span>
+          <h2>Where the problem hurts most</h2>
+          <p>We set the twin in a plant that machines jet-engine and airframe parts, because every part of the problem is sharper there.</p>
+        </div>
+        <div class="grid4">
+          <article class="card reveal">
+            <span class="num">Hard metals</span>
+            <h3>Titanium and nickel alloys</h3>
+            <p>Tough, heat-resistant materials wear tools and spindles quickly, so condition changes faster than a schedule assumes.</p>
+          </article>
+          <article class="card reveal">
+            <span class="num">Valuable parts</span>
+            <h3>Hours of work per part</h3>
+            <p>Blades, blisks and bulkheads are cut from expensive billets over long cycles. A failure mid-cut can scrap all of it.</p>
+          </article>
+          <article class="card reveal">
+            <span class="num">Few machines</span>
+            <h3>Specialised bottlenecks</h3>
+            <p>A 5-axis mill or vacuum furnace often has no spare. When it stops, everything downstream waits.</p>
+          </article>
+          <article class="card reveal">
+            <span class="num">Strict process</span>
+            <h3>Every fix is documented</h3>
+            <p>Work follows written procedures and needs sign-off, so a useful copilot must cite the procedure and leave approval to a person.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY WE TOOK IT -->
+    <section id="why">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">Why we took on this project</span>
+          <h2>The idea is proven. Using it is still hard.</h2>
+          <p>Predictive maintenance isn't new. What's rare is a system that carries it all the way to an approved repair, explains itself, and can be tested honestly. That's the gap we wanted to close.</p>
+        </div>
+        <div class="grid2">
+          <article class="card reveal">
+            <span class="num">01 · Close the whole loop</span>
+            <h3>Most demos stop at a chart</h3>
+            <p>A dashboard that shows a risk score still leaves someone to decide what to do. We wanted the full chain: sense, detect, predict, decide, and fix, ending in a work order a supervisor can approve in one click.</p>
+          </article>
+          <article class="card reveal">
+            <span class="num">02 · Earn trust</span>
+            <h3>Show the uncertainty, keep a human in charge</h3>
+            <p>Nobody stops a machine on a black box's word. Every prediction shows its error range, every fix cites its procedure, and nothing happens until a person approves it.</p>
+          </article>
+          <article class="card reveal">
+            <span class="num">03 · Test the claim</span>
+            <h3>A twin lets you check the promise</h3>
+            <p>Instead of quoting savings, the twin can run the same plant forward twice, with and without the copilot, and count what changes. You can check the claim yourself.</p>
+          </article>
+          <article class="card reveal">
+            <span class="num">04 · Make it understandable</span>
+            <h3>Readable by the people who use it</h3>
+            <p>Plain status words, deadlines in clock time, and a live 3D plant you can walk around. The same system should make sense to a supervisor, a technician and a manager.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHAT WE BUILT -->
+    <section id="built">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">What we built</span>
+          <h2>One loop, from vibration to a signed-off repair</h2>
+        </div>
+        <div class="loop reveal">
+          <div class="step" style="--tone: var(--accent)">
+            <div class="step-dot">1</div>
+            <h3>Sense</h3>
+            <p>A digital twin of 8 machines streams a reading every cycle: vibration, temperature, power.</p>
+            <span class="tech">SimPy twin · WebSocket 2 Hz</span>
+          </div>
+          <div class="step" style="--tone: var(--warn)">
+            <div class="step-dot">2</div>
+            <h3>Detect</h3>
+            <p>Unusual readings are flagged and graded against the ISO vibration zones.</p>
+            <span class="tech">Isolation Forest · ISO 10816-3</span>
+          </div>
+          <div class="step" style="--tone: var(--think)">
+            <div class="step-dot">3</div>
+            <h3>Predict</h3>
+            <p>A neural network estimates how many cycles each machine has left, with an error range.</p>
+            <span class="tech">Dilated TCN · remaining useful life</span>
+          </div>
+          <div class="step" style="--tone: var(--bad)">
+            <div class="step-dot">4</div>
+            <h3>Decide</h3>
+            <p>Agents diagnose the likely cause, find the procedure, and set a deadline in clock time.</p>
+            <span class="tech">LangGraph agents · SOP search</span>
+          </div>
+          <div class="step" style="--tone: var(--good)">
+            <div class="step-dot">5</div>
+            <h3>Fix</h3>
+            <p>A supervisor approves the work order; the machine is serviced and comes back healthy.</p>
+            <span class="tech">Work orders · maintenance log</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHAT CHANGES -->
+    <section id="impact">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">What changes</span>
+          <h2>The same plant, run forward twice</h2>
+          <p id="impact-intro">Live from the twin: the next 8 plant hours, simulated from the plant's current state with the same random seed.</p>
+        </div>
+        <div class="versus reveal">
+          <div class="vcol" style="--tone: var(--bad)">
+            <h3><i></i>Run to failure</h3>
+            <div class="stats">
+              <div class="stat"><b id="rtf-b">–</b><span>breakdowns</span></div>
+              <div class="stat"><b id="rtf-d">–</b><span>hours stopped</span></div>
+              <div class="stat"><b id="rtf-p">–</b><span>parts made</span></div>
+            </div>
+          </div>
+          <div class="vcol good" style="--tone: var(--good)">
+            <h3><i></i>With the copilot</h3>
+            <div class="stats">
+              <div class="stat"><b id="cop-b">–</b><span>breakdowns</span></div>
+              <div class="stat"><b id="cop-d">–</b><span>hours stopped</span></div>
+              <div class="stat"><b id="cop-p">–</b><span>parts made</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="fine" id="impact-fine">Simulated plant, not a measured result. Assumes a breakdown repair takes 3× as long as a planned service. The copilot services a machine when 85% of its predicted remaining life drops below 30 cycles.</p>
+
+        <div class="industry">
+          <div class="card reveal"><b>up to 70–75%</b><p>fewer breakdowns</p></div>
+          <div class="card reveal"><b>up to 35–45%</b><p>less downtime</p></div>
+          <div class="card reveal"><b>up to 25–30%</b><p>lower maintenance cost</p></div>
+        </div>
+        <p class="fine">Best-case figures for predictive maintenance programs, from the US Department of Energy FEMP <i>Operations &amp; Maintenance Best Practices Guide</i> (Release 3.0, 2010). They describe industry programs, not this project.</p>
+      </div>
+    </section>
+
+    <!-- LIMITS -->
+    <section id="limits">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="eyebrow">Honest limits</span>
+          <h2>What this is, and what it isn't</h2>
+        </div>
+        <ul class="limits reveal">
+          <li>The plant is simulated. The sensor stream has the same shape as real data, but no real machine has been connected yet.</li>
+          <li>The models are trained on the simulator, so their accuracy on a real spindle is unknown until tested on real data.</li>
+          <li>The copilot never acts alone. It drafts the work order; a person approves it.</li>
+          <li>The savings figures above are industry best cases, not a promise. The forecast shows the effect on this simulated plant only.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap">
+        <span class="eyebrow">See it working</span>
+        <h2>Break a machine on purpose and watch the copilot catch it</h2>
+        <p class="lead">The tour wears down a real spindle in the twin, shows the warning, approves the fix, and fast-forwards the shift.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg" href="/?tour=quick">Take the 3-minute tour</a>
+          <a class="btn btn-lg" href="/?nowelcome">Explore the plant</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Titan Aerospace is a fictional plant. Built with a SimPy digital twin, PyTorch, scikit-learn, LangGraph, FastAPI and Three.js.</div>
+  </footer>
+
+  <script>
+  (function () {
+    /* ---------- P-F curve ---------- */
+    const svg = document.getElementById('pf');
+    const NS = 'http://www.w3.org/2000/svg';
+    const X0 = 60, X1 = 860, Y0 = 40, Y1 = 280;          // plot box
+    const tStart = 0.28;                                   // fault begins
+    const cond = t => t < tStart ? 1 : 1 - Math.pow((t - tStart) / (1 - tStart), 2.1) * 0.92;
+    const X = t => X0 + t * (X1 - X0);
+    const Y = c => Y1 - (c - 0.04) / 0.98 * (Y1 - Y0);
+    const tAt = c => tStart + Math.pow((1 - c) / 0.92, 1 / 2.1) * (1 - tStart);
+    const tP = tAt(0.9), tF = 0.94;
+
+    const el = (tag, attrs, parent = svg, text) => {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      if (text != null) n.textContent = text;
+      parent.appendChild(n);
+      return n;
+    };
+    // axes
+    el('line', { class: 'ax', x1: X0, y1: Y1 + 12, x2: X1, y2: Y1 + 12 });
+    el('line', { class: 'ax', x1: X0, y1: Y0 - 10, x2: X0, y2: Y1 + 12 });
+    el('text', { class: 'axl', x: X1, y: Y1 + 32, 'text-anchor': 'end' }, svg, 'time →');
+    el('text', { class: 'axl', x: X0 - 12, y: Y0 - 18 }, svg, 'machine condition');
+
+    // P-F window (predictive)
+    const gP = el('g', { class: 'strat', 'data-s': 'pdm' });
+    el('rect', { class: 'window', x: X(tP), y: Y0 - 10, width: X(tF) - X(tP), height: Y1 - Y0 + 22, rx: 6 }, gP);
+    el('line', { class: 'window-edge', x1: X(tP), y1: Y0 - 10, x2: X(tP), y2: Y1 + 12 }, gP);
+    el('line', { class: 'window-edge', x1: X(tF), y1: Y0 - 10, x2: X(tF), y2: Y1 + 12 }, gP);
+    el('text', { class: 'lbl-s', x: (X(tP) + X(tF)) / 2, y: Y0 + 6, 'text-anchor': 'middle', fill: 'var(--accent)', style: 'fill: var(--accent); font-weight: 600' }, gP, 'the warning window: time to plan a fix');
+    const tAct = tP + (tF - tP) * 0.42;
+    el('circle', { class: 'act-good pt', cx: X(tAct), cy: Y(cond(tAct)), r: 8 }, gP);
+    const chipX = X(tAct) - 70, chipY = Y(cond(tAct)) + 22;
+    el('rect', { class: 'chip-bg', x: chipX, y: chipY, width: 140, height: 28, rx: 14 }, gP);
+    el('text', { class: 'lbl', x: chipX + 70, y: chipY + 18.5, 'text-anchor': 'middle', style: 'font-size: 12px' }, gP, 'Service by 15:40');
+
+    // Fixed schedule
+    const gC = el('g', { class: 'strat', 'data-s': 'cal' });
+    [0.1, 0.32, 0.65, 0.98].forEach(t => {
+      el('line', { class: 'cal', x1: X(t), y1: Y0 - 4, x2: X(t), y2: Y1 + 12 }, gC);
+    });
+    el('text', { class: 'lbl-s', x: X(0.1) + 8, y: Y1 + 4, style: 'fill: var(--warn); font-weight: 600' }, gC, 'service every N hours');
+    el('text', { class: 'lbl-s', x: X(0.98) - 8, y: Y0 + 4, 'text-anchor': 'end', style: 'fill: var(--bad); font-weight: 600' }, gC, 'broke before the next visit');
+    el('text', { class: 'lbl-s', x: X(0.21), y: Y(1) + 26, 'text-anchor': 'middle' }, gC, 'healthy parts replaced');
+
+    // Run to failure
+    const gR = el('g', { class: 'strat', 'data-s': 'rtf' });
+    el('circle', { class: 'act-bad', cx: X(tF), cy: Y(cond(tF)), r: 18, opacity: 0.16 }, gR);
+    el('text', { class: 'lbl-s', x: X(tF) - 16, y: Y(cond(tF)) + 64, 'text-anchor': 'end', style: 'fill: var(--bad); font-weight: 600' }, gR, 'repair after it breaks');
+
+    // curve
+    let d = '';
+    for (let i = 0; i <= 200; i++) { const t = i / 200 * tF; d += (i ? 'L' : 'M') + X(t).toFixed(1) + ',' + Y(cond(t)).toFixed(1); }
+    el('path', { class: 'curve curve-draw', d });
+    // points
+    const pts = [
+      { t: tStart, c: 'var(--ink-3)', a: 'Fault starts', b: 'invisible to people' },
+      { t: tP, c: 'var(--warn)', a: 'P · detectable', b: 'vibration starts rising' },
+      { t: tF, c: 'var(--bad)', a: 'F · breakdown', b: 'line stops' },
+    ];
+    // Label placement keeps text off the curve: above the flat start, below-left of P and F.
+    const place = [
+      { dx: 0, dy: -36, anchor: 'start' },
+      { dx: -14, dy: 26, anchor: 'end' },
+      { dx: -16, dy: 26, anchor: 'end' },
+    ];
+    pts.forEach((p, i) => {
+      const cx = X(p.t), cy = Y(cond(p.t)), L = place[i];
+      el('circle', { class: 'pt', cx, cy, r: 6.5, style: `fill: ${p.c}` });
+      el('text', { class: 'lbl', x: cx + L.dx, y: cy + L.dy, 'text-anchor': L.anchor }, svg, p.a);
+      el('text', { class: 'lbl-s', x: cx + L.dx, y: cy + L.dy + 16, 'text-anchor': L.anchor }, svg, p.b);
+    });
+
+    const NOTES = {
+      rtf: ['Run to failure: act at F.', 'Nothing happens until the machine breaks. The repair is unplanned, long, and can scrap the part being cut.'],
+      cal: ['Fixed schedule: act on the calendar.', 'Services land wherever the calendar says. Healthy parts get replaced, and a fast-wearing machine can still break between visits.'],
+      pdm: ['Predictive: act inside the warning window.', 'The copilot spots the rise at P, estimates when F will come, and asks for a planned service before it, at a time that suits the shift.'],
+    };
+    const buttons = document.querySelectorAll('.seg button');
+    function show(s) {
+      buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === s)));
+      svg.querySelectorAll('.strat').forEach(g => g.classList.toggle('on', g.dataset.s === s));
+      document.getElementById('note-t').textContent = NOTES[s][0];
+      document.getElementById('note-s').textContent = NOTES[s][1];
+    }
+    buttons.forEach(b => b.addEventListener('click', () => show(b.dataset.s)));
+    show('pdm');
+
+    /* ---------- live forecast numbers ---------- */
+    const fmt = n => Number(n).toLocaleString('en-US');
+    fetch('/forecast?samples=2').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(d => {
+      const a = d.policies.run_to_failure.summary, c = d.policies.copilot.summary;
+      document.getElementById('rtf-b').textContent = fmt(a.breakdowns);
+      document.getElementById('rtf-d').textContent = a.downtime_h.toFixed(1);
+      document.getElementById('rtf-p').textContent = fmt(a.parts);
+      document.getElementById('cop-b').textContent = fmt(c.breakdowns);
+      document.getElementById('cop-d').textContent = c.downtime_h.toFixed(1);
+      document.getElementById('cop-p').textContent = fmt(c.parts);
+      const h = Math.round((d.horizon_s || 28800) / 3600);
+      document.getElementById('impact-intro').textContent =
+        `Live from the twin: the next ${h} plant hours, simulated from the plant's current state with the same random seed. Downtime is summed across all 8 machines.`;
+    }).catch(() => {
+      document.getElementById('impact-intro').textContent =
+        'These numbers come live from the twin. Start the server (uvicorn api.main:app) and reload to see them.';
+    });
+
+    /* ---------- reveal on scroll ---------- */
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12 }) : null;
+    document.querySelectorAll('.reveal').forEach(n => io ? io.observe(n) : n.classList.add('in'));
+  })();
+  </script>
+</body>
+</html>

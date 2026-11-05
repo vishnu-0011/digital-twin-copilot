@@ -40,7 +40,9 @@ def predict_remaining_life(twin: FactoryTwin, predictor: RULPredictor) -> list[d
     states = get_fleet_state(twin)
     if not states:
         return []
-    history_df = twin.history_dataframe() if hasattr(twin, "history_dataframe") else None
+    # The model reads the last 20 cycles; a short recent window is enough
+    # (and stays fast however long the plant has been running).
+    history_df = twin.recent_dataframe() if hasattr(twin, "recent_dataframe") else twin.history_dataframe()
     return predictor.predict_latest(states, history_df=history_df)
 
 

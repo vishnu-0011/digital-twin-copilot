@@ -500,13 +500,18 @@ export function updateFleetTelemetry(fleetData) {
       temp: m.temperature_c || 42.0,
       rul: m.predicted_rul_cycles != null ? Math.round(m.predicted_rul_cycles) : m.rul_cycles,
       throughput: m.throughput_units || 0,
+      plan: m.plan || null,
     };
 
     if (group && group.statusRing) {
       const stat = (m.status || "HEALTHY").toUpperCase();
       let col = 0x059669; // Emerald green
-      if (stat === "CRITICAL" || stat === "FAILED") col = 0xdc2626;
+      if (m.plan) col = m.plan.hex; // One status ladder: same colours as badges and lists
+      else if (stat === "CRITICAL" || stat === "FAILED") col = 0xdc2626;
       else if (stat === "WARNING" || stat === "DEGRADING") col = 0xd97706;
+      else if (stat === "IN_MAINTENANCE") col = 0x0284c7; // Service blue
+      // Attention mode: healthy machines go quiet so problems stand out.
+      group.statusRing.visible = !(attentionMode && m.plan && m.plan.rank < 2);
 
       group.statusRing.material.color.setHex(col);
 
@@ -514,6 +519,74 @@ export function updateFleetTelemetry(fleetData) {
         group.beaconLight.material.color.setHex(col);
       }
     }
+    const rank = m.plan ? m.plan.rank : 0;
+    setAlertHalo(id, rank >= 3 ? (rank >= 4 ? 0xef4444 : 0xf59e0b) : null, rank >= 4);
+  });
+}
+
+/* --------------------------------------------------------------------------
+   Alert halos: a pulsing ring (and a light column for urgent ones) on every
+   machine that needs service, so problems are visible from any camera angle.
+   -------------------------------------------------------------------------- */
+let attentionMode = false;
+const alertHalos = new Map(); // id -> { group, urgent }
+
+export function setAttentionMode(on) {
+  attentionMode = !!on;
+  Object.keys(telemetryState).forEach(id => {
+    const g = machines.get(id);
+    const plan = telemetryState[id] && telemetryState[id].plan;
+    if (g && g.statusRing) g.statusRing.visible = !(attentionMode && plan && plan.rank < 2);
+  });
+  alertHalos.forEach(h => { h.group.visible = h.color != null; });
+}
+
+export function getAttentionMode() { return attentionMode; }
+
+function setAlertHalo(id, color, urgent) {
+  if (!scene) return;
+  let h = alertHalos.get(id);
+  if (color == null) {
+    if (h) { h.group.visible = false; h.color = null; }
+    return;
+  }
+  if (!h) {
+    const group = buildTourBeacon();
+    group.name = `AlertHalo-${id}`;
+    h = { group, color: null, urgent: false };
+    alertHalos.set(id, h);
+  }
+  const { ring, pulse, beam } = h.group.userData;
+  if (h.color !== color) {
+    ring.material.color.setHex(color);
+    pulse.material.color.setHex(color);
+    beam.material.color.setHex(color);
+    h.color = color;
+  }
+  h.urgent = urgent;
+  beam.visible = urgent;
+  const obj = machines.get(id);
+  if (obj) {
+    const p = new THREE.Vector3();
+    obj.getWorldPosition(p);
+    h.group.position.set(p.x, 0, p.z);
+  }
+  h.group.visible = isInteriorMode;
+}
+
+function updateAlertHalos(t) {
+  alertHalos.forEach(h => {
+    if (h.color == null) return;
+    h.group.visible = isInteriorMode;
+    const { ring, pulse, beam } = h.group.userData;
+    const speed = h.urgent ? 1.1 : 0.55;
+    const k = (t * speed) % 1;
+    const big = attentionMode ? 1.15 : 1.0;
+    ring.scale.setScalar(big * (1 + Math.sin(t * 3) * 0.03));
+    pulse.scale.setScalar(big * (1 + k * (h.urgent ? 1.1 : 0.6)));
+    pulse.material.opacity = (h.urgent ? 0.85 : 0.55) * (1 - k);
+    ring.material.opacity = h.urgent ? 0.9 : 0.6;
+    beam.material.opacity = 0.07 + Math.sin(t * 2.2) * 0.03;
   });
 }
 
@@ -712,8 +785,35 @@ function animate(time) {
     });
   }
 
+  // 16. Guided-tour beacon (pulsing floor ring + light column on the explained asset)
+  updateTourBeacon(t);
+  updateAlertHalos(t);
+  applyViewInset();
+
   // Render Scene
   renderer.render(scene, camera);
+}
+
+/* --------------------------------------------------------------------------
+   View inset: side panels cover part of the canvas, so the camera's optical
+   centre is shifted to the middle of the area that is actually visible.
+   Projection, picking and badge placement all follow automatically.
+   -------------------------------------------------------------------------- */
+let viewInsetTarget = 0;   // px: positive moves the picture right
+let viewInsetCur = 0;
+
+export function setViewInset(leftPx = 0, rightPx = 0) {
+  viewInsetTarget = (leftPx - rightPx) / 2;
+}
+
+function applyViewInset() {
+  if (!camera || !containerEl) return;
+  const diff = viewInsetTarget - viewInsetCur;
+  if (Math.abs(diff) < 0.5 && viewInsetCur === viewInsetTarget) return;
+  viewInsetCur = Math.abs(diff) < 0.5 ? viewInsetTarget : viewInsetCur + diff * 0.12;
+  const w = containerEl.clientWidth, h = containerEl.clientHeight;
+  if (Math.abs(viewInsetCur) < 0.5) camera.clearViewOffset();
+  else camera.setViewOffset(w, h, -viewInsetCur, 0, w, h);
 }
 
 function onWindowResize() {
@@ -723,6 +823,8 @@ function onWindowResize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
+  viewInsetCur = viewInsetCur + 0.01; // force re-apply at the new size
+  applyViewInset();
 }
 
 // Raycasting to pick machines by clicking
@@ -833,3 +935,102 @@ export const updateMachineStates = updateFleetTelemetry;
 export const triggerRadarScan = triggerRadarSweep;
 export function focusOnMachine(machineId, immediate = false) { setCameraPreset(machineId, immediate); }
 export function resetCamera() { setCameraPreset(isInteriorMode ? 'global' : 'campus'); }
+
+/* ==========================================================================
+   GUIDED TOUR SUPPORT
+   A pulsing floor ring + translucent light column that marks whatever the
+   tour guide is currently talking about, and a projector that converts any
+   tour target (machine or AMR) into screen coordinates for the leader line.
+   ========================================================================== */
+let tourBeacon = null;
+let tourBeaconTarget = null;
+
+function getTourTargetObject(id) {
+  if (!id) return null;
+  if (id === 'AGV-01' || id === 'agv1') return agvRobot1;
+  if (id === 'AGV-02' || id === 'agv2') return agvRobot2;
+  return machines.get(id) || null;
+}
+
+function buildTourBeacon() {
+  const group = new THREE.Group();
+  group.name = 'TourBeacon';
+
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0x22d3ee, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false
+  });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(3.0, 3.25, 64), ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.06;
+  group.add(ring);
+
+  const pulseMat = ringMat.clone();
+  const pulse = new THREE.Mesh(new THREE.RingGeometry(3.0, 3.12, 64), pulseMat);
+  pulse.rotation.x = -Math.PI / 2;
+  pulse.position.y = 0.07;
+  group.add(pulse);
+
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0x67e8f9, transparent: true, opacity: 0.12, side: THREE.DoubleSide,
+    depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.1, 14, 48, 1, true), beamMat);
+  beam.position.y = 7;
+  group.add(beam);
+
+  group.userData = { ring, pulse, beam };
+  group.visible = false;
+  scene.add(group);
+  return group;
+}
+
+export function setTourBeacon(id) {
+  if (!scene) return;
+  if (!tourBeacon) tourBeacon = buildTourBeacon();
+  tourBeaconTarget = id || null;
+  tourBeacon.visible = !!getTourTargetObject(tourBeaconTarget);
+}
+
+function updateTourBeacon(t) {
+  if (!tourBeacon || !tourBeacon.visible) return;
+  const obj = getTourTargetObject(tourBeaconTarget);
+  if (!obj) { tourBeacon.visible = false; return; }
+  const p = new THREE.Vector3();
+  obj.getWorldPosition(p);
+  tourBeacon.position.set(p.x, 0, p.z);
+  const small = obj === agvRobot1 || obj === agvRobot2;
+  const base = small ? 0.55 : 1.0;
+  const { ring, pulse, beam } = tourBeacon.userData;
+  ring.scale.setScalar(base * (1 + Math.sin(t * 3) * 0.03));
+  const k = (t * 0.7) % 1;
+  pulse.scale.setScalar(base * (1 + k * 0.9));
+  pulse.material.opacity = 0.8 * (1 - k);
+  beam.scale.set(base, 1, base);
+  beam.material.opacity = 0.09 + Math.sin(t * 2.2) * 0.03;
+}
+
+/** Fly the camera to an explicit shot (tour framing), with the roof cut away. */
+export function setCameraShot(pos, look) {
+  if (!camera || !controls) return;
+  agv1FollowMode = false;
+  agv2FollowMode = false;
+  setInteriorMode(true, false);
+  targetCamPos = new THREE.Vector3(pos[0], pos[1], pos[2]);
+  targetLookAt = new THREE.Vector3(look[0], look[1], look[2]);
+}
+
+/** Project a tour target (machine id, 'AGV-01', 'AGV-02') to client-space pixels. */
+export function projectTourTarget(id, yOffset = 3.2) {
+  const obj = getTourTargetObject(id);
+  if (!obj || !camera || !containerEl) return null;
+  const p = new THREE.Vector3();
+  obj.getWorldPosition(p);
+  p.y += yOffset;
+  const ndc = p.project(camera);
+  if (ndc.z >= 1 || Math.abs(ndc.x) > 1.2 || Math.abs(ndc.y) > 1.2) return null;
+  const rect = containerEl.getBoundingClientRect();
+  return {
+    x: (ndc.x * 0.5 + 0.5) * rect.width + rect.left,
+    y: (-ndc.y * 0.5 + 0.5) * rect.height + rect.top
+  };
+}

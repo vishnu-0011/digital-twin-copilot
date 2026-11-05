@@ -131,8 +131,12 @@ class TCNRemainingLifeModel(nn.Module):
             nn.GELU(),
             nn.Dropout(0.1),
             nn.Linear(32, 1),
-            nn.ReLU(),  # Enforces non-negative RUL cycles
         )
+        # No output ReLU: a ReLU head can "die" (output stuck at 0, zero
+        # gradient) on an unlucky run. Non-negativity is enforced at
+        # prediction time instead. Starting the bias near the middle of the
+        # 0-100 target range also speeds up convergence.
+        nn.init.constant_(self.head[-1].bias, 50.0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: (batch_size, seq_len, in_features)

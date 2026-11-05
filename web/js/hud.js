@@ -7,6 +7,9 @@
  */
 
 import { playClick } from './audio.js';
+import { isoZone, ISO_ZONES, ISO_ZONE_LIMITS, formatRul, RUL_PLATEAU } from './standards.js';
+import { planShort, fmtClock as wallClock, fmtDay, fmtIn, PLAN } from './plan.js';
+import { getHistory } from './history.js';
 
 let badgeContainer = null;
 const badgeElements = new Map(); // id -> HTMLElement
@@ -102,7 +105,7 @@ export function updateFloatingBadges(projectedPositions, onSelectMachine) {
           <div class="badge-card">
             <span class="badge-status-dot"></span>
             <span class="badge-id">${item.id}</span>
-            <span class="badge-rul">RUL --</span>
+            <span class="badge-rul"></span>
           </div>
           <div class="badge-pin"></div>
         `;
@@ -127,14 +130,11 @@ export function updateFloatingBadges(projectedPositions, onSelectMachine) {
 
     if (item.state) {
       el.setAttribute('data-status', (item.state.status || 'HEALTHY').toUpperCase());
+      const plan = item.state.plan;
+      el.setAttribute('data-plan', plan ? plan.key : 'healthy');
       const rulEl = el.querySelector('.badge-rul');
-      if (rulEl) {
-        if (item.state.rul != null) {
-          rulEl.textContent = `RUL ${item.state.rul}c`;
-        } else {
-          rulEl.textContent = (item.state.status || 'RUN').toUpperCase();
-        }
-      }
+      if (rulEl) rulEl.textContent = plan ? planShort(plan) : '';
+      el.title = plan ? `${item.id}: ${planShort(plan)}` : item.id;
     }
   });
 }
@@ -144,38 +144,33 @@ export function updateFloatingBadges(projectedPositions, onSelectMachine) {
  */
 export function updateTopKPIs(fleetData) {
   if (!fleetData || !Array.isArray(fleetData)) return;
-
   const total = fleetData.length;
-  let healthyCount = 0;
-  let totalWear = 0;
-  let minRul = 9999;
-  let totalParts = 0;
+  const plans = fleetData.map(m => ({ id: m.machine_id, p: m.plan || PLAN.healthy }));
+  const attention = plans.filter(x => x.p.rank >= PLAN.soon.rank);
+  const running = plans.filter(x => x.p.key !== 'down' && x.p.key !== 'service').length;
+  const parts = fleetData.reduce((a, m) => a + (m.throughput_units || 0), 0);
 
-  fleetData.forEach(m => {
-    const stat = (m.status || '').toLowerCase();
-    if (stat === 'healthy') healthyCount++;
-    totalWear += (m.wear_level || 0);
-    totalParts += (m.throughput_units || 0);
-    const rul = m.predicted_rul_cycles != null ? m.predicted_rul_cycles : m.rul_cycles;
-    if (rul != null && rul < minRul) {
-      minRul = Math.round(rul);
-    }
-  });
-
-  const avgWear = total > 0 ? (totalWear / total) : 0;
-  const healthPercent = Math.max(0, Math.round((1 - avgWear) * 100));
-
-  const kpiHealth = document.getElementById('kpi-health');
-  if (kpiHealth) kpiHealth.textContent = `${healthPercent}%`;
-
-  const kpiUnits = document.getElementById('kpi-units');
-  if (kpiUnits) kpiUnits.textContent = `${healthyCount}/${total}`;
-
-  const kpiMinRul = document.getElementById('kpi-min-rul');
-  if (kpiMinRul) kpiMinRul.textContent = minRul === 9999 ? '--' : `${minRul} cyc`;
-
-  const kpiThroughput = document.getElementById('kpi-throughput');
-  if (kpiThroughput) kpiThroughput.textContent = totalParts;
+  const att = document.getElementById('kpi-attention');
+  if (att) {
+    att.textContent = attention.length ? `${attention.length}` : 'None';
+    const worst = attention.reduce((a, x) => Math.max(a, x.p.rank), 0);
+    att.style.color = worst >= PLAN.now.rank ? 'var(--color-rose)' : worst >= PLAN.soon.rank ? 'var(--color-amber)' : 'var(--color-emerald)';
+  }
+  const run = document.getElementById('kpi-units');
+  if (run) {
+    run.textContent = `${running}/${total}`;
+    run.style.color = running < total ? 'var(--color-amber)' : '';
+  }
+  const next = document.getElementById('kpi-min-rul');
+  if (next) {
+    const due = plans.filter(x => x.p.deadlineWall).sort((a, b) => a.p.deadlineWall - b.p.deadlineWall)[0];
+    const down = plans.find(x => x.p.key === 'down');
+    if (down) { next.textContent = `${down.id} now`; next.style.color = 'var(--color-rose)'; }
+    else if (due) { next.textContent = `${wallClock(due.p.deadlineWall)} · ${due.id}`; next.style.color = due.p.color; }
+    else { next.textContent = 'None due'; next.style.color = 'var(--color-emerald)'; }
+  }
+  const partsEl = document.getElementById('kpi-throughput');
+  if (partsEl) partsEl.textContent = parts.toLocaleString('en-US');
 }
 
 /**
@@ -252,8 +247,8 @@ export function renderPipelineFlow(data) {
     const savingsEl = document.getElementById('pipe-savings');
 
     if (partsEl) partsEl.textContent = data.company.total_throughput_parts || 0;
-    if (balEl) balEl.textContent = `${data.company.line_balance_pct}%`;
-    if (savingsEl) savingsEl.textContent = `$${(data.company.downtime_cost_saved_usd || 0).toLocaleString()}`;
+    if (balEl) balEl.textContent = `${data.company.failures_prevented || 0}`;
+    if (savingsEl) savingsEl.textContent = `${(data.company.downtime_avoided_h || 0).toFixed(1)} h`;
   }
 
   // 2. Manufacturing Stages Flow across 10 stages
@@ -308,6 +303,35 @@ export function renderPipelineFlow(data) {
   }
 }
 
+// Per-asset setpoints. Live values (feed derate, power, tool life, run time)
+// are derived from the twin's state in populateDrawer.
+const MACHINE_SPECS = {
+  "CNC-01":   { asset: "TA-CNC-2024-X8", rpm: "14,200 RPM", feed: 3200, feedUnit: "mm/min", coolant: "4.2 bar (18 L/min)", powerKw: 18.4, tool: "T14: 4-Flute Carbide End Mill (Ø12 mm)", lifeTotal: 12, lifeUnit: "hrs" },
+  "CNC-02":   { asset: "TA-CNC-2024-F4", rpm: "24,000 RPM", feed: 4800, feedUnit: "mm/min", coolant: "5.0 bar (22 L/min)", powerKw: 14.2, tool: "T08: Diamond Micro-Ball Finishing (Ø4 mm)", lifeTotal: 8, lifeUnit: "hrs" },
+  "PRESS-01": { asset: "TA-PRS-1000-01", rpm: "28 strokes/min", feed: 120, feedUnit: "mm/s ram", coolant: "Hydraulic 280 bar, ISO VG46", powerKw: 75.0, tool: "DIE-B7: Ti-6Al-4V Bulkhead Cavity Die", lifeTotal: 5000, lifeUnit: "cycles" },
+  "PRESS-02": { asset: "TA-EXT-0500-02", rpm: "18 strokes/min", feed: 45, feedUnit: "mm/s ram", coolant: "Hydraulic 210 bar, ISO VG46", powerKw: 45.0, tool: "EXT-S02: Wing Spar Profile Die", lifeTotal: 3000, lifeUnit: "cycles" },
+  "FURN-01":  { asset: "TA-FRN-2023-V1", rpm: "Vacuum 2.4×10⁻⁵ mbar", feed: 8.5, feedUnit: "°C/min ramp", coolant: "Closed-loop water (2.8 bar)", powerKw: 92.0, tool: "Inconel 718 refractory retort", lifeTotal: 1200, lifeUnit: "thermal cycles" },
+  "ROBOT-01": { asset: "TA-ROB-06AX-01", rpm: "18,000 RPM spindle", feed: 1250, feedUnit: "mm/s TCP", coolant: "Pneumatic mist (6.0 bar)", powerKw: 8.6, tool: "BURR-03: Tungsten Conical Rotary File", lifeTotal: 40, lifeUnit: "hrs" },
+  "LASER-01": { asset: "TA-MTR-LSR-01", rpm: "120 Hz line scan", feed: 0.2, feedUnit: "µm resolution", coolant: "Chilled optics (20.0 °C)", powerKw: 2.8, tool: "OPTIC-D2: Blue Triangulation Head (405 nm)", lifeTotal: 10000, lifeUnit: "hrs" },
+  "CONV-01":  { asset: "TA-ASY-CNV-01", rpm: "Belt 0.85 m/s", feed: 48, feedUnit: "s/pallet takt", coolant: "Air lube (4.0 bar)", powerKw: 5.5, tool: "ESD dual-rail avionics carrier", lifeTotal: 20000, lifeUnit: "hrs" },
+};
+
+function fmtNum(n, digits = 0) {
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function fmtClock(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(Math.floor(s / 3600))}h ${pad(Math.floor((s % 3600) / 60))}m ${pad(s % 60)}s`;
+}
+
+function fmtDuration(seconds) {
+  if (seconds < 90) return `${Math.round(seconds)} s`;
+  if (seconds < 5400) return `${Math.round(seconds / 60)} min`;
+  return `${(seconds / 3600).toFixed(1)} h`;
+}
+
 /**
  * Updates inspection drawer with machine telemetry & SOP recommendations
  */
@@ -338,27 +362,24 @@ export function populateDrawer(machineData) {
   const friendlyType = taxonomy[machineData.machine_id] || "Titan Aerospace Precision Workcell";
   if (typeEl) typeEl.textContent = friendlyType;
 
-  // Status Badge
-  const vib = machineData.vibration_rms || 0;
-  const isVibCritical = vib >= 0.71;
-  const isVibWarning = vib >= 0.45;
+  // Live readings
+  const vib = machineData.vibration_rms != null ? machineData.vibration_rms : 0;
+  const temp = machineData.temperature_c != null ? machineData.temperature_c : (machineData.temperature || 42.0);
+  const wear = machineData.wear_level || 0;
+  const zone = machineData.iso_zone || isoZone(vib);
+  const zoneInfo = ISO_ZONES[zone];
+  const rawStatus = (machineData.status || 'healthy').toLowerCase();
 
-  let computedStatus = (machineData.status || 'HEALTHY').toUpperCase();
-  if (computedStatus === 'HEALTHY' || computedStatus === 'NOMINAL') {
-    if (isVibCritical) computedStatus = 'CRITICAL (ZONE D)';
-    else if (isVibWarning) computedStatus = 'WARNING (ZONE C)';
-  }
-
+  // Status badge: the twin's own status, plus the ISO zone it sits in.
+  const plan = machineData.plan || PLAN.healthy;
   const statusEl = document.getElementById('drawer-m-status');
   if (statusEl) {
-    statusEl.textContent = computedStatus;
-    statusEl.style.color =
-      (computedStatus.includes('CRITICAL') || computedStatus === 'FAILED') ? 'var(--color-rose)' :
-      (computedStatus.includes('WARNING') || computedStatus === 'DEGRADING') ? 'var(--color-amber)' : 'var(--color-emerald)';
+    statusEl.textContent = machineData.forecast ? `${plan.label} (forecast)` : plan.label;
+    statusEl.style.color = plan.color;
   }
+  renderVerdict(machineData, plan, zone, vib);
 
   // Wear Bar
-  const wear = machineData.wear_level || 0;
   const wearPct = Math.min(100, Math.round(wear * 100));
   const wearValEl = document.getElementById('drawer-wear-val');
   const wearFillEl = document.getElementById('drawer-wear-fill');
@@ -370,14 +391,24 @@ export function populateDrawer(machineData) {
       wearPct > 40 ? 'var(--color-amber)' : 'var(--color-emerald)';
   }
 
+  // Cycle time stretches with wear (friction and slop), exactly as the simulator models it.
+  const nominalCycle = machineData.nominal_cycle_time_s || 10;
+  const cycleTime = nominalCycle * (1 + 0.4 * wear);
+
   // TCN RUL
-  const rulCycles = machineData.predicted_rul_cycles != null ? Math.round(machineData.predicted_rul_cycles) : (machineData.rul_cycles != null ? machineData.rul_cycles : '--');
+  const rul = machineData.predicted_rul_cycles != null ? machineData.predicted_rul_cycles : machineData.rul_cycles;
   const rulCyclesEl = document.getElementById('drawer-rul-cycles');
   const rulHoursEl = document.getElementById('drawer-rul-hours');
-  if (rulCyclesEl) rulCyclesEl.textContent = rulCycles;
+  if (rulCyclesEl) rulCyclesEl.textContent = formatRul(rul);
   if (rulHoursEl) {
-    const hours = rulCycles !== '--' ? (rulCycles * 0.45).toFixed(1) : '--';
-    rulHoursEl.textContent = `≈ ${hours} operating hrs (15% safety buffer applied)`;
+    if (rul == null) {
+      rulHoursEl.textContent = '--';
+    } else if (rul >= RUL_PLATEAU) {
+      rulHoursEl.textContent = 'No degradation trend yet (healthy life is capped at 100 cycles in training)';
+    } else {
+      const safe = Math.max(0, rul * 0.85);
+      rulHoursEl.textContent = `Plan within ${Math.round(safe)} cycles (15% safety margin) ≈ ${fmtDuration(safe * cycleTime)} at ${cycleTime.toFixed(1)} s/cycle`;
+    }
   }
 
   // Telemetry Cells
@@ -386,169 +417,47 @@ export function populateDrawer(machineData) {
   const loadEl = document.getElementById('drawer-load-val');
   const isoEl = document.getElementById('drawer-iso-val');
 
-  const liveVib = machineData.vibration_rms != null ? machineData.vibration_rms : 0.15;
-  const temp = machineData.temperature_c != null ? machineData.temperature_c : (machineData.temperature || 42.0);
-
-  if (vibEl) vibEl.textContent = `${liveVib.toFixed(3)} mm/s`;
+  if (vibEl) vibEl.textContent = `${vib.toFixed(2)} mm/s`;
   if (tempEl) tempEl.textContent = `${temp.toFixed(1)} °C`;
-  if (loadEl) loadEl.textContent = machineData.load_factor ? `${(machineData.load_factor * 100).toFixed(0)}%` : '85%';
-
-  // ISO 10816 Vibration Severity Classification
+  if (loadEl) {
+    loadEl.textContent = `${cycleTime.toFixed(1)} s`;
+    loadEl.title = `Nominal ${nominalCycle.toFixed(1)} s; wear stretches each cycle by up to 40%`;
+  }
   if (isoEl) {
-    if (vib < 0.28) {
-      isoEl.textContent = "Zone A (Good)";
-      isoEl.style.color = "var(--color-emerald)";
-    } else if (vib < 0.50) {
-      isoEl.textContent = "Zone B (Acceptable)";
-      isoEl.style.color = "var(--color-cyan)";
-    } else if (vib < 0.75) {
-      isoEl.textContent = "Zone C (Warning)";
-      isoEl.style.color = "var(--color-amber)";
-    } else {
-      isoEl.textContent = "Zone D (Critical)";
-      isoEl.style.color = "var(--color-rose)";
-    }
+    isoEl.textContent = `Zone ${zone} (${zoneInfo.label})`;
+    isoEl.style.color = zoneInfo.color;
   }
 
-  // Populate Detailed Machine State & Tooling Specs
-  const machineSpecs = {
-    "CNC-01": {
-      asset: "TA-CNC-2024-X8",
-      rpm: "14,200 RPM",
-      feed: "3,200 mm/min",
-      coolant: "4.2 bar (18 L/m)",
-      power: "18.4 kW",
-      tool: "T14: 4-Flute Carbide End Mill (Ø12mm)",
-      toolLife: "4.8 hrs / 12 hrs",
-      runTime: "06h 42m 18s"
-    },
-    "CNC-02": {
-      asset: "TA-CNC-2024-F4",
-      rpm: "24,000 RPM",
-      feed: "4,800 mm/min",
-      coolant: "5.0 bar (22 L/m)",
-      power: "14.2 kW",
-      tool: "T08: Diamond Micro-Ball Finishing (Ø4mm)",
-      toolLife: "2.1 hrs / 8 hrs",
-      runTime: "07h 15m 04s"
-    },
-    "PRESS-01": {
-      asset: "TA-PRS-1000-01",
-      rpm: "28 SPM (Strokes/min)",
-      feed: "120 mm/s ram",
-      coolant: "Hydr: 280 bar ISO-VG46",
-      power: "75.0 kW",
-      tool: "DIE-B7: Ti-6Al-4V Bulkhead Cavity Die",
-      toolLife: "1,420 cycles / 5,000",
-      runTime: "05h 10m 42s"
-    },
-    "PRESS-02": {
-      asset: "TA-EXT-0500-02",
-      rpm: "18 SPM (Extrusion)",
-      feed: "45 mm/s ram",
-      coolant: "Hydr: 210 bar ISO-VG46",
-      power: "45.0 kW",
-      tool: "EXT-S02: Wing Spar Profile Die",
-      toolLife: "890 cycles / 3,000",
-      runTime: "04h 55m 20s"
-    },
-    "FURN-01": {
-      asset: "TA-FRN-2023-V1",
-      rpm: "Vac: 2.4×10⁻⁵ mbar",
-      feed: "Heat: 8.5 °C/min",
-      coolant: "Closed Loop H₂O (2.8 bar)",
-      power: "92.0 kW",
-      tool: "CHAMBER: Inconel 718 Refractory Retort",
-      toolLife: "420 thermal cycles / 1,200",
-      runTime: "09h 12m 30s"
-    },
-    "ROBOT-01": {
-      asset: "TA-ROB-06AX-01",
-      rpm: "18,000 RPM Spindle",
-      feed: "TCP Vel: 1,250 mm/s",
-      coolant: "Pneumatic Mist (6.0 bar)",
-      power: "8.6 kW",
-      tool: "BURR-03: Tungsten Conical Rotary File",
-      toolLife: "18.4 hrs / 40 hrs",
-      runTime: "06h 04m 15s"
-    },
-    "LASER-01": {
-      asset: "TA-MTR-LSR-01",
-      rpm: "Scan: 120 Hz Line",
-      feed: "Resolution: 0.2 µm",
-      coolant: "Chilled Optics (20.0 °C)",
-      power: "2.8 kW",
-      tool: "OPTIC-D2: Blue Triangulation Head (405nm)",
-      toolLife: "3,100 hrs / 10,000 hrs",
-      runTime: "08h 30m 00s"
-    },
-    "CONV-01": {
-      asset: "TA-ASY-CNV-01",
-      rpm: "Belt: 0.85 m/s",
-      feed: "Takt: 48 sec/pallet",
-      coolant: "Air Lube (4.0 bar)",
-      power: "5.5 kW",
-      tool: "FIXTURE: ESD Dual-Rail Avionics Carrier",
-      toolLife: "Continuous Modular",
-      runTime: "07h 48m 12s"
-    }
-  };
+  // Machine State & Tooling: fixed setpoints per asset, live values derived from the twin.
+  const spec = MACHINE_SPECS[machineData.machine_id] || MACHINE_SPECS["CNC-01"];
+  const derated = rawStatus === 'warning' || rawStatus === 'critical';
+  const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  setText('drawer-asset-tag', `ASSET # ${spec.asset}`);
+  setText('drawer-rpm-val', spec.rpm);
+  setText('drawer-feed-val', derated
+    ? `${fmtNum(spec.feed * 0.7)} ${spec.feedUnit} (−30%)`
+    : `${fmtNum(spec.feed)} ${spec.feedUnit}`);
+  setText('drawer-coolant-val', spec.coolant);
+  // Worn bearings and dull tools draw more power for the same cut.
+  setText('drawer-power-val', `${(spec.powerKw * (1 + 0.25 * wear)).toFixed(1)} kW`);
+  setText('drawer-tool-val', spec.tool);
+  setText('drawer-toollife-val', `${fmtNum(Math.min(1, wear) * spec.lifeTotal, spec.lifeTotal < 100 ? 1 : 0)} / ${fmtNum(spec.lifeTotal)} ${spec.lifeUnit}`);
+  setText('drawer-runtime-val', fmtClock(machineData.sim_time_s || 0));
 
-  const spec = machineSpecs[machineData.machine_id] || machineSpecs["CNC-01"];
-  const assetTagEl = document.getElementById('drawer-asset-tag');
-  const rpmEl = document.getElementById('drawer-rpm-val');
-  const feedEl = document.getElementById('drawer-feed-val');
-  const coolantEl = document.getElementById('drawer-coolant-val');
-  const powerEl = document.getElementById('drawer-power-val');
-  const toolEl = document.getElementById('drawer-tool-val');
-  const toolLifeEl = document.getElementById('drawer-toollife-val');
-  const runTimeEl = document.getElementById('drawer-runtime-val');
-
-  if (assetTagEl) assetTagEl.textContent = `ASSET # ${spec.asset}`;
-  if (rpmEl) rpmEl.textContent = spec.rpm;
-  if (feedEl) feedEl.textContent = spec.feed;
-  if (coolantEl) coolantEl.textContent = spec.coolant;
-  if (powerEl) powerEl.textContent = spec.power;
-  if (toolEl) toolEl.textContent = spec.tool;
-  if (toolLifeEl) toolLifeEl.textContent = spec.toolLife;
-  if (runTimeEl) runTimeEl.textContent = spec.runTime;
-
-  // Harmonic Fault Frequencies (FFT)
-  const fft1xEl = document.getElementById('drawer-fft-1x');
-  const fftBpfoEl = document.getElementById('drawer-fft-bpfo');
-  const fftBpfiEl = document.getElementById('drawer-fft-bpfi');
-  const fftBsfEl = document.getElementById('drawer-fft-bsf');
-
-  if (fft1xEl && fftBpfoEl && fftBpfiEl && fftBsfEl) {
-    if (vib >= 0.75) {
-      fft1xEl.textContent = "Elevated (0.42 mm/s)";
-      fft1xEl.style.color = "var(--color-rose)";
-      fftBpfoEl.textContent = "Harmonic Spike (0.58 mm/s)";
-      fftBpfoEl.style.color = "var(--color-rose)";
-      fftBpfiEl.textContent = "0.14 mm/s";
-      fftBpfiEl.style.color = "var(--color-amber)";
-      fftBsfEl.textContent = "0.08 mm/s";
-      fftBsfEl.style.color = "var(--color-amber)";
-    } else if (vib >= 0.45) {
-      fft1xEl.textContent = "Nominal";
-      fft1xEl.style.color = "var(--color-emerald)";
-      fftBpfoEl.textContent = "0.18 mm/s (Alert)";
-      fftBpfoEl.style.color = "var(--color-amber)";
-      fftBpfiEl.textContent = "0.06 mm/s";
-      fftBpfiEl.style.color = "var(--color-emerald)";
-      fftBsfEl.textContent = "0.04 mm/s";
-      fftBsfEl.style.color = "var(--color-emerald)";
-    } else {
-      fft1xEl.textContent = "Nominal";
-      fft1xEl.style.color = "var(--color-emerald)";
-      fftBpfoEl.textContent = "0.04 mm/s";
-      fftBpfoEl.style.color = "var(--color-emerald)";
-      fftBpfiEl.textContent = "0.03 mm/s";
-      fftBpfiEl.style.color = "var(--color-emerald)";
-      fftBsfEl.textContent = "0.02 mm/s";
-      fftBsfEl.style.color = "var(--color-emerald)";
-    }
-  }
+  // Bearing defect bands, modeled from wear: they rise as the bearing degrades.
+  const bands = [
+    ['drawer-fft-1x', 0.45, 0.0],
+    ['drawer-fft-bpfo', 0.06, 0.55],
+    ['drawer-fft-bpfi', 0.04, 0.22],
+    ['drawer-fft-bsf', 0.03, 0.12],
+  ];
+  bands.forEach(([id, base, growth]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const amp = vib * (base + growth * wear * wear);
+    el.textContent = `${amp.toFixed(2)} mm/s`;
+    el.style.color = amp >= 1.2 ? 'var(--color-rose)' : amp >= 0.5 ? 'var(--color-amber)' : 'var(--color-emerald)';
+  });
 
   // Push samples to dual oscilloscope buffer
   pushDualSample(vib, temp);
@@ -556,26 +465,26 @@ export function populateDrawer(machineData) {
   // SOP Diagnosis Card
   const sopBox = document.getElementById('drawer-sop-content');
   if (sopBox) {
-    const isDegraded = computedStatus.includes('CRITICAL') || computedStatus.includes('WARNING') || computedStatus === 'FAILED' || computedStatus === 'DEGRADING';
+    const isDegraded = ['warning', 'critical', 'failed'].includes(rawStatus) || zone === 'C' || zone === 'D';
     if (isDegraded) {
       sopBox.innerHTML = `
         <div class="sop-title">⚠️ SOP-AERO-04: High-Harmonic Vibration Mitigation</div>
-        <div class="sop-cause">Harmonic vibration peaks detected along rotational axis. Risk of micro-fractures in aerospace components.</div>
+        <div class="sop-cause">Vibration ${vib.toFixed(2)} mm/s is in ISO 10816-3 zone ${zone} (${zoneInfo.label}). Bearing defect bands are rising.</div>
         <ul class="sop-actions">
-          <li><input type="checkbox" checked disabled> Immediate 30% feed-rate derating applied by copilot</li>
-          <li><input type="checkbox" checked disabled> Lubrication pressure verification: Nominal 4.2 bar</li>
-          <li><input type="checkbox"> Inspect spindle runout with dial gauge (&lt; 0.003mm)</li>
-          <li><input type="checkbox"> Execute automated wear reset & tooling swap</li>
+          <li><input type="checkbox" checked disabled> 30% feed-rate derate applied</li>
+          <li><input type="checkbox" checked disabled> Coolant / lubrication supply verified: ${spec.coolant}</li>
+          <li><input type="checkbox"> Inspect spindle runout with dial gauge (&lt; 0.003 mm)</li>
+          <li><input type="checkbox"> Replace bearing set and reset wear</li>
         </ul>
       `;
     } else {
       sopBox.innerHTML = `
-        <div class="sop-title" style="color: var(--color-emerald)">✓ SOP-AERO-01: Standard Aerospace Operating Protocol</div>
-        <div class="sop-cause">Telemetry within ISO 10816 Zone A tolerance limits. Tooling profile nominal.</div>
+        <div class="sop-title" style="color: var(--color-emerald)">✓ SOP-AERO-01: Standard Operating Protocol</div>
+        <div class="sop-cause">Vibration ${vib.toFixed(2)} mm/s is in ISO 10816-3 zone ${zone} (${zoneInfo.label}). No action needed.</div>
         <ul class="sop-actions">
-          <li><input type="checkbox" checked disabled> High-frequency telemetry stream operational</li>
-          <li><input type="checkbox" checked disabled> Thermal and vibration boundaries verified within nominal tolerance</li>
-          <li><input type="checkbox"> Scheduled visual inspection at shift changeover</li>
+          <li><input type="checkbox" checked disabled> Telemetry stream live</li>
+          <li><input type="checkbox" checked disabled> Vibration and temperature inside limits</li>
+          <li><input type="checkbox"> Visual inspection at shift changeover</li>
         </ul>
       `;
     }
@@ -583,6 +492,98 @@ export function populateDrawer(machineData) {
 
   // Open drawer
   drawer.classList.add('open');
+}
+
+/* ---------------- Verdict: answer first ---------------- */
+
+function verdictText(m, p) {
+  const part = p.cause.part;
+  const at = (ms) => `${fmtDay(ms)}${wallClock(ms)}`;
+  switch (p.key) {
+    case 'down': return `Broken down: the ${part} failed and the line behind it is waiting. Repair it now.`;
+    case 'service': return `Being serviced (${p.cause.fix.toLowerCase()}).${p.untilWall ? ` Back in production around ${wallClock(p.untilWall)}.` : ''}`;
+    case 'now': return `The ${part} is close to failing. Service it${p.deadlineWall ? ` before ${at(p.deadlineWall)}` : ' now'} to avoid a breakdown.`;
+    case 'soon': return `The ${part} is wearing out. Plan a service this shift${p.deadlineWall ? `, before ${at(p.deadlineWall)}` : ''}.`;
+    case 'watch': return `Early wear on the ${part}. Nothing to do yet; the copilot will flag it when a service is due.`;
+    default: return 'Running normally. No wear trend, so there is nothing to plan.';
+  }
+}
+
+function renderVerdict(m, p, zone, vib) {
+  const box = document.getElementById('drawer-verdict');
+  if (!box) return;
+  box.dataset.plan = p.key;
+  box.classList.toggle('is-forecast', !!m.forecast);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+  set('verdict-label', p.label);
+  let when = '';
+  if (p.deadlineSeconds != null && (p.key === 'now' || p.key === 'soon')) when = ` · by ${fmtDay(p.deadlineWall)}${wallClock(p.deadlineWall)} <span class="muted">(in ${fmtIn(p.deadlineSeconds)})</span>`;
+  else if (p.key === 'service' && p.untilWall) when = ` · back ${wallClock(p.untilWall)}`;
+  set('verdict-when', when);
+  set('verdict-text', verdictText(m, p));
+
+  // Confidence: show the model's real error instead of a falsely precise number.
+  let conf = '';
+  if (p.key === 'service') {
+    conf = '';
+  } else if (p.trending && p.rul != null) {
+    const err = p.mae != null ? ` ± ${Math.round(p.mae)}` : '';
+    conf = `Predicted remaining life <b>${Math.round(p.rul)}${err} cycles</b>`;
+    if (p.failLow && p.failHigh) conf += ` · likely failure between <b>${wallClock(p.failLow)}</b> and <b>${wallClock(p.failHigh)}</b>`;
+    if (p.mae != null) conf += `<span class="muted"> (± is the model's typical error on unseen data)</span>`;
+  } else if (p.key !== 'down' && p.key !== 'service') {
+    conf = 'No degradation trend in the last 20 cycles.';
+  }
+  set('verdict-conf', conf);
+
+  const showFix = ['down', 'now', 'soon', 'watch'].includes(p.key);
+  const mins = Math.round((m.service_duration_s || 600) / 60);
+  set('verdict-fix', showFix ? `<b>Fix:</b> ${p.cause.fix} · ${p.cause.sop} · ~${mins} min planned stop` : '');
+
+  const approve = document.getElementById('btn-approve');
+  const snooze = document.getElementById('btn-snooze');
+  const actionable = !m.forecast && ['down', 'now', 'soon', 'watch'].includes(p.key);
+  if (approve) {
+    approve.hidden = !actionable;
+    approve.textContent = p.key === 'down' ? 'Approve repair' : 'Approve work order';
+    approve.classList.toggle('secondary', p.key === 'watch');
+  }
+  if (snooze) snooze.hidden = !actionable || p.key === 'down';
+
+  // Trend sparkline with ISO zone bands
+  const hist = m.forecast ? [] : getHistory(m.machine_id);
+  const svgEl = document.getElementById('verdict-spark');
+  const n = document.getElementById('verdict-n');
+  if (n) n.textContent = hist.length;
+  if (svgEl) svgEl.innerHTML = sparkline(hist.map(h => h.vib));
+  const trendEl = document.getElementById('verdict-trend');
+  if (trendEl) {
+    if (hist.length >= 10) {
+      const a = hist.slice(-10, -5).reduce((x, h) => x + h.vib, 0) / 5;
+      const b = hist.slice(-5).reduce((x, h) => x + h.vib, 0) / 5;
+      const d = b - a;
+      trendEl.textContent = `now ${vib.toFixed(2)} mm/s · zone ${zone} · ${Math.abs(d) < 0.03 ? 'steady' : d > 0 ? 'rising' : 'falling'}`;
+    } else trendEl.textContent = `now ${vib.toFixed(2)} mm/s · zone ${zone}`;
+  }
+}
+
+function sparkline(values) {
+  const W = 320, H = 74, MAXV = 6;
+  const y = v => H - (Math.min(v, MAXV) / MAXV) * H;
+  const [ab, bc, cd] = ISO_ZONE_LIMITS;
+  const bands = [
+    [0, ab, 'var(--color-emerald)'], [ab, bc, 'var(--color-cyan)'],
+    [bc, cd, 'var(--color-amber)'], [cd, MAXV, 'var(--color-rose)'],
+  ].map(([lo, hi, c]) => `<rect x="0" y="${y(hi)}" width="${W}" height="${y(lo) - y(hi)}" fill="${c}" opacity="0.10"/>`).join('');
+  const labels = [['A', ab / 2], ['B', (ab + bc) / 2], ['C', (bc + cd) / 2], ['D', (cd + MAXV) / 2]]
+    .map(([t, v]) => `<text x="${W - 4}" y="${y(v) + 3}" text-anchor="end" class="spark-zone">${t}</text>`).join('');
+  if (values.length < 2) return bands + labels + `<text x="8" y="${H / 2}" class="spark-empty">Collecting readings…</text>`;
+  const step = W / (values.length - 1);
+  const pts = values.map((v, i) => `${(i * step).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const last = values[values.length - 1];
+  return bands + labels + `<polyline points="${pts}" fill="none" stroke="var(--text-main)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+    <circle cx="${W - 1}" cy="${y(last)}" r="3" fill="var(--text-main)"/>`;
 }
 
 export function closeDrawer() {

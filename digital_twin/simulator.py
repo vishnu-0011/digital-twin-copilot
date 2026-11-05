@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import random
 import math
+from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
 
@@ -126,7 +127,7 @@ class MachineTwin:
         self.cycle_count = 0
         self.throughput_units = 0
         self.status = MachineStatus.HEALTHY
-        self.under_maintenance_until: Optional[float] = None
+        self.under_maintenance_until: Optional[float] = None  # sim time a service ends
 
         self.action = env.process(self.run())
 
@@ -155,8 +156,9 @@ class MachineTwin:
             return MachineStatus.DEGRADING
         return MachineStatus.HEALTHY
 
-    def _emit_state(self):
-        self.status = self._status_from_wear()
+    def _emit_state(self, keep_status: bool = False):
+        if not keep_status:
+            self.status = self._status_from_wear()
         state = MachineState(
             machine_id=self.config.machine_id,
             timestamp=self.start_wall_clock + timedelta(seconds=self.env.now),
@@ -172,15 +174,45 @@ class MachineTwin:
             self.on_state(state)
         return state
 
+    # -- accelerated aging, used for live demos -----------------------------
+    def age_to(self, target_wear: float, max_cycles: int = 5000):
+        """Fast-forwards this machine's own wear process until it reaches
+        `target_wear`, emitting a reading for every cycle on the way.
+
+        Jumping the wear level directly would leave a single huge vibration
+        step in the history, which the RUL model has never seen and reads as
+        imminent failure. Aging cycle by cycle produces the same trajectory a
+        real degrading machine would, so every model downstream sees
+        realistic input. Simulation time does not advance.
+        """
+        target = min(1.0, max(0.0, float(target_wear)))
+        if target <= self.wear_level:
+            self.wear_level = target
+            return self._emit_state()
+        state = None
+        for _ in range(max_cycles):
+            if self.wear_level >= target:
+                break
+            self.cycle_count += 1
+            self.throughput_units += 1
+            step = max(self.config.wear_rate_mean * 0.25,
+                       self.rng.gauss(self.config.wear_rate_mean, self.config.wear_rate_std))
+            self.wear_level = min(target, self.wear_level + step)
+            state = self._emit_state()
+        return state
+
     # -- maintenance hook, callable by agents / scheduler -----------------
     def perform_maintenance(self):
         """Resets wear to 0 and marks machine as in maintenance for its
         configured duration. Designed to be called by the Scheduler Agent's
         tool, or directly in a what-if simulation."""
         self.status = MachineStatus.IN_MAINTENANCE
+        self.under_maintenance_until = self.env.now + self.config.maintenance_duration_s
+        self._emit_state(keep_status=True)  # make "in service" visible right away
         yield self.env.timeout(self.config.maintenance_duration_s)
         self.wear_level = 0.0
         self.status = MachineStatus.HEALTHY
+        self.under_maintenance_until = None
 
     # -- main process loop --------------------------------------------------
     def run(self):
@@ -192,6 +224,7 @@ class MachineTwin:
                     yield self.env.timeout(self.config.nominal_cycle_time_s)
                 except simpy.Interrupt:
                     yield from self.perform_maintenance()
+                    self._emit_state()
                 continue
 
             # cycle time creeps up slightly as wear increases (friction/slop)
@@ -223,12 +256,29 @@ class FactoryTwin:
       - schedule_maintenance(machine_id): agent-callable tool
     """
 
-    def __init__(self, fleet: Optional[list[MachineConfig]] = None, seed: int = 42):
+    RECENT_PER_MACHINE = 240
+
+    def __init__(
+        self,
+        fleet: Optional[list[MachineConfig]] = None,
+        seed: int = 42,
+        max_history: Optional[int] = None,
+    ):
         self.env = simpy.Environment()
         self.rng = random.Random(seed)
         self.start_wall_clock = datetime.now(timezone.utc)
-        self.history: list[MachineState] = []
+        # Full history for training runs; a long-running live plant caps it
+        # (max_history) so memory stays flat.
+        self.history = deque(maxlen=max_history) if max_history else []
+        # Short per-machine window: all that live inference and charts need.
+        self.recent: dict[str, deque] = {}
         self.latest_state: dict[str, MachineState] = {}
+        # Optional hook, called (machine_id, old_status, new_status) when a
+        # machine's status changes.
+        self.on_transition: Optional[Callable[[str, MachineStatus, MachineStatus], None]] = None
+        # Optional hook, called with a machine_id just before an agent-scheduled
+        # service starts (the API uses it to count prevented failures).
+        self.on_service: Optional[Callable[[str], None]] = None
 
         configs = fleet or DEFAULT_FLEET
         self.machines: dict[str, MachineTwin] = {
@@ -242,7 +292,11 @@ class FactoryTwin:
 
     def _record_state(self, state: MachineState):
         self.history.append(state)
+        prev = self.latest_state.get(state.machine_id)
         self.latest_state[state.machine_id] = state
+        self.recent.setdefault(state.machine_id, deque(maxlen=self.RECENT_PER_MACHINE)).append(state)
+        if self.on_transition and prev is not None and prev.status != state.status:
+            self.on_transition(state.machine_id, prev.status, state.status)
 
     def run(self, duration_s: float):
         self.env.run(until=self.env.now + duration_s)
@@ -256,6 +310,10 @@ class FactoryTwin:
         twin = self.machines.get(machine_id)
         if not twin:
             return False
+        if twin.status == MachineStatus.IN_MAINTENANCE:
+            return False  # already being serviced; a second interrupt would crash it
+        if self.on_service:
+            self.on_service(machine_id)
         twin.action.interrupt("maintenance_requested")
         return True
 
@@ -263,6 +321,19 @@ class FactoryTwin:
         """Convenience export for the ML pipeline (pandas DataFrame)."""
         import pandas as pd
         return pd.DataFrame([s.to_dict() for s in self.history])
+
+    def recent_dataframe(self, per_machine: int = 30):
+        """Last `per_machine` readings of every machine. Live inference only
+        needs a short window, so this stays cheap however long the plant runs."""
+        import pandas as pd
+        rows = []
+        for q in self.recent.values():
+            rows.extend(s.to_dict() for s in list(q)[-per_machine:])
+        return pd.DataFrame(rows)
+
+    def recent_readings(self, machine_id: str, n: int = 60) -> list[dict]:
+        q = self.recent.get(machine_id)
+        return [s.to_dict() for s in list(q)[-n:]] if q else []
 
 
 if __name__ == "__main__":

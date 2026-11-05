@@ -18,7 +18,8 @@ import {
   getInteriorMode,
   registerModeChangeHandler,
   pickMachine,
-  getMachineScreenPositions
+  getMachineScreenPositions,
+  setViewInset
 } from './scene.js';
 
 import {
@@ -41,9 +42,15 @@ import {
   isMuted
 } from './audio.js';
 
-import { initTourUI } from './tour.js';
+import { initTourUI, startGuidedTour } from './tour.js';
+import { initForecastUI, isForecastActive, openForecast } from './forecast.js';
+import { planStatus } from './plan.js';
+import { recordFleet, ensureHistory } from './history.js';
+import { initOps, updateOps, getView, toast, plantChanged } from './ops.js';
+import { initChrome } from './chrome.js';
 
 let fleetCache = [];
+let plantInfo = null;   // plant clock, speed, impact, model error (from the stream)
 let pollIntervalId = null;
 let telemetryWs = null;
 let isWsConnected = false;
@@ -99,18 +106,41 @@ function updateWsBadge(status) {
   }
 }
 
-function applyTelemetryData(machinesList, pipelineData) {
+/** Adds the plain-language status (and clock-time deadline) to each machine. */
+function withPlans(machinesList) {
+  const speed = (plantInfo && plantInfo.speed) || 1;
+  const mae = plantInfo ? plantInfo.rul_mae_cycles : null;
+  return machinesList.map(m => {
+    const wallNow = Date.now() + ((m.forecast_offset_s || 0) / speed) * 1000;
+    return { ...m, plan: planStatus(m, { speed, wallNow, mae }) };
+  });
+}
+
+/** Draws a fleet snapshot (live or forecast) into the scene, KPIs and drawer. */
+function renderFleet(machinesList) {
+  const planned = withPlans(machinesList);
+  updateMachineStates(planned);
+  updateTopKPIs(planned);
+
+  const currentSelected = getSelectedMachineId();
+  if (currentSelected) {
+    const selectedObj = planned.find(m => m.machine_id === currentSelected);
+    if (selectedObj) {
+      populateDrawer(selectedObj);
+    }
+  }
+  return planned;
+}
+
+function applyTelemetryData(machinesList, pipelineData, plant = null, log = null) {
+  if (plant) plantInfo = plant;
   if (machinesList && Array.isArray(machinesList)) {
     fleetCache = machinesList;
-    updateMachineStates(machinesList);
-    updateTopKPIs(machinesList);
-
-    const currentSelected = getSelectedMachineId();
-    if (currentSelected) {
-      const selectedObj = machinesList.find(m => m.machine_id === currentSelected);
-      if (selectedObj) {
-        populateDrawer(selectedObj);
-      }
+    recordFleet(machinesList);
+    // While scrubbing the forecast, keep the live data cached but off screen.
+    if (!isForecastActive()) {
+      const planned = renderFleet(machinesList);
+      updateOps(planned, plantInfo, log);
     }
   }
 
@@ -162,7 +192,7 @@ function initWebSocketClient() {
     try {
       const data = JSON.parse(event.data);
       if (data.type === 'telemetry') {
-        applyTelemetryData(data.machines, data.pipeline);
+        applyTelemetryData(data.machines, data.pipeline, data.plant, data.log);
       } else if (data.type === 'scan_result') {
         processScanOutcome(data.result);
       } else if (data.type === 'action_result') {
@@ -171,6 +201,9 @@ function initWebSocketClient() {
         } else if (data.action === 'repair' && data.status === 'ok') {
           playRepairSuccess();
           addLogMessage(`✓ Maintenance successful on ${data.machine_id}. Tool wear reset.`, "SUCCESS");
+        } else if (data.action === 'work_order') {
+          if (data.status === 'noop') toast(`<b>${data.machine_id}</b> is already in service.`, 'info');
+          else if (data.status !== 'ok') toast(`Could not approve the work order: ${data.error || data.message || 'unknown error'}`, 'alert');
         } else if (data.action === 'reset' && data.status === 'ok') {
           playRepairSuccess();
           addLogMessage("Shift reset complete via WebSocket. All workcells nominal.", "SUCCESS");
@@ -273,6 +306,24 @@ function startApp() {
     console.error("Telemetry initialization error:", err);
   }
 
+  // Keep the 3D view centred in the area not covered by the side panels.
+  const syncInset = () => {
+    const body = document.body;
+    if (body.classList.contains('tour-mode') || window.innerWidth <= 900) { setViewInset(0, 0); return; }
+    const panel = document.getElementById('ops-panel');
+    const drawer = document.getElementById('machine-drawer');
+    const panelOpen = panel && !body.classList.contains('ops-collapsed') && !body.classList.contains('forecast-mode');
+    const left = panelOpen ? panel.getBoundingClientRect().right : 0;
+    const right = drawer && drawer.classList.contains('open') ? window.innerWidth - drawer.getBoundingClientRect().left : 0;
+    setViewInset(left, right);
+  };
+  const insetObserver = new MutationObserver(() => requestAnimationFrame(syncInset));
+  insetObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  const drawerEl = document.getElementById('machine-drawer');
+  if (drawerEl) insetObserver.observe(drawerEl, { attributes: true, attributeFilter: ['class'] });
+  window.addEventListener('resize', syncInset);
+  setTimeout(syncInset, 50);
+
   // 5. Keep floating badges synchronized on each animation tick
   function syncBadges() {
     requestAnimationFrame(syncBadges);
@@ -285,6 +336,14 @@ function startApp() {
   // 6. Initialize Guided Presentation Tour UI
   try {
     initTourUI({ selectMachine, dispatchAction });
+    initForecastUI({ renderFleet, getLiveFleet: () => fleetCache, selectMachine });
+    initOps({ dispatch: dispatchAction, selectMachine, openForecast: () => openForecast(), getSelected: getSelectedMachineId });
+    initChrome({
+      startTour: (kind) => startGuidedTour(0, { quick: kind === 'quick' }),
+      dispatch: dispatchAction,
+      toast,
+      plantChanged,
+    });
   } catch (err) {
     console.error("Tour UI initialization error:", err);
   }
@@ -368,6 +427,7 @@ function setupControls(canvasContainer) {
       playClick();
       stepBtn.disabled = true;
       addLogMessage("Stepping physical twin +1800s forward...", "TWIN");
+      plantChanged();
 
       if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
         telemetryWs.send(JSON.stringify({ action: "step", duration_s: 1800 }));
@@ -397,6 +457,7 @@ function setupControls(canvasContainer) {
       playClick();
       resetFleetBtn.disabled = true;
       addLogMessage("Resetting shift: Restoring all workcells to nominal status...", "SHIFT");
+      plantChanged();
 
       if (isWsConnected && telemetryWs && telemetryWs.readyState === WebSocket.OPEN) {
         telemetryWs.send(JSON.stringify({ action: "reset" }));
@@ -433,10 +494,10 @@ function setupControls(canvasContainer) {
   // Audio toggle button (default muted)
   const audioBtn = document.getElementById('btn-audio');
   if (audioBtn) {
-    audioBtn.textContent = isMuted() ? "🔇 Audio Off" : "🔊 Audio On";
+    audioBtn.textContent = isMuted() ? "🔇 Sound off" : "🔊 Sound on";
     audioBtn.addEventListener('click', () => {
       const muted = toggleMute();
-      audioBtn.textContent = muted ? "🔇 Audio Off" : "🔊 Audio On";
+      audioBtn.textContent = muted ? "🔇 Sound off" : "🔊 Sound on";
       if (!muted) playClick();
     });
   }
@@ -504,7 +565,9 @@ function setupControls(canvasContainer) {
     setSceneTheme(initialTheme);
   }
 
-  const initialView = urlParams.get('view');
+  // Open on the factory floor so the plant's state is visible at once
+  // (the campus is one click away in the view bar).
+  const initialView = urlParams.get('view') || (urlParams.has('tour') ? null : 'global');
   const initialMachine = urlParams.get('machine');
   const isSnap = urlParams.get('snap') === 'true' || urlParams.has('view');
   if (initialView) {
@@ -548,9 +611,16 @@ export function selectMachine(machineId, immediate = false) {
     b.classList.toggle('active', b.getAttribute('data-preset') === preset);
   });
 
-  const machineData = fleetCache.find(m => m.machine_id === machineId);
+  const raw = fleetCache.find(m => m.machine_id === machineId);
+  const machineData = raw ? withPlans([raw])[0] : null;
   if (machineData) {
     populateDrawer(machineData);
+    ensureHistory(machineId, () => {
+      if (getSelectedMachineId() !== machineId) return;
+      const latest = fleetCache.find(m => m.machine_id === machineId);
+      if (latest && !isForecastActive()) populateDrawer(withPlans([latest])[0]);
+    });
+    if (getView() === 'technician') document.querySelector('.drawer-tab[data-tab="sop"]')?.click();
     addLogMessage(`Inspecting workcell ${machineId} (${machineData.type || 'CNC'}).`, "SELECT");
   } else {
     populateDrawer({ machine_id: machineId, status: "HEALTHY", wear_level: 0.1, rul_cycles: 150 });
@@ -574,7 +644,7 @@ async function fetchFleetData() {
 
     const data = await res.json();
     const machinesList = Array.isArray(data) ? data : (data.machines || []);
-    applyTelemetryData(machinesList, null);
+    applyTelemetryData(machinesList, null, data.plant || null, data.log || null);
   } catch (err) {
     console.warn("Could not fetch /fleet:", err.message);
   }

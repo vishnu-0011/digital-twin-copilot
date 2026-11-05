@@ -17,8 +17,10 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import itertools
 import os
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
@@ -27,8 +29,9 @@ from pydantic import BaseModel
 
 from digital_twin.simulator import FactoryTwin
 from digital_twin.models import MachineStatus
-from ml_pipeline.anomaly_detector import AnomalyDetector
-from ml_pipeline.rul_predictor import RULPredictor, label_rul
+from digital_twin.standards import iso_zone
+from digital_twin.forecast import forecast_fleet, UNPLANNED_REPAIR_MULTIPLIER
+from ml_pipeline.model_cache import load_or_train
 from rag.knowledge_base import MaintenanceKnowledgeBase
 from agents.orchestrator import build_copilot_graph
 from agents.tools import run_what_if_simulation
@@ -64,18 +67,140 @@ class ConnectionManager:
 ws_manager = ConnectionManager()
 
 
+def _with_zone(rows: list[dict]) -> list[dict]:
+    for r in rows:
+        r["iso_zone"] = iso_zone(r.get("vibration_rms", 0.0))
+        twin = app_state.get("twin")
+        m = twin.machines.get(r.get("machine_id")) if twin else None
+        if m:
+            r["nominal_cycle_time_s"] = m.config.nominal_cycle_time_s
+            r["machine_type"] = m.config.machine_type
+            r["service_duration_s"] = m.config.maintenance_duration_s
+            r["service_ends_s"] = m.under_maintenance_until
+    return rows
+
+
 def build_fleet_payload():
     twin: FactoryTwin = app_state["twin"]
     predictor = app_state.get("predictor")
     latest_states = [s.to_dict() for s in twin.get_latest_states()]
     if predictor:
         try:
-            history_df = twin.history_dataframe() if hasattr(twin, "history_dataframe") else None
-            scored = predictor.predict_latest(latest_states, history_df=history_df)
-            return scored
+            # The TCN reads the last 20 cycles per machine. Using only a short
+            # recent window keeps this constant-time as the plant runs on.
+            scored = predictor.predict_latest(latest_states, history_df=twin.recent_dataframe())
+            return _with_zone(scored)
         except Exception:
             pass
-    return latest_states
+    return _with_zone(latest_states)
+
+
+# -- Maintenance log & shared actions ----------------------------------------
+_log_ids = itertools.count(1)
+
+
+def log_event(kind: str, machine_id: str | None, by: str, text: str):
+    """Append-only audit trail shown in the UI's Log tab."""
+    twin = app_state.get("twin")
+    app_state.setdefault("log", deque(maxlen=300)).append({
+        "id": next(_log_ids),
+        "ts": time.time(),
+        "plant_s": round(twin.env.now, 1) if twin else None,
+        "kind": kind,
+        "machine_id": machine_id,
+        "by": by,
+        "text": text,
+    })
+
+
+def on_transition(machine_id: str, old: MachineStatus, new: MachineStatus):
+    if new == MachineStatus.FAILED:
+        log_event("breakdown", machine_id, "Plant", f"{machine_id} broke down and stopped the line")
+    elif old == MachineStatus.IN_MAINTENANCE and new != MachineStatus.IN_MAINTENANCE:
+        log_event("back_in_service", machine_id, "Technician", f"{machine_id} service complete, back in production")
+    elif new == MachineStatus.CRITICAL:
+        log_event("alert", machine_id, "Copilot", f"{machine_id} needs service now")
+
+
+def on_service(machine_id: str):
+    """Called by the twin just before a scheduled service starts."""
+    record_service(machine_id)
+    actor = app_state.get("_actor") or "Copilot"
+    if actor == "Copilot":
+        log_event("auto_service", machine_id, "Copilot", f"Copilot scheduled service on {machine_id} (high urgency)")
+
+
+def act_work_order(machine_id: str, by: str = "Supervisor") -> dict:
+    """Approves a work order: the machine goes into service for its planned
+    duration (plant time), then comes back with wear reset."""
+    twin: FactoryTwin = app_state["twin"]
+    m = twin.machines.get(machine_id)
+    if not m:
+        return {"status": "error", "error": f"Unknown machine {machine_id}"}
+    if m.status == MachineStatus.IN_MAINTENANCE:
+        return {"status": "noop", "machine_id": machine_id, "message": "Already in service"}
+    app_state["_actor"] = by
+    try:
+        ok = twin.schedule_maintenance(machine_id)
+        twin.run(0.01)  # let SimPy deliver the interrupt so the state flips now
+    finally:
+        app_state["_actor"] = None
+    if ok:
+        mins = round(m.config.maintenance_duration_s / 60)
+        log_event("work_order", machine_id, by, f"Work order approved for {machine_id} ({mins} min planned service)")
+    return {"status": "ok" if ok else "error", "machine_id": machine_id,
+            "service_ends_s": m.under_maintenance_until}
+
+
+def act_repair(machine_id: str, by: str = "Supervisor") -> bool:
+    """Instant repair (demo shortcut): wear back to zero immediately."""
+    twin: FactoryTwin = app_state["twin"]
+    m = twin.machines.get(machine_id)
+    if not m:
+        return False
+    record_service(machine_id)
+    m.wear_level = 0.0
+    m.status = MachineStatus.HEALTHY
+    m._emit_state()
+    log_event("repair", machine_id, by, f"{machine_id} serviced, wear reset")
+    return True
+
+
+def act_reset():
+    twin: FactoryTwin = app_state["twin"]
+    for m in twin.machines.values():
+        m.wear_level = 0.05
+        m.status = MachineStatus.HEALTHY
+        m._emit_state()
+    log_event("reset", None, "Demo", "Plant reset to a fresh shift")
+
+
+def act_inject(machine_id: str, wear: float) -> bool:
+    twin: FactoryTwin = app_state["twin"]
+    m = twin.machines.get(machine_id)
+    if not m:
+        return False
+    m.age_to(wear)
+    log_event("fault", machine_id, "Demo", f"{machine_id} aged to {round(wear * 100)}% wear (demo)")
+    return True
+
+
+def act_step(duration_s: float):
+    app_state["twin"].run(duration_s=duration_s)
+    log_event("step", None, "Demo", f"Plant fast-forwarded {round(duration_s / 60)} min (demo)")
+
+
+def record_service(machine_id: str):
+    """Counts a service done before breakdown as a prevented failure."""
+    twin: FactoryTwin = app_state["twin"]
+    m = twin.machines.get(machine_id)
+    if not m:
+        return
+    impact = app_state.setdefault("impact", {"failures_prevented": 0, "downtime_avoided_s": 0.0})
+    if m.status in (MachineStatus.WARNING, MachineStatus.CRITICAL) or m.wear_level >= 0.6:
+        planned = m.config.maintenance_duration_s
+        impact["failures_prevented"] += 1
+        impact["downtime_avoided_s"] += planned * (UNPLANNED_REPAIR_MULTIPLIER - 1)
 
 
 def build_pipeline_flow_data():
@@ -92,6 +217,9 @@ def build_pipeline_flow_data():
     laser = states.get("LASER-01", {})
 
     total_parts = sum(s.get("throughput_units", 0) for s in states.values())
+    impact = app_state.get("impact", {"failures_prevented": 0, "downtime_avoided_s": 0.0})
+    down = sum(1 for s in states.values() if s.get("status") in ("failed", "in_maintenance"))
+    availability = round(100.0 * (len(states) - down) / max(1, len(states)), 1)
 
     bottleneck = None
     for mid, s in states.items():
@@ -104,8 +232,10 @@ def build_pipeline_flow_data():
             "name": "Titan Aerospace Precision Fab",
             "facility": "Sector 7 Advanced Machining Facility",
             "total_throughput_parts": total_parts,
-            "line_balance_pct": 96.8 if not bottleneck else 74.2,
-            "downtime_cost_saved_usd": round(total_parts * 42.50, 2),
+            "availability_pct": availability,
+            "failures_prevented": impact["failures_prevented"],
+            "downtime_avoided_h": round(impact["downtime_avoided_s"] / 3600.0, 2),
+            "unplanned_repair_multiplier": UNPLANNED_REPAIR_MULTIPLIER,
             "active_bottleneck": bottleneck,
         },
         "manufacturing_stages": [
@@ -221,16 +351,16 @@ def build_pipeline_flow_data():
             {
                 "step": 1,
                 "name": "Telemetry Ingestion",
-                "metric": "60Hz Vibration & Temp",
+                "metric": "Per-cycle vibration & temp",
                 "status": "STREAMING",
-                "details": "High-frequency real-time telemetry stream across all 8 workcells",
+                "details": "One reading per machine cycle, pushed to the console at 2 Hz",
             },
             {
                 "step": 2,
                 "name": "Signal Dynamics",
                 "metric": "Rolling Variance & RMS",
                 "status": "PASS",
-                "details": "Continuous time-domain RMS filtering and thermal rate tracking",
+                "details": "Per-cycle deltas plus 5-cycle rolling mean and spread",
             },
             {
                 "step": 3,
@@ -264,20 +394,51 @@ def build_pipeline_flow_data():
     }
 
 
+def build_plant_info():
+    twin: FactoryTwin = app_state["twin"]
+    predictor = app_state.get("predictor")
+    metrics = getattr(predictor, "holdout_metrics", None) or {}
+    impact = app_state.get("impact", {"failures_prevented": 0, "downtime_avoided_s": 0.0})
+    return {
+        "time_s": round(twin.env.now, 1),
+        "speed": app_state.get("plant_speed", 1.0),
+        "wall_ts": time.time(),
+        "simulated": True,
+        "rul_mae_cycles": metrics.get("mae_cycles"),
+        "impact": {
+            "failures_prevented": impact["failures_prevented"],
+            "downtime_avoided_h": round(impact["downtime_avoided_s"] / 3600.0, 2),
+            "unplanned_repair_multiplier": UNPLANNED_REPAIR_MULTIPLIER,
+        },
+    }
+
+
 def build_telemetry_snapshot():
     return {
         "type": "telemetry",
         "timestamp": time.time(),
         "machines": build_fleet_payload(),
         "pipeline": build_pipeline_flow_data(),
+        "plant": build_plant_info(),
+        "log": list(app_state.get("log", []))[-40:],
     }
 
 
 async def telemetry_broadcaster_task(interval: float = 0.5):
-    """Background task continuously broadcasting 2Hz telemetry snapshots to connected WebSockets."""
+    """Runs the plant clock in real time (times TWIN_SPEED) and pushes a
+    snapshot to every connected console twice a second."""
+    loop = asyncio.get_running_loop()
+    last = loop.time()
     try:
         while True:
             await asyncio.sleep(interval)
+            now = loop.time()
+            dt, last = now - last, now
+            if "twin" in app_state and app_state.get("plant_speed", 0) > 0:
+                try:
+                    app_state["twin"].run(duration_s=dt * app_state["plant_speed"])
+                except Exception:
+                    pass
             if ws_manager.active_connections and "twin" in app_state:
                 try:
                     payload = build_telemetry_snapshot()
@@ -290,25 +451,28 @@ async def telemetry_broadcaster_task(interval: float = 0.5):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Warm up offline ML models with synthetic run-to-failure historical data
-    training_twin = FactoryTwin(seed=42)
-    training_twin.run(duration_s=20000)
-    history = training_twin.history_dataframe()
-
-    detector = AnomalyDetector().fit(history)
-    predictor = RULPredictor().fit(label_rul(history))
+    # 1. Offline ML models trained on synthetic run-to-failure history.
+    #    Cached on disk after the first run so restarts take seconds.
+    detector, predictor, model_source = load_or_train(seed=42, duration_s=20000)
 
     kb = MaintenanceKnowledgeBase()
     kb.ingest_directory()
 
     # 2. Live production plant starts fresh in an active nominal shift (~20 min run-in)
-    live_twin = FactoryTwin(seed=101)
+    live_twin = FactoryTwin(seed=101, max_history=50_000)
     live_twin.run(duration_s=1200)
 
     app_state["twin"] = live_twin
+    app_state["plant_speed"] = float(os.environ.get("TWIN_SPEED", "1.0"))
+    app_state["log"] = deque(maxlen=300)
+    live_twin.on_service = on_service
+    live_twin.on_transition = on_transition
+    log_event("start", None, "Plant", "Shift started, copilot monitoring 8 machines")
     app_state["detector"] = detector
     app_state["predictor"] = predictor
     app_state["kb"] = kb
+    app_state["model_source"] = model_source
+    app_state["impact"] = {"failures_prevented": 0, "downtime_avoided_s": 0.0}
     app_state["graph"] = build_copilot_graph(live_twin, detector, predictor, kb)
 
     # 3. Start background real-time telemetry broadcaster
@@ -354,18 +518,24 @@ def health():
         "status": "ok",
         "mode": "100% Pure ML (Zero API Keys)",
         "rul_backend": predictor.backend if predictor else "tcn_2021",
+        "models": app_state.get("model_source", "unknown"),
+        "rul_holdout": getattr(predictor, "holdout_metrics", None) if predictor else None,
     }
 
 
 @app.get("/fleet")
 def fleet_state():
-    return {"machines": build_fleet_payload()}
+    return {
+        "machines": build_fleet_payload(),
+        "plant": build_plant_info(),
+        "log": list(app_state.get("log", []))[-40:],
+    }
 
 
 @app.post("/simulate")
 def simulate(req: SimulateRequest):
     twin: FactoryTwin = app_state["twin"]
-    twin.run(duration_s=req.duration_s)
+    act_step(req.duration_s)
     return {"advanced_s": req.duration_s, "fleet": [s.to_dict() for s in twin.get_latest_states()]}
 
 
@@ -386,14 +556,7 @@ class MaintenanceTriggerRequest(BaseModel):
 @app.post("/maintenance/trigger")
 def trigger_maintenance(req: MaintenanceTriggerRequest):
     twin: FactoryTwin = app_state["twin"]
-    m_twin = twin.machines.get(req.machine_id)
-    if m_twin:
-        m_twin.wear_level = 0.0
-        m_twin.status = MachineStatus.HEALTHY
-        m_twin._emit_state()
-        scheduled = True
-    else:
-        scheduled = False
+    scheduled = act_repair(req.machine_id)
     return {
         "machine_id": req.machine_id,
         "scheduled": scheduled,
@@ -405,10 +568,7 @@ def trigger_maintenance(req: MaintenanceTriggerRequest):
 def reset_fleet():
     """Resets all machines in the live factory twin back to nominal fresh-shift status."""
     twin: FactoryTwin = app_state["twin"]
-    for m in twin.machines.values():
-        m.wear_level = 0.05
-        m.status = MachineStatus.HEALTHY
-        m._emit_state()
+    act_reset()
     return {
         "status": "SUCCESS",
         "message": "All workcells reset to nominal operating condition.",
@@ -424,21 +584,15 @@ class FaultInjectRequest(BaseModel):
 
 @app.post("/fault/inject")
 async def inject_fault(req: FaultInjectRequest):
-    """Injects an artificial bearing or mechanical degradation fault for live demos."""
+    """Ages a machine to the requested wear for live demos (accelerated aging,
+    one emitted reading per cycle, so the models see a realistic history)."""
     twin: FactoryTwin = app_state["twin"]
     m_twin = twin.machines.get(req.machine_id)
     if not m_twin:
         return {"status": "ERROR", "message": f"Machine {req.machine_id} not found"}
 
-    m_twin.wear_level = req.wear_level
-    status_map = {
-        "healthy": MachineStatus.HEALTHY,
-        "warning": MachineStatus.WARNING,
-        "critical": MachineStatus.CRITICAL,
-        "failed": MachineStatus.FAILED,
-    }
-    m_twin.status = status_map.get(req.status.lower(), MachineStatus.CRITICAL)
-    m_twin._emit_state()
+    # Status follows from the wear the machine reaches (see MachineTwin.age_to).
+    act_inject(req.machine_id, req.wear_level)
 
     latest = [s.to_dict() for s in twin.get_latest_states()]
     m_state = next((s for s in latest if s["machine_id"] == req.machine_id), {})
@@ -452,6 +606,49 @@ async def inject_fault(req: FaultInjectRequest):
         "machine": m_state,
         "fleet": latest,
     }
+
+
+class WorkOrderRequest(BaseModel):
+    machine_id: str
+    approved_by: str = "Supervisor"
+
+
+@app.post("/work-orders")
+def create_work_order(req: WorkOrderRequest):
+    """Approves a planned service: the machine is in service for its planned
+    duration, then returns to production with wear reset."""
+    return act_work_order(req.machine_id, by=req.approved_by)
+
+
+@app.get("/maintenance/log")
+def maintenance_log(limit: int = 100):
+    return {"entries": list(app_state.get("log", []))[-limit:]}
+
+
+@app.get("/machines/{machine_id}/history")
+def machine_history(machine_id: str, n: int = 60):
+    twin: FactoryTwin = app_state["twin"]
+    if machine_id not in twin.machines:
+        return {"machine_id": machine_id, "readings": []}
+    rows = twin.recent_readings(machine_id, n=max(1, min(n, 240)))
+    return {
+        "machine_id": machine_id,
+        "readings": [
+            {k: r[k] for k in ("sim_time_s", "cycle_count", "vibration_rms", "temperature_c", "wear_level", "status")}
+            for r in rows
+        ],
+    }
+
+
+@app.get("/forecast")
+def forecast(horizon_h: float = 8.0, samples: int = 97, seed: int = 7):
+    """Fast-forwards a copy of the live plant (the live twin is untouched) and
+    returns what happens with and without the copilot, sampled for the UI's
+    time slider."""
+    twin: FactoryTwin = app_state["twin"]
+    result = forecast_fleet(twin, horizon_s=horizon_h * 3600.0, samples=samples, seed=seed)
+    result["generated_at"] = time.time()
+    return result
 
 
 @app.get("/pipeline/flow")
@@ -480,100 +677,37 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
             if action == "ping":
                 await websocket.send_json({"type": "pong", "timestamp": time.time()})
 
-            elif action == "step":
-                duration_s = float(data.get("duration_s", 1800))
-                twin: FactoryTwin = app_state["twin"]
-                twin.run(duration_s=duration_s)
-                snapshot = build_telemetry_snapshot()
-                await ws_manager.broadcast(snapshot)
-                await websocket.send_json({
-                    "type": "action_result",
-                    "action": "step",
-                    "status": "ok",
-                    "advanced_s": duration_s,
-                })
-
-            elif action == "repair":
-                mid = data.get("machine_id")
-                twin: FactoryTwin = app_state["twin"]
-                m_twin = twin.machines.get(mid)
-                if m_twin:
-                    m_twin.wear_level = 0.0
-                    m_twin.status = MachineStatus.HEALTHY
-                    m_twin._emit_state()
-                    snapshot = build_telemetry_snapshot()
-                    await ws_manager.broadcast(snapshot)
-                    await websocket.send_json({
-                        "type": "action_result",
-                        "action": "repair",
-                        "machine_id": mid,
-                        "status": "ok",
-                    })
-                else:
-                    await websocket.send_json({
-                        "type": "action_result",
-                        "action": "repair",
-                        "status": "error",
-                        "error": f"Unknown machine {mid}",
-                    })
-
-            elif action == "reset":
-                twin: FactoryTwin = app_state["twin"]
-                for m in twin.machines.values():
-                    m.wear_level = 0.05
-                    m.status = MachineStatus.HEALTHY
-                    m._emit_state()
-                snapshot = build_telemetry_snapshot()
-                await ws_manager.broadcast(snapshot)
-                await websocket.send_json({
-                    "type": "action_result",
-                    "action": "reset",
-                    "status": "ok",
-                })
-
             elif action == "scan":
-                graph = app_state["graph"]
-                result = graph.invoke({"trigger": "scheduled_check"})
-                snapshot = build_telemetry_snapshot()
-                await ws_manager.broadcast(snapshot)
-                await websocket.send_json({
-                    "type": "scan_result",
-                    "status": "ok",
-                    "result": result,
-                })
+                result = app_state["graph"].invoke({"trigger": "scheduled_check"})
+                await ws_manager.broadcast(build_telemetry_snapshot())
+                await websocket.send_json({"type": "scan_result", "status": "ok", "result": result})
 
-            elif action == "inject_fault":
-                mid = data.get("machine_id", "CNC-01")
-                wear = float(data.get("wear_level", 0.85))
-                stat = data.get("status", "critical").lower()
-                twin: FactoryTwin = app_state["twin"]
-                m_twin = twin.machines.get(mid)
-                if m_twin:
-                    m_twin.wear_level = wear
-                    status_map = {
-                        "healthy": MachineStatus.HEALTHY,
-                        "warning": MachineStatus.WARNING,
-                        "critical": MachineStatus.CRITICAL,
-                        "failed": MachineStatus.FAILED,
-                    }
-                    m_twin.status = status_map.get(stat, MachineStatus.CRITICAL)
-                    m_twin._emit_state()
-                    snapshot = build_telemetry_snapshot()
-                    await ws_manager.broadcast(snapshot)
-                    await websocket.send_json({
-                        "type": "action_result",
-                        "action": "inject_fault",
-                        "machine_id": mid,
-                        "wear_level": wear,
-                        "status": "ok",
-                    })
-                else:
-                    await websocket.send_json({
-                        "type": "action_result",
-                        "action": "inject_fault",
-                        "status": "error",
-                        "error": f"Unknown machine {mid}",
-                    })
+            elif action in ("step", "repair", "reset", "inject_fault", "work_order"):
+                # Every action shares one implementation with its HTTP twin.
+                mid = data.get("machine_id")
+                result: dict = {"type": "action_result", "action": action, "status": "ok"}
+                if action == "step":
+                    duration_s = float(data.get("duration_s", 1800))
+                    act_step(duration_s)
+                    result["advanced_s"] = duration_s
+                elif action == "reset":
+                    act_reset()
+                elif action == "repair":
+                    result["machine_id"] = mid
+                    if not act_repair(mid, by=data.get("by", "Supervisor")):
+                        result.update(status="error", error=f"Unknown machine {mid}")
+                elif action == "inject_fault":
+                    wear = float(data.get("wear_level", 0.85))
+                    mid = mid or "CNC-01"
+                    result.update(machine_id=mid, wear_level=wear)
+                    if not act_inject(mid, wear):
+                        result.update(status="error", error=f"Unknown machine {mid}")
+                elif action == "work_order":
+                    result.update(act_work_order(mid, by=data.get("by", "Supervisor")))
+                    result["type"] = "action_result"
+                    result["action"] = action
+                await ws_manager.broadcast(build_telemetry_snapshot())
+                await websocket.send_json(result)
 
             else:
                 await websocket.send_json({
@@ -587,9 +721,6 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
 
 
 # -- Serve 3D Strategy Game UI at root (placed after API routes) -------------
-import os
-from fastapi.staticfiles import StaticFiles
-
 WEB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
 os.makedirs(WEB_DIR, exist_ok=True)
 app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

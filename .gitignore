@@ -42,3 +42,5 @@ nohup.out
 
 # --- Leftover shell artifacts (e.g. brace-expansion mistakes on Windows) ---
 {*}*
+# --- Trained model cache (rebuilt automatically when training code changes) ---
+.model_cache/
