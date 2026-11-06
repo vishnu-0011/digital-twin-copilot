@@ -10,6 +10,7 @@
     try { document.documentElement.dataset.theme = localStorage.getItem('titan_theme') || 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
   </script>
   <link rel="stylesheet" href="/css/site.css?v=1">
+  <link rel="stylesheet" href="/css/page-guide.css?v=1">
   <style>
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
     .pill-why { background: rgba(225, 29, 72, 0.12); color: var(--bad); }
@@ -260,5 +261,6 @@
       document.querySelectorAll('.reveal').forEach(n => io ? io.observe(n) : n.classList.add('in'));
     })();
   </script>
+  <script type="module" src="/js/guide/page-guide.js"></script>
 </body>
 </html>

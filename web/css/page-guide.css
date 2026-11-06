@@ -1,0 +1,369 @@
+/* ==========================================================================
+   Titan Aerospace — Rivet Page Guide (why.html, method.html, results.html)
+   ========================================================================== */
+
+/* Header Guide Button */
+.btn-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-guide:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  transform: translateY(-1px);
+}
+.btn-guide.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.guide-pulsing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 30%, transparent);
+  animation: pg-pulse 2s infinite ease-in-out;
+}
+@keyframes pg-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+/* Floating Guide Container */
+#page-guide-root {
+  position: fixed;
+  bottom: 24px;
+  left: 28px;
+  z-index: 999;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#page-guide-root.hidden {
+  opacity: 0;
+  transform: translateY(24px);
+  pointer-events: none;
+}
+
+/* Rivet Mascot Orb */
+.pg-mascot-wrap {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  pointer-events: auto;
+  position: relative;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.22));
+}
+.pg-orb {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e2e8f0 65%, #94a3b8 100%);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8), inset 0 -4px 8px rgba(15, 23, 42, 0.25), 0 8px 24px rgba(0,0,0,0.18);
+  position: relative;
+  display: grid;
+  place-items: center;
+  animation: pg-bob 4s ease-in-out infinite;
+}
+:root[data-theme="dark"] .pg-orb {
+  background: radial-gradient(circle at 35% 30%, #e2e8f0 0%, #94a3b8 60%, #475569 100%);
+}
+@keyframes pg-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+/* Visor */
+.pg-visor {
+  width: 38px;
+  height: 22px;
+  border-radius: 12px;
+  background: #090d16;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15), 0 2px 6px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  position: relative;
+  overflow: hidden;
+}
+/* Visor Eyes */
+.pg-eye {
+  width: 7px;
+  height: 10px;
+  border-radius: 4px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8, 0 0 2px #fff;
+  transition: all 0.2s ease;
+  animation: pg-blink 5s infinite;
+}
+@keyframes pg-blink {
+  0%, 94%, 98%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+.pg-eye.mood-happy {
+  border-radius: 50% 50% 0 0;
+  height: 6px;
+  transform: translateY(-1px);
+}
+.pg-eye.mood-worried {
+  transform: rotate(15deg);
+  background: #fbbf24;
+  box-shadow: 0 0 8px #fbbf24;
+}
+.pg-eye.mood-thinking {
+  transform: translateY(-2px);
+  background: #a78bfa;
+  box-shadow: 0 0 8px #a78bfa;
+}
+.pg-eye.mood-proud {
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+}
+/* Halo ring */
+.pg-halo {
+  position: absolute;
+  width: 66px;
+  height: 22px;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border-radius: 50%;
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
+/* Floating Card Bubble */
+.pg-bubble {
+  width: min(580px, calc(100vw - 120px));
+  padding: 16px 20px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--hair-2);
+  box-shadow: var(--shadow), 0 12px 32px -8px rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+}
+.pg-progress-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: var(--hair);
+}
+.pg-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+/* Eyebrow header */
+.pg-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 650 10.5px/1 var(--sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+.pg-speaker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.pg-speaker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.pg-section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+.pg-section-tag::before {
+  content: "•";
+  opacity: 0.5;
+}
+.pg-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+/* Title */
+.pg-title {
+  font: 700 17.5px/1.25 var(--sans);
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+/* Subtitle reading text */
+.pg-text {
+  position: relative;
+  font-size: 14.5px;
+  line-height: 1.6;
+  max-height: calc(1.6em * 4.8);
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  user-select: text;
+  scrollbar-width: thin;
+  color: var(--ink);
+  padding-bottom: 2px;
+}
+.pg-text::-webkit-scrollbar { width: 4px; }
+.pg-text::-webkit-scrollbar-thumb { background: var(--hair-2); border-radius: 4px; }
+
+/* Karaoke Word Spans */
+.pg-w {
+  opacity: 0.42;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+.pg-w.said {
+  opacity: 1;
+}
+.pg-w.now {
+  opacity: 1;
+  color: var(--accent);
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.pg-w.kw {
+  font-weight: 650;
+}
+.pg-w.kw.said {
+  color: var(--accent);
+}
+
+/* Controls */
+.pg-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hair);
+}
+.pg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hair-2);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 600 12px var(--sans);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.pg-btn:hover {
+  background: var(--hair);
+  transform: translateY(-1px);
+}
+.pg-btn:active {
+  transform: translateY(0);
+}
+.pg-btn.icon-only {
+  width: 30px;
+  padding: 0;
+}
+.pg-btn.icon-only svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+.pg-btn.btn-play {
+  width: 34px;
+  height: 34px;
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.pg-btn.btn-play:hover {
+  background: var(--ink-2);
+}
+.pg-hint {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-left: 2px;
+}
+.pg-spacer {
+  flex: 1;
+}
+.pg-btn.btn-exit {
+  color: var(--ink-3);
+  gap: 4px;
+}
+.pg-btn.btn-exit:hover {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+}
+
+/* Section Focus Highlight on Page */
+.pg-highlight-section {
+  position: relative;
+}
+.pg-highlight-section::after {
+  content: "";
+  position: absolute;
+  inset: -12px -16px;
+  border-radius: 16px;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+  pointer-events: none;
+  animation: pg-focus-glow 1.5s ease-out;
+}
+@keyframes pg-focus-glow {
+  0% { opacity: 0; transform: scale(0.98); }
+  40% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.6; }
+}
+
+@media (max-width: 720px) {
+  #page-guide-root {
+    left: 12px;
+    right: 12px;
+    bottom: 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pg-mascot-wrap {
+    align-self: flex-start;
+    margin-bottom: -16px;
+    margin-left: 8px;
+    z-index: 2;
+  }
+  .pg-bubble {
+    width: 100%;
+    padding: 14px 16px 12px;
+  }
+  .pg-hint { display: none; }
+}

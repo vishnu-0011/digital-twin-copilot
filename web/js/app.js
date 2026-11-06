@@ -351,7 +351,7 @@ function startApp() {
     initForecastUI({ renderFleet, getLiveFleet: () => fleetCache, selectMachine });
     initOps({ dispatch: dispatchAction, selectMachine, openForecast: () => openForecast(), getSelected: getSelectedMachineId });
     initChrome({
-      startTour: (kind) => startGuidedTour(0, { quick: kind === 'quick', kind }),
+      startTour: (kind) => startGuidedTour(0, { quick: kind === 'quick', mode: kind }),
       dispatch: dispatchAction,
       toast,
       plantChanged,

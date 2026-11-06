@@ -326,7 +326,7 @@ body.tour-mode #camera-director-bar { opacity: 0; pointer-events: none; transfor
   position: relative;
   font-size: 15px;
   line-height: 1.62;
-  max-height: min(240px, calc(1.62em * 6.5));
+  max-height: calc(1.62em * 5.2);
   overflow-y: auto;
   scroll-behavior: smooth;
   overscroll-behavior: contain;
@@ -334,14 +334,12 @@ body.tour-mode #camera-director-bar { opacity: 0; pointer-events: none; transfor
   scrollbar-width: thin;
   color: var(--text-main);
   transition: opacity 0.3s ease;
-  padding: 4px 0 6px;
+  padding-bottom: 2px;
 }
-/* Do NOT mask out top lines: keep all spoken context 100% visible and readable */
-.guide-text.scrolled {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-.gw { opacity: 0.36; transition: opacity 0.25s ease, color 0.25s ease; }
+/* Subtle scrollbar styling without obscuring or masking reading text */
+.guide-text::-webkit-scrollbar { width: 4px; }
+.guide-text::-webkit-scrollbar-thumb { background: var(--guide-hair); border-radius: 4px; }
+.gw { opacity: 0.38; transition: opacity 0.2s ease, color 0.2s ease; }
 .gw.said { opacity: 1; }
 .gw.now {
   opacity: 1;
@@ -577,7 +575,7 @@ body.tour-mode #camera-director-bar { opacity: 0; pointer-events: none; transfor
   .guide-bubble { width: auto; flex: 1; padding: 14px 14px 10px; border-radius: 16px; }
   .guide-eyebrow { padding-left: 74px; min-height: 12px; }
   .guide-beat-title { font-size: 16px; margin: 8px 0 4px; }
-  .guide-text { font-size: 13.5px; max-height: min(180px, calc(1.55em * 5.5)); line-height: 1.55; }
+  .guide-text { font-size: 13.5px; max-height: calc(1.55em * 5); line-height: 1.55; }
   .guide-controls { gap: 4px; margin-top: 10px; padding-top: 9px; }
   .guide-pill { padding: 0 9px; }
   .guide-voice-label, .guide-btn-exit span { display: none; }

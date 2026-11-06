@@ -21,10 +21,11 @@ import { playClick, playScan, playAlarm, playRepairSuccess } from './audio.js';
 import { createMascot } from './guide/mascot.js';
 import { createNarrator, parseScript } from './guide/voice.js';
 import { mountDiagram } from './guide/diagrams.js';
-import { BEATS as ALL_BEATS, CHAPTERS, TARGET_LABELS } from './guide/script.js';
+import { BEATS as ALL_BEATS, DOCS_BEATS, CHAPTERS, DOCS_CHAPTERS, TARGET_LABELS } from './guide/script.js';
 
-// The active beat list: the full tour, or the quick one (beats marked quick).
+// The active beat list: the full tour, quick tour, or foundation docs tour.
 let BEATS = ALL_BEATS;
+let ACTIVE_CHAPTERS = CHAPTERS;
 import { forecastControls } from './forecast.js';
 
 let deps = {
@@ -125,7 +126,7 @@ function renderRail() {
   const rail = $('guide-rail');
   if (!rail) return;
   rail.innerHTML = '';
-  CHAPTERS.filter(ch => BEATS.some(b => b.ch === ch.id)).forEach((ch, ci) => {
+  ACTIVE_CHAPTERS.filter(ch => BEATS.some(b => b.ch === ch.id)).forEach((ch, ci) => {
     const beats = BEATS.map((b, i) => ({ b, i })).filter(x => x.b.ch === ch.id);
     const btn = document.createElement('button');
     btn.className = 'guide-rail-ch';
@@ -140,7 +141,7 @@ function renderRail() {
 
 function updateRail() {
   const beat = BEATS[state.index];
-  const chIdx = CHAPTERS.filter(ch => BEATS.some(b => b.ch === ch.id)).findIndex(c => c.id === beat.ch);
+  const chIdx = ACTIVE_CHAPTERS.filter(ch => BEATS.some(b => b.ch === ch.id)).findIndex(c => c.id === beat.ch);
   document.querySelectorAll('.guide-rail-ch').forEach((el, i) => {
     el.classList.toggle('active', i === chIdx);
     el.classList.toggle('done', i < chIdx);
@@ -168,40 +169,27 @@ function renderSubtitle(parsed) {
   state.lineTop = 0;
 }
 
-/* Smoothly follow narration lines without deep auto-scrolling or clipping:
-   Never scroll if the entire text fits comfortably. When scrolling is needed,
-   only scroll down when the active spoken word reaches the bottom threshold. */
+/* Keep currently read words comfortably visible without premature or deep scrolling.
+   Only scrolls when a line genuinely extends beyond the visible bottom of the card,
+   and never cuts off or fades text that is currently being read. */
 function followLine(el, cur) {
-  if (!cur || !el) return;
-  // If all text fits comfortably inside the container, NEVER scroll
-  if (el.scrollHeight <= el.clientHeight + 6) {
-    if (el.scrollTop !== 0) el.scrollTop = 0;
-    el.classList.remove('scrolled');
-    return;
-  }
-
-  const curTop = cur.offsetTop - el.offsetTop;
-  const curHeight = cur.offsetHeight || 24;
-  const curBottom = curTop + curHeight;
+  if (!el || !cur) return;
+  const curTop = cur.offsetTop;
+  const curBottom = curTop + (cur.offsetHeight || 24);
   const viewTop = el.scrollTop;
   const viewBottom = viewTop + el.clientHeight;
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Only scroll down when the spoken word reaches the bottom threshold of the box
-  if (curBottom > viewBottom - 18) {
-    const target = Math.min(el.scrollHeight - el.clientHeight, curBottom - el.clientHeight + 36);
-    if (Math.abs(target - el.scrollTop) > 4) {
-      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      el.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
-      el.classList.add('scrolled');
-    }
-  } else if (curTop < viewTop + 10) {
-    // Scroll up if moving backward or active word is above top
-    const target = Math.max(0, curTop - 14);
-    if (Math.abs(target - el.scrollTop) > 4) {
-      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      el.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
-      el.classList.toggle('scrolled', target > 0);
-    }
+  // If word is near or beyond the bottom of visible container, scroll just enough to reveal it
+  if (curBottom > viewBottom - 12) {
+    const target = Math.max(0, Math.round(curBottom - el.clientHeight + 22));
+    el.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
+    el.classList.toggle('scrolled', target > 4);
+  } else if (curTop < viewTop + 4 && viewTop > 0) {
+    // If word is above the visible container (e.g. rewind / previous sentence)
+    const target = Math.max(0, Math.round(curTop - 8));
+    el.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
+    el.classList.toggle('scrolled', target > 4);
   }
 }
 
@@ -261,7 +249,7 @@ function goTo(index) {
   state.parsed = parseScript(beat.say);
   $('guide-beat-title').textContent = beat.title;
   $('guide-beat-count').textContent = `${index + 1} of ${BEATS.length}`;
-  const chapter = CHAPTERS.find(c => c.id === beat.ch);
+  const chapter = ACTIVE_CHAPTERS.find(c => c.id === beat.ch);
   $('guide-chapter').textContent = chapter ? chapter.label : '';
   $('guide-beat-fill').style.width = '0%';
   renderSubtitle(state.parsed);
@@ -472,17 +460,20 @@ function ensureEngine() {
   }
 }
 
-export function startGuidedTour(fromIndex = 0, { quick = false, kind = 'full' } = {}) {
+export function startGuidedTour(fromIndex = 0, { quick = false, mode = 'full' } = {}) {
   if (state.running) return;
-  if (kind === 'pages' || kind === 'briefing') {
-    BEATS = ALL_BEATS.filter(b => b.pages);
-  } else if (quick || kind === 'quick') {
+  state.mode = mode;
+  if (mode === 'docs' || mode === 'pages' || mode === 'deep') {
+    BEATS = DOCS_BEATS;
+    ACTIVE_CHAPTERS = DOCS_CHAPTERS;
+  } else if (quick || mode === 'quick') {
     BEATS = ALL_BEATS.filter(b => b.quick);
+    ACTIVE_CHAPTERS = CHAPTERS;
   } else {
     BEATS = ALL_BEATS;
+    ACTIVE_CHAPTERS = CHAPTERS;
   }
-  state.quick = quick || kind === 'quick';
-  state.kind = kind;
+  state.quick = quick;
   ensureEngine();
   state.running = true;
   state.playing = true;
@@ -593,12 +584,12 @@ export function initTourUI(injected = {}) {
     if (document.hidden) state.mascot.stop(); else state.mascot.start();
   });
 
-  // Deep link: ?tour=1 (or ?tour=quick, ?tour=pages) starts the tour automatically.
+  // Deep link: ?tour=1 (or ?tour=<beat number>), ?tour=quick, ?tour=docs
   const p = new URLSearchParams(window.location.search).get('tour');
   if (p === 'quick') {
-    setTimeout(() => startGuidedTour(0, { quick: true, kind: 'quick' }), 1200);
-  } else if (p === 'pages' || p === 'guide' || p === 'briefing') {
-    setTimeout(() => startGuidedTour(0, { kind: 'pages' }), 1200);
+    setTimeout(() => startGuidedTour(0, { quick: true, mode: 'quick' }), 1200);
+  } else if (p === 'docs' || p === 'pages' || p === 'deep') {
+    setTimeout(() => startGuidedTour(0, { mode: 'docs' }), 1200);
   } else if (p) {
     const n = Math.max(0, (parseInt(p, 10) || 1) - 1);
     setTimeout(() => startGuidedTour(Math.min(n, ALL_BEATS.length - 1)), 1200);

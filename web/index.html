@@ -56,13 +56,13 @@
         <button id="btn-tour-menu" class="btn-hud btn-tour" aria-haspopup="true" aria-expanded="false" title="Guided tours with Rivet">Tour</button>
         <div class="hud-menu" id="menu-tour" role="menu" hidden>
           <button role="menuitem" data-tour="quick"><b>3-minute tour</b><span>The essentials: a fault, the fix, the forecast</span></button>
-          <button role="menuitem" data-tour="pages"><b>Pages guide · 3 min</b><span>Why, How it works, and Benchmark Results</span></button>
           <button role="menuitem" data-tour="full"><b>Full tour · 9 min</b><span>How every part works, with diagrams</span></button>
+          <button role="menuitem" data-tour="docs"><b>Why, How & Results · 5 min</b><span>Explaining the 3 foundation pages with Rivet</span></button>
           <div class="menu-sep" role="separator"></div>
-          <button role="menuitem" data-href="/guide.html"><b>Project Guide</b><span>Complete walk-through of Why, Method & Results</span></button>
           <button role="menuitem" data-href="/why.html"><b>Why this project</b><span>The core problem, in a short read</span></button>
           <button role="menuitem" data-href="/method.html"><b>How it works</b><span>Architecture, models, design decisions</span></button>
           <button role="menuitem" data-href="/results.html"><b>Results</b><span>Measured accuracy and the policy comparison</span></button>
+          <button role="menuitem" data-href="/guide.html"><b>Master Guide</b><span>All 3 foundation pages in one view</span></button>
         </div>
         <button id="btn-tour" class="btn-hud btn-tour btn-tour-stop" hidden>End tour</button>
       </div>
@@ -138,14 +138,10 @@
       </ul>
       <div class="welcome-actions">
         <button class="welcome-primary" data-welcome="quick">Take the 3-minute tour</button>
-        <button data-welcome="pages">Pages guide (Why, Method, Results)</button>
         <button data-welcome="full">Full tour (9 min)</button>
         <button data-welcome="explore">Explore on my own</button>
       </div>
-      <div style="display:flex; justify-content:center; gap:16px; margin-top:14px; font-size:13px;">
-        <a class="welcome-why" href="/guide.html">Complete Project Guide →</a>
-        <a class="welcome-why" href="/why.html">Why we built this →</a>
-      </div>
+      <a class="welcome-why" href="/why.html">Why we built this →</a>
     </div>
   </div>
 
