@@ -266,75 +266,75 @@ export const DOCS_BEATS = [
   {
     ch: 'why', title: 'Why this project exists',
     camera: 'campus', mood: 'worried', diagram: 'problem',
-    say: `Let's walk through the foundation of this project. In precision aerospace manufacturing, unplanned machine downtime costs *twenty-two thousand dollars an hour*.
-      {1} When a big milling spindle seizes mid-cut, {2} the whole titanium turbine blade becomes scrap.
-      {3} And old SCADA control screens fire so many cryptic threshold alarms that operators simply hit mute.
-      {4} So our first goal is clear: *warn thirty to fifty cycles early*, and say exactly what to do.`,
+    say: `Let's walk through why this project exists. Plants usually choose between two bad options.
+      {1} They repair a machine after it breaks, {2} which stops the line and can scrap the part being cut.
+      {3} Or they service on a calendar, replacing healthy parts while a fast-wearing machine still breaks.
+      {4} And the data that could help arrives as raw numbers and alarms, not decisions.`,
   },
   {
-    ch: 'why', title: 'The P-F warning window',
+    ch: 'why', title: 'The warning window',
     camera: 'campus', mood: 'curious', diagram: 'twin',
-    say: `{1} Machines warn before they break. A bearing doesn't fail out of nowhere: micro-vibrations and temperature gradients rise hours or days before failure.
-      {2} Run-to-failure waits until breakdown at point F, stopping the line.
-      {3} Fixed calendar servicing replaces perfectly good parts and still misses fast wear.
-      {4} Our digital twin copilot acts *inside the warning window at point P*, scheduling service at the right shift.`,
+    say: `{1} Machines warn before they break. Vibration starts to rise at point *P*, well before the breakdown at point *F*.
+      {2} Running to failure acts at F.
+      {3} A calendar acts whenever the date says.
+      {4} The copilot acts *inside the window*, at a time that suits the shift, and a person approves it.`,
   },
   {
-    ch: 'why', title: 'Why aerospace manufacturing?',
+    ch: 'why', title: 'Why an aerospace machine shop',
     camera: 'bay1', focus: 'CNC-01', mood: 'thinking', diagram: 'signals',
-    say: `We anchored this digital twin in an aerospace machine shop carving jet-engine parts from tough *titanium and Inconel alloys*.
-      Tolerances are tighter than *two microns*. One worn cutting insert can scrap thirty thousand dollars of raw titanium billet.
-      Turning raw sensor readings into an early, trustworthy maintenance decision is where predictive AI delivers the highest business value.`,
+    say: `We set the twin in a shop that machines jet-engine and airframe parts from *titanium and nickel alloys*.
+      These metals wear tools fast, parts take hours to cut, and key machines often have no spare.
+      Every fix follows a written procedure with sign-off, so the copilot must cite it and leave the decision to a person.`,
   },
 
   /* ---------------- 2 · HOW IT WORKS (method.html) ---------------- */
   {
-    ch: 'method', title: 'The 4-layer architecture',
+    ch: 'method', title: 'One loop, from reading to repair',
     camera: 'global', mood: 'happy', diagram: 'dataflow',
-    say: `How does it actually work? The architecture has four clean layers.
-      {1} First: a *SimPy discrete-event physics simulator* produces raw sensor streams without future data leakage.
-      {2} Second: an edge feature pipeline extracts rolling RMS, crest factor, and thermal gradients.
-      {3} Third: our *Dilated TCN prognostics model* predicts Remaining Useful Life.
-      {4} And fourth: a deterministic LangGraph SOP agent issues grounded work orders.`,
+    say: `How does it work? One loop.
+      {1} A *SimPy digital twin* of eight machines streams vibration, temperature and part age.
+      {2} An *Isolation Forest* flags readings outside the healthy range.
+      {3} A *temporal convolutional network* estimates how many cycles are left.
+      {4} And rule-based agents draft a work order with the procedure and a deadline, for a supervisor to approve.`,
   },
   {
-    ch: 'method', title: 'The Dilated Causal TCN',
+    ch: 'method', title: 'The remaining-life model',
     camera: 'bay2', focus: 'PRESS-01', mood: 'thinking', diagram: 'tcn',
-    say: `For Remaining Useful Life prediction, we use a *Dilated Temporal Convolutional Network* based on the winning 2021 PHM challenge.
-      Why TCN over an LSTM? {1} Convolutions train in parallel rather than step-by-step.
-      {2} Residual skip connections eliminate vanishing gradients.
-      {3} And exponential dilations of one, two, four, and eight give a receptive field of over sixty cycles with zero recurrent bottlenecks.`,
+    say: `For remaining life we use a *dilated temporal convolutional network*, after Lövberg's 2021 work on turbofan engines.
+      {1} Convolutions train in parallel, not step by step like an LSTM.
+      {2} Residual connections keep training stable.
+      {3} And dilations of one, two, four and eight let four layers look *sixty-one readings* back.`,
   },
   {
-    ch: 'method', title: 'Deterministic SOP agent',
+    ch: 'method', title: 'Grounded, rule-based decisions',
     camera: 'bay3', focus: 'ROBOT-01', mood: 'proud', diagram: 'rag',
-    say: `In safety-critical manufacturing, you cannot let an AI hallucinate maintenance actions.
-      {1} Our diagnostic copilot uses *TF-IDF cosine similarity* against verified plant Standard Operating Procedures.
-      {2} When vibration enters *ISO 10816 Zone C or D*, it extracts the exact root-cause, urgency rating, and manual checklist.
-      {3} Every recommendation cites the official manual clause, giving technicians complete trust.`,
+    say: `Maintenance decisions must be repeatable, so the agents are *rules, not a language model*.
+      {1} Diagnosis retrieves the procedure for that machine type from the plant's own documents.
+      {2} Vibration is graded against the *ISO 10816* zones, and the scheduler trusts only eighty-five percent of the predicted life.
+      {3} Every work order cites its procedure, and nothing happens until a person approves it.`,
   },
 
   /* ---------------- 3 · THE RESULTS (results.html) ---------------- */
   {
-    ch: 'results', title: 'NASA C-MAPSS benchmark',
+    ch: 'results', title: 'How accurate is it?',
     camera: 'bay4', focus: 'CONV-01', mood: 'proud', diagram: 'rul',
-    say: `We validated our prognostics pipeline against the gold-standard *NASA C-MAPSS turbofan benchmark*.
-      {1} The TCN achieved an RMSE of twelve point one cycles and an asymmetric penalty score of two hundred and forty-two,
-      {2} outperforming Bidirectional LSTMs and Random Forests by twenty-four percent.
-      {3} Our asymmetric loss intentionally penalizes late predictions more than early ones, ensuring machines are never serviced too late.`,
+    say: `Every result is measured on simulated plants the models never saw.
+      {1} The remaining-life model is off by under four cycles on average, better than gradient boosting and far better than using no sensors.
+      {2} The detector warns hundreds of cycles before failure, much earlier than a fixed vibration limit.
+      {3} The exact numbers, and the error range, are on the Results page.`,
   },
   {
-    ch: 'results', title: '82% fleet downtime cut',
+    ch: 'results', title: 'Less than half the downtime',
     camera: 'global', mood: 'proud', diagram: 'optimize', celebrate: true,
-    say: `In empirical policy evaluation across ten unseen simulated plants with identical random wear,
-      the Copilot cut total downtime by *eighty-two percent* compared to run-to-failure, and *seventy-eight percent* compared to fixed calendar servicing.
-      It eliminated *ninety-six percent of unexpected mid-shift breakdowns*, saving over sixty-one thousand dollars per production cycle.`,
+    say: `Then the whole loop, on ten unseen plants with identical wear.
+      The copilot avoided every breakdown and cut downtime to *less than half* of running to failure.
+      To be fair, a fixed schedule tuned on those same plants does about as well, but one step further it starts breaking machines. The copilot needs no tuning.`,
   },
   {
-    ch: 'results', title: '100% offline & reproducible',
+    ch: 'results', title: 'Offline, tested, honest',
     camera: 'campus', mood: 'happy', gesture: 'wave', diagram: 'realworld', celebrate: true,
-    say: `Everything in this system is *one hundred percent offline*, requires zero external API keys, and passes all forty-eight automated tests.
-      You can read the deep-dive documentation pages *Why, How It Works, and Results* anytime from the top bar or launch Rivet directly on those pages.
-      Thank you for exploring Titan Aerospace!`,
+    say: `Everything runs *offline on one laptop*, with forty-eight automated tests.
+      The plant is simulated, and the NASA turbofan benchmark is built in to check the model on real data.
+      Open *Why*, *How it works* or *Results* from the top bar, and press *Walk me through* to have me read any of them with you.`,
   },
 ];

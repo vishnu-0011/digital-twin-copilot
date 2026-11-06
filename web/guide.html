@@ -10,7 +10,7 @@
     try { document.documentElement.dataset.theme = localStorage.getItem('titan_theme') || 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
   </script>
   <link rel="stylesheet" href="/css/site.css?v=1">
-  <link rel="stylesheet" href="/css/page-guide.css?v=1">
+  <link rel="stylesheet" href="/css/page-guide.css?v=5">
   <style>
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
     .pill-why { background: rgba(225, 29, 72, 0.12); color: var(--bad); }
@@ -45,9 +45,9 @@
         <a href="/guide.html" aria-current="page">Guide</a>
       </nav>
       <div class="actions">
-        <a class="btn" href="/?tour=pages">Pages tour</a>
-        <a class="btn" href="/?tour=quick">3-min tour</a>
-        <a class="btn btn-primary" href="/?nowelcome">Open live plant</a>
+        <button id="btn-page-guide" class="btn btn-guide" type="button"><i class="pg-orb-dot" aria-hidden="true"></i><span>Walk me through</span></button>
+        <a class="btn" href="/?tour=quick">3-minute tour</a>
+        <a class="btn btn-primary" href="/?nowelcome">Open the live plant</a>
       </div>
     </div>
   </header>
@@ -56,12 +56,12 @@
     <!-- HERO -->
     <section class="hero">
       <div class="wrap">
-        <span class="eyebrow">Project Navigation & Academic Guide</span>
-        <h1>The Complete Guide: Why, Method & Results</h1>
-        <p class="lead">Titan Aerospace is built on three interconnected engineering pillars. This master guide explains how each page fits together, what problem it solves, what code executes it, and how to defend it in an academic or technical evaluation.</p>
-        
+        <span class="eyebrow">Project guide</span>
+        <h1>Three pages, one argument</h1>
+        <p class="lead">The project pages make a single case: <em class="k">why</em> the problem matters, <em class="k">how</em> the copilot works, and whether the <em class="k">results</em> hold up. This page maps them, with the question an examiner is likely to ask on each and where the code and tests live.</p>
+
         <div class="guide-hero-actions">
-          <a class="btn btn-primary" href="/?tour=pages">▶ Launch Rivet's Pages Tour (3 min)</a>
+          <a class="btn btn-primary" href="/why.html?guide=1">Start with Why, guided</a>
           <a class="btn" href="#why-section">1 · Why</a>
           <a class="btn" href="#method-section">2 · How it works</a>
           <a class="btn" href="#results-section">3 · Results</a>
@@ -74,33 +74,33 @@
       <div class="wrap">
         <div class="grid3">
           <article class="card reveal" style="--tone: var(--bad)">
-            <span class="pill pill-why">Pillar 1</span>
-            <h3 style="margin-top: 12px">Why Titan Copilot</h3>
-            <p>The operational imperative: aerospace machines fail at $400+/minute. Fixed calendars waste healthy tools, run-to-failure scraps parts, and alarm floods cause operators to hit mute.</p>
-            <a class="card-link" href="/why.html">Read full Why page →</a>
+            <span class="pill pill-why">1 · Why</span>
+            <h3 style="margin-top: 12px">The problem</h3>
+            <p>Machines warn before they break, but plants either repair after a breakdown or service on a calendar. The hard part is turning a reading into a decision someone trusts enough to act on.</p>
+            <a class="card-link" href="/why.html">Read the Why page →</a>
           </article>
 
           <article class="card reveal" style="--tone: var(--accent)">
-            <span class="pill pill-method">Pillar 2</span>
-            <h3 style="margin-top: 12px">How It Works (Method)</h3>
-            <p>The engineering depth: SimPy physical simulator, Dilated TCN with causal Chomp-1D layers (zero future leakage), ISO 10816-3 vibration zones, and deterministic SOP retrieval.</p>
-            <a class="card-link" href="/method.html">Read full Method page →</a>
+            <span class="pill pill-method">2 · How it works</span>
+            <h3 style="margin-top: 12px">The method</h3>
+            <p>A SimPy digital twin of 8 machines, an Isolation Forest for "has wear started?", a dilated TCN for "how long is left?", rule-based agents that cite the procedure, and a supervisor who approves.</p>
+            <a class="card-link" href="/method.html">Read the How it works page →</a>
           </article>
 
           <article class="card reveal" style="--tone: var(--good)">
-            <span class="pill pill-results">Pillar 3</span>
-            <h3 style="margin-top: 12px">Measured Results</h3>
-            <p>The empirical proof: tested against NASA's C-MAPSS turbofan benchmark (7-cycle RMSE vs 14-cycle LSTM), cutting unplanned downtime by 68% and saving $140k+ per shift.</p>
-            <a class="card-link" href="/results.html">Read full Results page →</a>
+            <span class="pill pill-results">3 · Results</span>
+            <h3 style="margin-top: 12px">The evidence</h3>
+            <p>Measured on simulated plants the models never saw: <b data-f="cut">–</b> less downtime than running to failure, and an honest comparison with a tuned fixed schedule, which edges the copilot but has a cliff.</p>
+            <a class="card-link" href="/results.html">Read the Results page →</a>
           </article>
         </div>
 
         <div class="section-banner reveal">
           <div>
-            <h3 style="margin-bottom: 4px">Experience this walkthrough inside the 3D plant</h3>
-            <p style="color: var(--ink-2); font-size: 14.5px;">Rivet, our 3D guide orb, will fly between bays and project synced SVG diagrams as it explains each page.</p>
+            <h3 style="margin-bottom: 4px">Let Rivet read the pages with you</h3>
+            <p style="color: var(--ink-2); font-size: 14.5px;">Press <b>Walk me through</b> on any page. Rivet highlights each part as it explains it, then carries on to the next page.</p>
           </div>
-          <a class="btn btn-primary" style="white-space: nowrap;" href="/?tour=pages">Start Pages Walkthrough</a>
+          <a class="btn btn-primary" style="white-space: nowrap;" href="/why.html?guide=1">Start the guided read</a>
         </div>
       </div>
     </section>
@@ -109,28 +109,28 @@
     <section id="why-section">
       <div class="wrap">
         <div class="sec-head reveal">
-          <span class="pill pill-why">Deep Dive · Pillar 1</span>
-          <h2>The "Why" Page Explained: The Problem We Solve</h2>
-          <p>Located at <code>/why.html</code>, this page addresses the fundamental business and human factors failure modes in industrial manufacturing.</p>
+          <span class="pill pill-why">1 · Why</span>
+          <h2>The problem we chose</h2>
+          <p><code>/why.html</code> argues that the gap isn't prediction; it's getting the right person to act in time, with enough trust to stop a running machine.</p>
         </div>
 
         <div class="grid2c">
           <div class="reveal">
-            <h3>Key Concepts on the Why Page</h3>
+            <h3>What the page covers</h3>
             <ul style="margin: 14px 0 0 20px; line-height: 1.8; color: var(--ink-2); font-size: 14.5px;">
-              <li><b>The P-F Warning Interval:</b> Point P is when micro-vibrations become detectable; Point F is functional failure. Plants without copilots only react after Point F.</li>
-              <li><b>The $400/Minute Downtime Trap:</b> A seized 5-axis mill stops the deburring robot, the vacuum furnace, and avionics assembly behind it.</li>
-              <li><b>The Human Factors Alarm Fatigue:</b> Standard SCADA systems fire 200+ raw thresholds per shift. Operators experience alarm numbness and hit mute.</li>
-              <li><b>Why Aerospace:</b> Inconel and titanium alloys wear tools unpredictably based on lot hardness, rendering fixed hour-based calendars useless.</li>
+              <li><b>The warning window (P-F interval):</b> a fault becomes detectable at P and causes a breakdown at F. The chart compares acting at F, acting on a calendar, and acting inside the window.</li>
+              <li><b>Three failure modes:</b> breakdowns found too late, calendars that ignore the machine's condition, and readings that never become decisions (alarm floods get muted).</li>
+              <li><b>Why an aerospace shop:</b> hard titanium and nickel alloys, long and valuable cuts, bottleneck machines without spares, and written procedures with sign-off.</li>
+              <li><b>Honest limits:</b> the plant is simulated, and the industry savings figures (US DOE FEMP, 2010) are best cases, not this project's results.</li>
             </ul>
           </div>
           <div class="reveal">
             <div class="viva-box">
-              <b>🎓 Evaluator / Viva Question for the Why Page:</b>
-              <p>"Why can't plants simply install traditional SCADA thresholds (e.g. <code>if vibration > 5.0 mm/s then alarm</code>)?"</p>
-              <p style="margin-top: 8px; color: var(--ink-3);"><b>Student Defense:</b> Single-point scalar thresholds fire too late (when bearing pitting has already propagated) and cannot estimate Remaining Useful Life (RUL). Furthermore, raw alarms lack actionable root-cause procedures, creating cognitive overload.</p>
+              <b>Likely question</b>
+              <p>"Why not just alarm when vibration crosses a threshold?"</p>
+              <p style="margin-top: 8px; color: var(--ink-3);"><b>Answer:</b> a fixed limit fires late and says nothing about how long is left. On the test plants the ISO 10816-3 zone C limit catches <span data-f="isoRec">–</span> of worn readings with a median warning of <span data-f="isoLead">–</span> cycles; the learned detector warns <span data-f="lead">–</span> cycles ahead. The remaining-life model then turns that into a deadline.</p>
             </div>
-            <p style="margin-top: 14px;"><a class="card-link" href="/why.html">Explore interactive P-F curve on why.html →</a></p>
+            <p style="margin-top: 14px;"><a class="card-link" href="/why.html">Explore the P-F chart →</a></p>
           </div>
         </div>
       </div>
@@ -140,28 +140,28 @@
     <section id="method-section" style="border-top: 1px solid var(--hair); padding-top: 48px;">
       <div class="wrap">
         <div class="sec-head reveal">
-          <span class="pill pill-method">Deep Dive · Pillar 2</span>
-          <h2>The "How It Works" Page Explained: Architecture & Math</h2>
-          <p>Located at <code>/method.html</code>, this page documents the four-tier predictive pipeline, strict temporal causality, and mathematical formulations.</p>
+          <span class="pill pill-method">2 · How it works</span>
+          <h2>Architecture, models and decisions</h2>
+          <p><code>/method.html</code> walks the loop from a vibration reading to a signed-off repair, with the twin's equations and every design choice we rejected.</p>
         </div>
 
         <div class="grid2c">
           <div class="reveal">
-            <h3>4-Tier Engineering Architecture</h3>
+            <h3>Five layers, one loop</h3>
             <ul style="margin: 14px 0 0 20px; line-height: 1.8; color: var(--ink-2); font-size: 14.5px;">
-              <li><b>Tier 1 · SimPy Physics Engine:</b> Simulates non-linear tool wear, bearing raceway degradation, and Poisson workcell delays with strict zero-feature-leakage.</li>
-              <li><b>Tier 2 · Dilated TCN Prognostics:</b> 1D causal convolutions with exponentially growing dilation sequence <code>d ∈ {1, 2, 4, 8}</code> yielding large receptive fields without RNN bottlenecks.</li>
-              <li><b>Tier 3 · Strict Causality via Chomp-1D:</b> Custom PyTorch layer removes right-side padding so the model never sees future states.</li>
-              <li><b>Tier 4 · ISO 10816-3 & Deterministic SOPs:</b> Classifies vibration velocity into Zones A (Good) to D (Unacceptable) and retrieves verified shop SOP checklists via TF-IDF cosine similarity.</li>
+              <li><b>Plant:</b> a SimPy twin of 8 machines; hidden wear drives vibration and temperature with noise. Models never see the wear.</li>
+              <li><b>Models:</b> an Isolation Forest fitted on the healthy envelope, and a dilated causal TCN (dilations 1-2-4-8, a Chomp1d trim so no future readings leak) predicting cycles to failure.</li>
+              <li><b>Agents:</b> a LangGraph graph of rules (Monitor → Diagnosis → Scheduler → Report). Diagnosis cites the machine type's procedure; the scheduler drafts a work order when 0.85 × RUL &lt; 30 cycles.</li>
+              <li><b>People:</b> a supervisor approves; the twin services the machine and its readings return to normal.</li>
             </ul>
           </div>
           <div class="reveal">
             <div class="viva-box">
-              <b>🎓 Evaluator / Viva Question for the Method Page:</b>
-              <p>"Why choose a Temporal Convolutional Network over an LSTM or Transformer?"</p>
-              <p style="margin-top: 8px; color: var(--ink-3);"><b>Student Defense:</b> TCN trains in parallel O(1) across time steps (unlike sequential O(N) LSTMs), avoids vanishing gradients via residual connections, and has mathematically bounded receptive fields. It runs 100% offline in milliseconds on standard edge CPUs.</p>
+              <b>Likely question</b>
+              <p>"Why a TCN rather than an LSTM?"</p>
+              <p style="margin-top: 8px; color: var(--ink-3);"><b>Answer:</b> convolutions train in parallel across time, residual blocks keep gradients stable, and four dilated layers give a 61-reading receptive field. Gradient boosting is kept as a baseline: the TCN's error is <span data-f="tcnMae">–</span> cycles against <span data-f="gbMae">–</span>.</p>
             </div>
-            <p style="margin-top: 14px;"><a class="card-link" href="/method.html">View full architecture diagrams on method.html →</a></p>
+            <p style="margin-top: 14px;"><a class="card-link" href="/method.html">See the architecture →</a></p>
           </div>
         </div>
       </div>
@@ -171,28 +171,29 @@
     <section id="results-section" style="border-top: 1px solid var(--hair); padding-top: 48px;">
       <div class="wrap">
         <div class="sec-head reveal">
-          <span class="pill pill-results">Deep Dive · Pillar 3</span>
-          <h2>The "Results" Page Explained: Empirical Validation</h2>
-          <p>Located at <code>/results.html</code>, this page presents benchmark proof scored via <code>python -m evaluation.run_all</code> on both simulated cleanrooms and NASA C-MAPSS data.</p>
+          <span class="pill pill-results">3 · Results</span>
+          <h2>What was measured</h2>
+          <p><code>/results.html</code> is generated by <code>python -m evaluation.run_all</code>, scored on plants the models never saw.</p>
         </div>
 
         <div class="grid2c">
           <div class="reveal">
-            <h3>Measured Benchmark Highlights</h3>
+            <h3>Headline numbers</h3>
             <ul style="margin: 14px 0 0 20px; line-height: 1.8; color: var(--ink-2); font-size: 14.5px;">
-              <li><b>NASA C-MAPSS FD001 Comparison:</b> TCN achieved <b>7.0 cycle RMSE</b> and <b>5.3 cycle MAE</b>, outperforming standard Bi-LSTM (14.2 RMSE) and Random Forest (18.6 RMSE).</li>
-              <li><b>68% Reduction in Unplanned Stoppages:</b> Policy simulation over 1,000 production hours demonstrated cutting catastrophic seizures from 12 down to 4.</li>
-              <li><b>$140,000+ Downtime Cost Reduction:</b> Replacing emergency repairs with pre-scheduled off-shift servicing drastically cut overtime labor and scrapped titanium billets.</li>
-              <li><b>Reproducible Science:</b> Every metric and chart is generated deterministically from <code>evaluation/results.json</code> with zero hardcoded claims.</li>
+              <li><b>Remaining life:</b> mean error <span data-f="tcnMae">–</span> cycles (gradient boosting <span data-f="gbMae">–</span>, no-sensor baseline <span data-f="baseMae">–</span>).</li>
+              <li><b>Early warning:</b> median <span data-f="lead">–</span> cycles before failure, at the cost of <span data-f="fa">–</span> false alarms on healthy readings.</li>
+              <li><b>Downtime per shift:</b> <span data-f="rtfD">–</span> h running to failure, <span data-f="copD">–</span> h with the copilot and no breakdowns.</li>
+              <li><b>Fixed schedule:</b> tuned on the test plants it reaches <span data-f="fixD">–</span> h, slightly better, but at 100% of average life it collapses to <span data-f="cliffB">–</span> breakdowns.</li>
+              <li><b>NASA C-MAPSS:</b> built in and run separately (<code>--cmapss-only</code>, about 40 minutes).</li>
             </ul>
           </div>
           <div class="reveal">
             <div class="viva-box">
-              <b>🎓 Evaluator / Viva Question for the Results Page:</b>
-              <p>"How was the policy simulation evaluated without bias?"</p>
-              <p style="margin-top: 8px; color: var(--ink-3);"><b>Student Defense:</b> We subjected the exact same randomized machine wear seeds to three distinct controllers: Run-to-Failure (replace after seizure), Fixed Calendar (service every 150 cycles), and Copilot Predictive (service when RUL < 30 with 0.85 safety margin).</p>
+              <b>Likely question</b>
+              <p>"How do you know the policy comparison is fair?"</p>
+              <p style="margin-top: 8px; color: var(--ink-3);"><b>Answer:</b> every policy runs the same <span data-f="plants">–</span> plants with the same random wear, and the copilot uses the real trained model, not the true wear. The fixed schedule is swept and its best setting reported, which flatters it. Repair time is varied from 1.5× to 5× to show the conclusion holds.</p>
             </div>
-            <p style="margin-top: 14px;"><a class="card-link" href="/results.html">View empirical benchmark charts on results.html →</a></p>
+            <p style="margin-top: 14px;"><a class="card-link" href="/results.html">See the charts →</a></p>
           </div>
         </div>
       </div>
@@ -202,9 +203,9 @@
     <section style="border-top: 1px solid var(--hair); padding-top: 48px; margin-bottom: 60px;">
       <div class="wrap">
         <div class="sec-head reveal">
-          <span class="eyebrow">Architecture & Code Cross-Reference</span>
-          <h2>Page Cross-Reference Matrix</h2>
-          <p>Quick navigation mapping each web page to its backend module, unit test file, and core thesis documentation.</p>
+          <span class="eyebrow">Where it lives</span>
+          <h2>Each page, its code and its tests</h2>
+          <p>Open these when someone asks to see the code behind a claim.</p>
         </div>
 
         <table class="summary-table reveal">
@@ -227,21 +228,21 @@
             </tr>
             <tr>
               <td><b><a href="/method.html" style="color:var(--accent)">How It Works (/method.html)</a></b></td>
-              <td>4-tier architecture, Dilated TCN, causal Chomp-1D, ISO 10816-3.</td>
+              <td>Five-layer loop, the twin equations, both models, the decision rule.</td>
               <td><code>ml_pipeline/tcn_model.py</code><br><code>digital_twin/standards.py</code></td>
               <td><code>tests/test_tcn.py</code><br><code>tests/test_standards.py</code></td>
               <td><code>docs/VIVA.md</code></td>
             </tr>
             <tr>
               <td><b><a href="/results.html" style="color:var(--good)">Results (/results.html)</a></b></td>
-              <td>Empirical C-MAPSS metrics, policy simulation, and downtime ROI.</td>
+              <td>Model accuracy, early warning, and the policy comparison on unseen plants.</td>
               <td><code>evaluation/cmapss_benchmark.py</code><br><code>evaluation/policy_eval.py</code></td>
               <td><code>tests/test_evaluation.py</code></td>
               <td><code>docs/RESULTS.md</code></td>
             </tr>
             <tr>
               <td><b><a href="/?nowelcome" style="color:var(--think)">3D Plant (/)</a></b></td>
-              <td>Interactive hardware-accelerated 60 FPS cleanroom digital twin.</td>
+              <td>The live 3D plant: alerts, the drawer, work-order approval, the forecast.</td>
               <td><code>api/main.py</code><br><code>web/js/scene.js</code></td>
               <td><code>tests/test_api_web.py</code></td>
               <td><code>README.md</code></td>
@@ -253,6 +254,24 @@
   </main>
 
   <script>
+    /* ---------- numbers from the evaluation suite ---------- */
+    fetch('/data/results.json').then(r => r.ok ? r.json() : null).then(d => {
+      if (!d) return;
+      const pol = d.policy.policies, f1 = n => Number(n).toLocaleString('en-US', { maximumFractionDigits: 1 });
+      const fixed = pol[Object.keys(pol).find(k => k.startsWith('Fixed schedule'))];
+      const an = d.anomaly.models, ifo = an[Object.keys(an).find(k => k.startsWith('Isolation'))], iso = an[Object.keys(an).find(k => k.startsWith('ISO'))];
+      const cliff = d.policy.fixed_interval_sweep.find(s => s.k >= 1) || {};
+      const F = {
+        cut: Math.round((1 - pol['Copilot (TCN)'].downtime_h.mean / pol['Run to failure'].downtime_h.mean) * 100) + '%',
+        rtfD: f1(pol['Run to failure'].downtime_h.mean), copD: f1(pol['Copilot (TCN)'].downtime_h.mean),
+        fixD: f1(fixed.downtime_h.mean), cliffB: f1(cliff.breakdowns), plants: d.policy.seeds.length,
+        tcnMae: f1(d.rul.table[0].mae), gbMae: f1(d.rul.table[1].mae), baseMae: f1(d.rul.table[2].mae),
+        lead: Math.round(ifo.median_lead_cycles), isoLead: Math.round(iso.median_lead_cycles),
+        isoRec: Math.round(iso.recall * 100) + '%', fa: Math.round(ifo.false_alarm_rate_healthy * 100) + '%',
+      };
+      document.querySelectorAll('[data-f]').forEach(n => { if (F[n.dataset.f] != null) n.textContent = F[n.dataset.f]; });
+    }).catch(() => {});
+
     /* ---------- reveal on scroll ---------- */
     (function() {
       const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => {
@@ -261,6 +280,6 @@
       document.querySelectorAll('.reveal').forEach(n => io ? io.observe(n) : n.classList.add('in'));
     })();
   </script>
-  <script type="module" src="/js/guide/page-guide.js"></script>
+  <script type="module" src="/js/guide/page-guide.js?v=7"></script>
 </body>
 </html>

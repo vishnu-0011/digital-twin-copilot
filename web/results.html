@@ -10,7 +10,7 @@
     try { document.documentElement.dataset.theme = localStorage.getItem('titan_theme') || 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
   </script>
   <link rel="stylesheet" href="/css/site.css?v=1">
-  <link rel="stylesheet" href="/css/page-guide.css?v=1">
+  <link rel="stylesheet" href="/css/page-guide.css?v=5">
   <style>
     :root { --s1: #0284c7; --s2: #eb6834; --mark-muted: #b8c0cc; --grid: rgba(15, 23, 42, 0.07); }
     :root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --mark-muted: #4a5568; --grid: rgba(255, 255, 255, 0.07); }
@@ -48,7 +48,7 @@
         <a href="/guide.html">Guide</a>
       </nav>
       <div class="actions">
-        <button id="btn-page-guide" class="btn btn-guide" aria-label="Start guided tour with Rivet"><span class="guide-pulsing-dot" aria-hidden="true"></span><b>Guide with Rivet</b></button>
+        <button id="btn-page-guide" class="btn btn-guide" type="button"><i class="pg-orb-dot" aria-hidden="true"></i><span>Walk me through</span></button>
         <a class="btn" href="/?tour=quick">3-minute tour</a>
         <a class="btn btn-primary" href="/?nowelcome">Open the live plant</a>
       </div>
@@ -446,6 +446,6 @@ python -m evaluation.run_all --quick                   # about 8 min; --cmapss-o
     document.querySelectorAll('.reveal').forEach(n => io ? io.observe(n) : n.classList.add('in'));
   })();
   </script>
-  <script type="module" src="/js/guide/page-guide.js"></script>
+  <script type="module" src="/js/guide/page-guide.js?v=7"></script>
 </body>
 </html>
