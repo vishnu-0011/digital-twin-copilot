@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Titan Aerospace — 3D Digital Twin Operations Center</title>
-  <link rel="stylesheet" href="/css/style.css?v=2.8">
-  <link rel="stylesheet" href="/css/guide.css?v=2.8">
-  <link rel="stylesheet" href="/css/forecast.css?v=2.8">
-  <link rel="stylesheet" href="/css/ops.css?v=2.8">
+  <link rel="stylesheet" href="/css/style.css?v=2.9">
+  <link rel="stylesheet" href="/css/guide.css?v=2.9">
+  <link rel="stylesheet" href="/css/forecast.css?v=2.9">
+  <link rel="stylesheet" href="/css/ops.css?v=2.9">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
 </head>
 <body>
@@ -56,8 +56,10 @@
         <button id="btn-tour-menu" class="btn-hud btn-tour" aria-haspopup="true" aria-expanded="false" title="Guided tours with Rivet">Tour</button>
         <div class="hud-menu" id="menu-tour" role="menu" hidden>
           <button role="menuitem" data-tour="quick"><b>3-minute tour</b><span>The essentials: a fault, the fix, the forecast</span></button>
+          <button role="menuitem" data-tour="pages"><b>Pages guide · 3 min</b><span>Why, How it works, and Benchmark Results</span></button>
           <button role="menuitem" data-tour="full"><b>Full tour · 9 min</b><span>How every part works, with diagrams</span></button>
           <div class="menu-sep" role="separator"></div>
+          <button role="menuitem" data-href="/guide.html"><b>Project Guide</b><span>Complete walk-through of Why, Method & Results</span></button>
           <button role="menuitem" data-href="/why.html"><b>Why this project</b><span>The core problem, in a short read</span></button>
           <button role="menuitem" data-href="/method.html"><b>How it works</b><span>Architecture, models, design decisions</span></button>
           <button role="menuitem" data-href="/results.html"><b>Results</b><span>Measured accuracy and the policy comparison</span></button>
@@ -136,10 +138,14 @@
       </ul>
       <div class="welcome-actions">
         <button class="welcome-primary" data-welcome="quick">Take the 3-minute tour</button>
+        <button data-welcome="pages">Pages guide (Why, Method, Results)</button>
         <button data-welcome="full">Full tour (9 min)</button>
         <button data-welcome="explore">Explore on my own</button>
       </div>
-      <a class="welcome-why" href="/why.html">Why we built this →</a>
+      <div style="display:flex; justify-content:center; gap:16px; margin-top:14px; font-size:13px;">
+        <a class="welcome-why" href="/guide.html">Complete Project Guide →</a>
+        <a class="welcome-why" href="/why.html">Why we built this →</a>
+      </div>
     </div>
   </div>
 
@@ -200,6 +206,7 @@
             <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M4 9.5h3l4.5-3.8v12.6L7 14.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
             <span class="guide-voice-label">Voice</span>
           </button>
+          <select id="guide-voice-pick" class="guide-btn guide-pill guide-voice-pick" title="Narrator voice" aria-label="Narrator voice" hidden></select>
           <button id="guide-rate" class="guide-btn guide-pill guide-rate" title="Narration speed">1×</button>
           <button id="guide-exit" class="guide-btn guide-pill guide-btn-exit" title="End tour (Esc)">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
@@ -434,10 +441,10 @@
   </section>
 
   <!-- Three.js Offline Vendored Core & Controls -->
-  <script src="/vendor/three.min.js?v=2.8"></script>
-  <script src="/vendor/OrbitControls.js?v=2.8"></script>
+  <script src="/vendor/three.min.js?v=2.9"></script>
+  <script src="/vendor/OrbitControls.js?v=2.9"></script>
 
   <!-- Application Main Controller -->
-  <script type="module" src="/js/app.js?v=2.8"></script>
+  <script type="module" src="/js/app.js?v=2.9"></script>
 </body>
 </html>

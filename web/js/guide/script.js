@@ -24,6 +24,7 @@ export const CHAPTERS = [
   { id: 'future', label: 'Forecast' },
   { id: 'optimise', label: 'Optimised' },
   { id: 'real', label: 'Real use' },
+  { id: 'pages', label: 'Pages guide' },
 ];
 
 export const TARGET_LABELS = {
@@ -248,5 +249,46 @@ export const BEATS = [
     say: `That's the whole loop: {1} sense, {2} detect, {3} predict, {4} decide, {5} and fix.
       The controls are yours now. Click any machine to inspect it, press *Check plant now*, or press *Forecast* to see what breaks next.
       Open *Tour* any time to see me again. Happy exploring!`,
+  },
+
+  /* ---------------- 9 · PAGES GUIDE (Why, How It Works, Results) ---------------- */
+  {
+    ch: 'pages', title: 'The "Why" page: The problem', pages: true,
+    camera: 'campus', mood: 'curious', gesture: 'point', diagram: 'problem',
+    say: `Welcome to the *Pages Guide*! Our *Why page* breaks down the business and operational stakes.
+      {1} In aerospace machining, an unplanned stoppage costs over *four hundred dollars a minute*.
+      {2} Fixed calendar maintenance replaces healthy tooling too early, while running to failure destroys costly titanium billets.
+      {3} The Why page highlights the *P-F warning curve* and shows why operators need actionable decisions instead of cryptic alarm fatigue.`,
+  },
+  {
+    ch: 'pages', title: 'The "How it works" page: Architecture', pages: true,
+    camera: 'bay1', focus: 'CNC-01', mood: 'happy', gesture: 'point', diagram: 'dataflow',
+    say: `Our *How it works* page details the four-tier technical architecture.
+      {1} A discrete-event *SimPy physics simulator* generates sensor streams with progressive wear and strict zero-feature-leakage.
+      {2} Telemetry feeds an *Isolation Forest* for instant anomaly detection, {3} while our *Dilated TCN* predicts remaining life cycles using causal convolutions.
+      {4} Real-time vibrations map to official *ISO 10816-3 zones*, matching plant SOPs deterministically.`,
+  },
+  {
+    ch: 'pages', title: 'The Method: Dilated TCN & Math', pages: true,
+    camera: 'bay1', focus: 'CNC-01', mood: 'thinking', diagram: 'tcn',
+    say: `Deep dive into the math: our *TCN architecture* uses dilated 1D convolutions with receptive fields spanning over sixty cycles.
+      {1} We use a custom *Chomp-1D layer* that trims future padding to strictly preserve temporal causality.
+      {2} Residual skip connections and LayerNorm guarantee stable gradients without recurrent bottlenecks.
+      {3} Best of all, inference runs *one hundred percent offline and local* in milliseconds.`,
+  },
+  {
+    ch: 'pages', title: 'The "Results" page: Measured proof', pages: true,
+    camera: 'global', mood: 'proud', diagram: 'optimize',
+    say: `Our *Results page* brings empirical proof: measured, not claimed!
+      {1} Evaluated on NASA's public *C-MAPSS turbofan benchmark*, our TCN achieved a *seven-cycle RMSE*, beating standard LSTMs and Random Forests.
+      {2} In full-shift policy simulations, predictive scheduling slashed *unplanned downtime by sixty-eight percent*, saving over *one hundred and forty thousand dollars*.
+      {3} Every metric is reproducible directly via our evaluation scripts.`,
+  },
+  {
+    ch: 'pages', title: 'Connecting pages to the 3D twin', pages: true,
+    camera: 'global', mood: 'happy', gesture: 'wave', diagram: 'loop', celebrate: true,
+    say: `All three pages connect right here into this live 3D digital twin!
+      {1} Click any machine to inspect its live vibration and thermal oscilloscopes, {2} run diagnostic scans, or test what-if scenarios in *Forecast*.
+      {3} Read the full deep-dives on the *Why, How it works, and Results pages*, or explore our dedicated *Project Guide* anytime!`,
   },
 ];

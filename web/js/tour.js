@@ -164,6 +164,45 @@ function renderSubtitle(parsed) {
     el.appendChild(document.createTextNode(' '));
   });
   el.scrollTop = 0;
+  el.classList.remove('scrolled');
+  state.lineTop = 0;
+}
+
+/* Smoothly follow narration lines without deep auto-scrolling or clipping:
+   Never scroll if the entire text fits comfortably. When scrolling is needed,
+   only scroll down when the active spoken word reaches the bottom threshold. */
+function followLine(el, cur) {
+  if (!cur || !el) return;
+  // If all text fits comfortably inside the container, NEVER scroll
+  if (el.scrollHeight <= el.clientHeight + 6) {
+    if (el.scrollTop !== 0) el.scrollTop = 0;
+    el.classList.remove('scrolled');
+    return;
+  }
+
+  const curTop = cur.offsetTop - el.offsetTop;
+  const curHeight = cur.offsetHeight || 24;
+  const curBottom = curTop + curHeight;
+  const viewTop = el.scrollTop;
+  const viewBottom = viewTop + el.clientHeight;
+
+  // Only scroll down when the spoken word reaches the bottom threshold of the box
+  if (curBottom > viewBottom - 18) {
+    const target = Math.min(el.scrollHeight - el.clientHeight, curBottom - el.clientHeight + 36);
+    if (Math.abs(target - el.scrollTop) > 4) {
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
+      el.classList.add('scrolled');
+    }
+  } else if (curTop < viewTop + 10) {
+    // Scroll up if moving backward or active word is above top
+    const target = Math.max(0, curTop - 14);
+    if (Math.abs(target - el.scrollTop) > 4) {
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
+      el.classList.toggle('scrolled', target > 0);
+    }
+  }
 }
 
 function onWord(i, word) {
@@ -174,10 +213,7 @@ function onWord(i, word) {
       spans[k].classList.toggle('said', k < i);
       spans[k].classList.toggle('now', k === i);
     }
-    const cur = spans[i];
-    if (cur && cur.offsetTop + cur.offsetHeight > el.scrollTop + el.clientHeight - 4) {
-      el.scrollTop = cur.offsetTop - el.clientHeight / 3;
-    }
+    followLine(el, spans[i]);
   }
   // Lip-sync kick: more vowels → wider mouth
   if (state.mascot && word) {
@@ -320,6 +356,30 @@ function updateVoiceButton() {
   btn.disabled = !has;
   btn.classList.toggle('off', !on);
   btn.title = has ? 'Toggle narration voice (V)' : 'Speech synthesis is not available in this browser';
+  fillVoicePicker();
+}
+
+/** The voice menu lists only human-sounding voices, best first. */
+function fillVoicePicker() {
+  const sel = $('guide-voice-pick');
+  if (!sel || !state.narrator) return;
+  const list = state.narrator.voices();
+  const on = state.narrator.isVoiceOn();
+  sel.hidden = list.length < 2;
+  sel.disabled = !on;
+  const key = list.map(v => v.name).join('|');
+  if (sel.dataset.key !== key) {
+    sel.dataset.key = key;
+    sel.innerHTML = '';
+    list.slice(0, 12).forEach(v => {
+      const o = document.createElement('option');
+      o.value = v.name;
+      o.textContent = v.label;
+      sel.appendChild(o);
+    });
+  }
+  const cur = state.narrator.voiceName();
+  if (cur) sel.value = cur;
 }
 
 /* ------------------------------------------------------------------ */
@@ -398,6 +458,7 @@ function ensureEngine() {
       onDone: onNarrationDone,
       onSpeakingChange: (on) => state.mascot && state.mascot.setSpeaking(on),
       onVoiceUnavailable: () => updateVoiceButton(),
+      onVoicesChanged: () => fillVoicePicker(),
     });
   }
   if (!state.mascot) {
@@ -411,10 +472,17 @@ function ensureEngine() {
   }
 }
 
-export function startGuidedTour(fromIndex = 0, { quick = false } = {}) {
+export function startGuidedTour(fromIndex = 0, { quick = false, kind = 'full' } = {}) {
   if (state.running) return;
-  BEATS = quick ? ALL_BEATS.filter(b => b.quick) : ALL_BEATS;
-  state.quick = quick;
+  if (kind === 'pages' || kind === 'briefing') {
+    BEATS = ALL_BEATS.filter(b => b.pages);
+  } else if (quick || kind === 'quick') {
+    BEATS = ALL_BEATS.filter(b => b.quick);
+  } else {
+    BEATS = ALL_BEATS;
+  }
+  state.quick = quick || kind === 'quick';
+  state.kind = kind;
   ensureEngine();
   state.running = true;
   state.playing = true;
@@ -497,6 +565,10 @@ export function initTourUI(injected = {}) {
     state.narrator.setVoiceOn(!state.narrator.isVoiceOn());
     updateVoiceButton();
   });
+  $('guide-voice-pick')?.addEventListener('change', (e) => {
+    state.narrator.setVoice(e.target.value);
+    e.target.blur();
+  });
   $('guide-rate')?.addEventListener('click', (e) => {
     playClick();
     state.rateIdx = (state.rateIdx + 1) % RATES.length;
@@ -521,10 +593,12 @@ export function initTourUI(injected = {}) {
     if (document.hidden) state.mascot.stop(); else state.mascot.start();
   });
 
-  // Deep link: ?tour=1 (or ?tour=<beat number>) starts the tour automatically.
+  // Deep link: ?tour=1 (or ?tour=quick, ?tour=pages) starts the tour automatically.
   const p = new URLSearchParams(window.location.search).get('tour');
   if (p === 'quick') {
-    setTimeout(() => startGuidedTour(0, { quick: true }), 1200);
+    setTimeout(() => startGuidedTour(0, { quick: true, kind: 'quick' }), 1200);
+  } else if (p === 'pages' || p === 'guide' || p === 'briefing') {
+    setTimeout(() => startGuidedTour(0, { kind: 'pages' }), 1200);
   } else if (p) {
     const n = Math.max(0, (parseInt(p, 10) || 1) - 1);
     setTimeout(() => startGuidedTour(Math.min(n, ALL_BEATS.length - 1)), 1200);

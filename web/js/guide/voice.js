@@ -12,35 +12,91 @@
  * the tour paces identically with or without sound.
  */
 
-const BASE_WPM = 165;
-const PREFERRED_VOICES = [
-  /Samantha/i, /Google US English/i, /Microsoft Aria/i, /Microsoft Jenny/i,
-  /Ava/i, /Allison/i, /Karen/i, /Daniel/i, /Google UK English Female/i
-];
+const BASE_WPM = 160;
+const STORE_KEY = 'tour.voice';
 
-function pickVoice() {
-  if (!('speechSynthesis' in window)) return null;
-  const voices = window.speechSynthesis.getVoices() || [];
-  const english = voices.filter(v => /^en(-|_|$)/i.test(v.lang));
-  for (const re of PREFERRED_VOICES) {
-    const v = english.find(x => re.test(x.name));
-    if (v) return v;
-  }
-  return english.find(v => v.localService) || english[0] || null;
+/* Voices ranked by how human they sound. Neural/"Natural" voices (Edge,
+   Windows) and Apple's downloadable Premium/Enhanced voices are far ahead
+   of the compact defaults; macOS novelty voices are never chosen. */
+const NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Eddy|Flo|Fred|Good News|Grandma|Grandpa|Jester|Junior|Kathy|Organ|Princess|Ralph|Reed|Rocko|Sandy|Shelley|Superstar|Trinoids|Whisper|Wobble|Zarvox)\b/i;
+const HUMAN_NAMES = /\b(Samantha|Ava|Zoe|Allison|Susan|Evan|Nathan|Joelle|Noelle|Tom|Serena|Kate|Oliver|Jamie|Matilda|Lee|Aria|Jenny|Guy|Libby|Sonia|Ryan|Emma|Brian|Andrew)\b/i;
+
+function voiceScore(v) {
+  if (!/^en(-|_|$)/i.test(v.lang) || NOVELTY.test(v.name)) return -1;
+  let s = 10;
+  if (/Natural|Neural/i.test(v.name)) s = 100;
+  else if (/Premium/i.test(v.name)) s = 92;
+  else if (/Enhanced/i.test(v.name)) s = 84;
+  else if (/Siri/i.test(v.name)) s = 78;
+  else if (/Google US English/i.test(v.name)) s = 64;
+  else if (/Google UK English/i.test(v.name)) s = 60;
+  else if (HUMAN_NAMES.test(v.name)) s = 52;
+  else if (/\b(Daniel|Karen|Moira|Tessa|Rishi|Aman|Tara|Veena|Fiona)\b/i.test(v.name)) s = 42;
+  else if (v.localService) s = 20;
+  if (/^en[-_]US/i.test(v.lang)) s += 4;
+  else if (/^en[-_]GB/i.test(v.lang)) s += 2;
+  return s;
 }
 
-/**
- * Parses the tour mini-markup into words, sentences and cue points.
- *   *keyword phrase*   → highlighted in the subtitle
- *   {3}                → diagram cue 3 fires when the next word is spoken
- */
+/** Short display name: "Microsoft Aria Online (Natural) - English (United States)" → "Aria (natural)". */
+export function voiceLabel(v) {
+  let n = v.name.replace(/^Microsoft\s+/i, '').replace(/\s*-\s*English.*$/i, '')
+    .replace(/\s*\(English[^)]*\)\)?/i, '').replace(/\bOnline\s*/i, '');
+  n = n.replace(/\((Natural|Neural|Premium|Enhanced)\)/i, (_, q) => `(${q.toLowerCase()})`);
+  return n.replace(/Google (US|UK) English/i, 'Google $1').trim();
+}
+
+function rankedVoices() {
+  if (!('speechSynthesis' in window)) return [];
+  const seen = new Set();
+  return (window.speechSynthesis.getVoices() || [])
+    .map(v => ({ v, s: voiceScore(v) }))
+    .filter(x => x.s >= 0 && !seen.has(x.v.name) && seen.add(x.v.name))
+    .sort((a, b) => b.s - a.s)
+    .map(x => x.v);
+}
+
+function pickVoice() {
+  const ranked = rankedVoices();
+  let saved = null;
+  try { saved = localStorage.getItem(STORE_KEY); } catch (_) { /* storage blocked */ }
+  return ranked.find(v => v.name === saved) || ranked[0] || null;
+}
+
+/* How the narration should be *said*, as opposed to how it is shown.
+   Subtitles keep "CNC-01"; the voice says "C N C oh one". */
+const DIGITS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const SAY_AS = [
+  [/^([A-Z]{2,5})-0(\d)('s)?$/, (_, a, n, s = '') => `${a.split('').join(' ')} oh ${DIGITS[n]}${s}`],
+  [/^([A-Z]{2,5})-(\d+)('s)?$/, (_, a, n, s = '') => `${a.split('').join(' ')} ${n}${s}`],
+  [/^TF-IDF$/, () => 'T F I D F'],
+  [/^OPC-UA$/, () => 'O P C U A'],
+  [/^SimPy$/, () => 'Sim Pie'],
+  [/^FastAPI$/, () => 'Fast A P I'],
+  [/^LangGraph$/, () => 'Lang Graph'],
+  [/^WebSocket$/, () => 'web socket'],
+  [/^(TCN|PHM|MQTT|HTTP|CPU|QC|ISO|AGV|CNC|RUL)$/, (m) => m.split('').join(' ')],
+  [/^10816$/, () => 'ten eight sixteen'],
+  [/^3D$/, () => 'three D'],
+];
+
+function sayAs(tok) {
+  const m = tok.match(/^([("'‘“]*)(.*?)([.,;:!?)"'’”]*)$/);
+  const [, pre, core, post] = m || [null, '', tok, ''];
+  for (const [re, fn] of SAY_AS) {
+    if (re.test(core)) return pre + core.replace(re, fn) + post;
+  }
+  return tok;
+}
+
 export function parseScript(src) {
-  const tokens = src.trim().split(/\s+/);
   const words = [];
   const cues = [];            // { word, cue }
   let inKw = false;
   let spoken = '';
-  for (const raw of tokens) {
+  const lines = src.trim().split(/\n/).map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+  for (const raw of line.split(/\s+/)) {
     const cueMatch = raw.match(/^\{(\d+)\}$/);
     if (cueMatch) { cues.push({ word: words.length, cue: Number(cueMatch[1]) }); continue; }
     let tok = raw;
@@ -48,29 +104,32 @@ export function parseScript(src) {
     if (tok.startsWith('*')) { kw = true; inKw = true; tok = tok.slice(1); }
     let closes = false;
     if (/\*[.,;:!?)'"’]*$/.test(tok)) { closes = true; tok = tok.replace(/\*([.,;:!?)'"’]*)$/, '$1'); }
+    const say = sayAs(tok);
     const start = spoken.length ? spoken.length + 1 : 0;
-    spoken += (spoken.length ? ' ' : '') + tok;
-    words.push({ text: tok, kw, start });
+    spoken += (spoken.length ? ' ' : '') + say;
+    words.push({ text: tok, say, kw, start });
     if (closes) inKw = false;
+  }
+  if (words.length) words[words.length - 1].para = true;   // a line break in the script = a breath
   }
   // Sentence boundaries
   const sentences = [];
   let first = 0;
   words.forEach((w, i) => {
     if (/[.!?]["')’]*$/.test(w.text) || i === words.length - 1) {
-      const text = words.slice(first, i + 1).map(x => x.text).join(' ');
-      sentences.push({ first, last: i, text, charStart: words[first].start });
+      const text = words.slice(first, i + 1).map(x => x.say).join(' ');
+      sentences.push({ first, last: i, text, charStart: words[first].start, para: !!w.para });
       first = i + 1;
     }
   });
   return { words, cues, sentences, spoken };
 }
 
-export function createNarrator({ onWord = () => {}, onDone = () => {}, onSpeakingChange = () => {}, onVoiceUnavailable = () => {} } = {}) {
+export function createNarrator({ onWord = () => {}, onDone = () => {}, onSpeakingChange = () => {}, onVoiceUnavailable = () => {}, onVoicesChanged = () => {} } = {}) {
   const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
   let voice = pickVoice();
   if (synth && typeof synth.addEventListener === 'function') {
-    synth.addEventListener('voiceschanged', () => { voice = pickVoice(); });
+    synth.addEventListener('voiceschanged', () => { voice = pickVoice(); onVoicesChanged(); });
   }
 
   let voiceOn = !!synth;
@@ -82,6 +141,17 @@ export function createNarrator({ onWord = () => {}, onDone = () => {}, onSpeakin
   let playing = false;
 
   const msPerWord = () => 60000 / (BASE_WPM * rate);
+
+  /* A person breathes between sentences and pauses longer between ideas.
+     The engine's own gap is short and uniform, so add a little. */
+  function gapAfter(s) {
+    const end = parsed.words[s.last].text;
+    let ms = /\?["')’]*$/.test(end) ? 380 : 230;
+    if (s.para) ms += 320;
+    return ms / rate;
+  }
+  /* Tiny pace changes sentence to sentence; a fixed tempo is what sounds robotic. */
+  const SWAY = [0, 0.025, -0.02, 0.01, -0.03, 0.02];
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
   const later = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
 
@@ -127,15 +197,15 @@ export function createNarrator({ onWord = () => {}, onDone = () => {}, onSpeakin
 
     if (!voiceOn || !synth) {
       onSpeakingChange(true);
-      scheduleWords(startWord, s.last, myGen, () => speakSentence(si + 1, myGen, s.last + 1));
+      scheduleWords(startWord, s.last, myGen, () => later(() => speakSentence(si + 1, myGen, s.last + 1), gapAfter(s)));
       return;
     }
 
-    const text = parsed.words.slice(startWord, s.last + 1).map(w => w.text).join(' ');
+    const text = parsed.words.slice(startWord, s.last + 1).map(w => w.say).join(' ');
     const u = new SpeechSynthesisUtterance(text);
-    if (voice) u.voice = voice;
-    u.rate = rate;
-    u.pitch = 1.08;
+    if (voice) { u.voice = voice; u.lang = voice.lang; }
+    u.rate = rate * 0.97 * (1 + SWAY[si % SWAY.length]);
+    u.pitch = 1;
     u.volume = 1;
     const offset = parsed.words[startWord].start;
     let gotBoundary = false;
@@ -147,7 +217,7 @@ export function createNarrator({ onWord = () => {}, onDone = () => {}, onSpeakin
       if (ended || myGen !== gen) return;
       ended = true;
       for (let i = startWord; i <= s.last; i++) emitWord(i);
-      speakSentence(si + 1, myGen, s.last + 1);
+      later(() => speakSentence(si + 1, myGen, s.last + 1), gapAfter(s));
     };
 
     // Some engines accept the utterance but never start it (no voices installed,
@@ -247,6 +317,16 @@ export function createNarrator({ onWord = () => {}, onDone = () => {}, onSpeakin
       return voiceOn;
     },
     getRate: () => rate,
+    /** Human-sounding voices available here, best first. */
+    voices: () => rankedVoices().map(v => ({ name: v.name, label: voiceLabel(v), local: v.localService })),
+    voiceName: () => (voice ? voice.name : null),
+    setVoice(name) {
+      const v = rankedVoices().find(x => x.name === name);
+      if (!v) return;
+      voice = v;
+      try { localStorage.setItem(STORE_KEY, name); } catch (_) { /* storage blocked */ }
+      if (playing && voiceOn) play(Math.max(0, wordIdx));
+    },
     setRate(r) {
       rate = r;
       if (playing) play(Math.max(0, wordIdx));

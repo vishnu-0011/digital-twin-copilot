@@ -323,15 +323,23 @@ body.tour-mode #camera-director-bar { opacity: 0; pointer-events: none; transfor
 }
 
 .guide-text {
+  position: relative;
   font-size: 15px;
   line-height: 1.62;
-  max-height: calc(1.62em * 4.3);
+  max-height: min(240px, calc(1.62em * 6.5));
   overflow-y: auto;
   scroll-behavior: smooth;
+  overscroll-behavior: contain;
   user-select: text;
   scrollbar-width: thin;
   color: var(--text-main);
   transition: opacity 0.3s ease;
+  padding: 4px 0 6px;
+}
+/* Do NOT mask out top lines: keep all spoken context 100% visible and readable */
+.guide-text.scrolled {
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 .gw { opacity: 0.36; transition: opacity 0.25s ease, color 0.25s ease; }
 .gw.said { opacity: 1; }
@@ -391,6 +399,20 @@ body.tour-mode #camera-director-bar { opacity: 0; pointer-events: none; transfor
 .guide-play .ico-play, .guide-play.is-paused .ico-pause { display: none; }
 .guide-play.is-paused .ico-play { display: block; }
 .guide-pill { border-color: var(--guide-hair); }
+.guide-voice-pick {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: 136px;
+  padding-right: 26px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+}
+.guide-voice-pick[hidden] { display: none; }
+.guide-voice-pick:disabled { opacity: 0.45; cursor: default; }
 .guide-rate { min-width: 46px; font-variant-numeric: tabular-nums; }
 #guide-voice .ico-off { display: none; }
 #guide-voice:not(.is-on) .ico-on { display: none; }
@@ -555,11 +577,12 @@ body.tour-mode #camera-director-bar { opacity: 0; pointer-events: none; transfor
   .guide-bubble { width: auto; flex: 1; padding: 14px 14px 10px; border-radius: 16px; }
   .guide-eyebrow { padding-left: 74px; min-height: 12px; }
   .guide-beat-title { font-size: 16px; margin: 8px 0 4px; }
-  .guide-text { font-size: 13.5px; max-height: calc(1.55em * 4); line-height: 1.55; }
+  .guide-text { font-size: 13.5px; max-height: min(180px, calc(1.55em * 5.5)); line-height: 1.55; }
   .guide-controls { gap: 4px; margin-top: 10px; padding-top: 9px; }
   .guide-pill { padding: 0 9px; }
   .guide-voice-label, .guide-btn-exit span { display: none; }
   #guide-rate { display: none; }
+  .guide-voice-pick { display: none; }
   .guide-chip { display: none; }
   /* The card has its own End tour button; the header one only crowds the brand. */
   #btn-tour.tour-active { display: none; }
@@ -590,3 +613,6 @@ body .btn-tour.tour-active::before {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--gm-alarm) 20%, transparent);
 }
 body .btn-tour.tour-active:hover { border-color: color-mix(in srgb, var(--color-rose) 45%, transparent); color: var(--color-rose); transform: none; }
+
+/* With the voice menu showing, the keyboard hint gives way (the shortcuts are in each button's tooltip). */
+.guide-controls:has(.guide-voice-pick:not([hidden])) .guide-hint { display: none; }
