@@ -1,6 +1,10 @@
 # Titan Aerospace Maintenance Copilot
 
-**A digital twin of an aerospace machine shop, with models that predict which machine will fail and when, and a copilot that drafts the work order for a supervisor to approve.** Runs offline on one laptop.
+**A digital twin of an aerospace machine shop, with models that predict which machine will fail and when, and a copilot that drafts the work order for a supervisor to approve.** Runs offline on one laptop or in the cloud.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/vishnu-0011/digital-twin-copilot)
+&nbsp;
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/new?template=https://github.com/vishnu-0011/digital-twin-copilot)
 
 ![The operations view: what needs attention, by when, and what to do](docs/screenshots/app-home.png)
 

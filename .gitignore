@@ -42,5 +42,6 @@ nohup.out
 
 # --- Leftover shell artifacts (e.g. brace-expansion mistakes on Windows) ---
 {*}*
-# --- Trained model cache (rebuilt automatically when training code changes) ---
-.model_cache/
+# --- Trained model cache (preserve baseline pre-trained weights for instant cloud boot) ---
+.model_cache/*
+!.model_cache/*.pkl
