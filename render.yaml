@@ -10,3 +10,5 @@ services:
     envVars:
       - key: PORT
         value: 10000
+      - key: TWIN_FALLBACK_CACHE
+        value: "1"

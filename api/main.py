@@ -457,16 +457,25 @@ async def telemetry_broadcaster_task(interval: float = 0.5):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import gc
+    try:
+        import torch
+        torch.set_num_threads(1)
+    except Exception:
+        pass
+
     # 1. Offline ML models trained on synthetic run-to-failure history.
     #    Cached on disk after the first run so restarts take seconds.
     detector, predictor, model_source = load_or_train(seed=42, duration_s=20000)
 
     kb = MaintenanceKnowledgeBase()
     kb.ingest_directory()
+    gc.collect()
 
-    # 2. Live production plant starts fresh in an active nominal shift (~20 min run-in)
-    live_twin = FactoryTwin(seed=101, max_history=50_000)
-    live_twin.run(duration_s=1200)
+    # 2. Live production plant starts fresh in an active nominal shift (~10 min run-in, memory-bounded)
+    live_twin = FactoryTwin(seed=101, max_history=8_000)
+    live_twin.run(duration_s=600)
+    gc.collect()
 
     app_state["twin"] = live_twin
     app_state["plant_speed"] = float(os.environ.get("TWIN_SPEED", "1.0"))
@@ -480,6 +489,7 @@ async def lifespan(app: FastAPI):
     app_state["model_source"] = model_source
     app_state["impact"] = {"failures_prevented": 0, "downtime_avoided_s": 0.0}
     app_state["graph"] = build_copilot_graph(live_twin, detector, predictor, kb)
+    gc.collect()
 
     # 3. Start background real-time telemetry broadcaster
     broadcast_task = asyncio.create_task(telemetry_broadcaster_task(interval=0.5))

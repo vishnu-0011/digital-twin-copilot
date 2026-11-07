@@ -121,6 +121,7 @@ def _train(seed: int, duration_s: float, log=print):
 
 def load_or_train(seed: int = 42, duration_s: float = 30000, log=print):
     """Returns (detector, predictor, source) where source is 'cache' or 'trained'."""
+    import gc
     key = _fingerprint({"seed": seed, "duration_s": duration_s})
     path = CACHE_DIR / f"models-{key}.pkl"
 
@@ -129,9 +130,25 @@ def load_or_train(seed: int = 42, duration_s: float = 30000, log=print):
             with path.open("rb") as f:
                 bundle = pickle.load(f)
             log(f"[models] loaded cached models ({path.name})")
+            gc.collect()
             return bundle["detector"], bundle["predictor"], "cache"
         except Exception as e:  # corrupt or incompatible cache: retrain
             log(f"[models] cache unreadable ({e}); retraining")
+
+    # In low-memory or cloud environments (e.g. Render / Docker), reuse pre-bundled weights
+    # to avoid OOM memory spikes from training on container boot.
+    allow_fallback = os.environ.get("TWIN_FALLBACK_CACHE") == "1" or os.environ.get("RENDER")
+    if allow_fallback and os.environ.get("TWIN_RETRAIN") != "1" and CACHE_DIR.exists():
+        for cand in sorted(CACHE_DIR.glob("models-*.pkl"), key=lambda x: x.stat().st_size, reverse=True):
+            if cand.exists() and cand != path:
+                try:
+                    with cand.open("rb") as f:
+                        bundle = pickle.load(f)
+                    log(f"[models] loaded pre-bundled cloud cache ({cand.name})")
+                    gc.collect()
+                    return bundle["detector"], bundle["predictor"], "cache"
+                except Exception as e:
+                    pass
 
     log("[models] training models (first run, about two minutes)...")
     detector, predictor = _train(seed, duration_s, log=log)
@@ -146,4 +163,5 @@ def load_or_train(seed: int = 42, duration_s: float = 30000, log=print):
         log(f"[models] cached to {path}")
     except OSError as e:
         log(f"[models] could not write cache ({e}); continuing")
+    gc.collect()
     return detector, predictor, "trained"
